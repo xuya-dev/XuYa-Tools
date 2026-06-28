@@ -1,7 +1,7 @@
 <template>
   <ToolShell
-    title="CLI 配置 / 反代"
-    description="管理 Claude Code / Codex CLI 供应商配置,本地反代与请求统计。"
+    title="CLI 配置管理"
+    description="管理 Claude Code / Codex CLI 供应商配置,一键切换、编辑、查看 live 配置。"
     :icon="Terminal"
   >
     <template #actions>

@@ -77,6 +77,16 @@ const router = createRouter({
       name: 'cli',
       component: () => import('@/views/tools/CliManager.vue'),
     },
+    {
+      path: '/tools/proxy',
+      name: 'proxy',
+      component: () => import('@/views/tools/ProxyManager.vue'),
+    },
+    {
+      path: '/tools/usage',
+      name: 'usage',
+      component: () => import('@/views/tools/UsageStats.vue'),
+    },
   ],
 });
 

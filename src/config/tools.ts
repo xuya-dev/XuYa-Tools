@@ -18,6 +18,8 @@ import {
   ScanText,
   ListTree,
   Globe,
+  Network,
+  BarChart3,
 } from '@lucide/vue';
 
 export type ToolCategory =
@@ -176,11 +178,29 @@ export const tools: ToolMeta[] = [
   // ---- 开发配置 ----
   {
     id: 'cli',
-    name: 'CLI 配置 / 反代',
-    description: '管理 Claude Code / Codex CLI 供应商配置,本地反代与请求统计。',
+    name: 'CLI 配置管理',
+    description: '管理 Claude Code / Codex CLI 供应商配置,一键切换、编辑、查看 live 配置。',
     category: 'devops',
     icon: Terminal,
     route: '/tools/cli',
-    keywords: ['claude', 'codex', 'cli', 'proxy', '反代', '代理', '统计', '配置', 'provider'],
+    keywords: ['claude', 'codex', 'cli', 'provider', '配置', '切换', 'config'],
+  },
+  {
+    id: 'proxy',
+    name: '本地反代',
+    description: '启动本地代理,接管 Claude Code / Codex CLI,将请求导向配置的上游供应商。',
+    category: 'devops',
+    icon: Network,
+    route: '/tools/proxy',
+    keywords: ['proxy', '反代', '代理', 'takeover', '接管', '上游', 'upstream'],
+  },
+  {
+    id: 'usage',
+    name: '请求统计',
+    description: '查看反代记录的请求数据:成功率、延迟、Token 用量、费用与明细日志。',
+    category: 'devops',
+    icon: BarChart3,
+    route: '/tools/usage',
+    keywords: ['usage', 'stats', '统计', '日志', 'log', 'token', '费用', '延迟'],
   },
 ];

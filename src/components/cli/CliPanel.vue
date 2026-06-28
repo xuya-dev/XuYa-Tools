@@ -96,122 +96,6 @@
             </div>
         </div>
 
-        <!-- 本地代理控制 -->
-        <div class="proxy-panel">
-            <div class="proxy-head">
-                <div class="proxy-head-info">
-                    <span class="proxy-title">本地代理</span>
-                    <span class="proxy-status-dot" :class="{ on: proxyStatus?.running }"></span>
-                    <span class="proxy-status-text">{{ proxyStatus?.running ? '运行中' : '已停止' }}</span>
-                </div>
-                <button
-                    class="proxy-toggle-btn"
-                    :class="{ running: proxyStatus?.running }"
-                    :disabled="proxyBusy"
-                    @click="onToggleProxy"
-                >{{ proxyStatus?.running ? '停止' : '启动' }}</button>
-            </div>
-
-            <div class="proxy-detail" v-if="proxyStatus?.running">
-                <div class="proxy-detail-row">
-                    <span class="proxy-detail-label">地址</span>
-                    <span class="proxy-detail-val mono">{{ proxyUrl }}</span>
-                </div>
-                <div class="proxy-detail-row" v-if="proxyStatus.active_provider_name">
-                    <span class="proxy-detail-label">上游</span>
-                    <span class="proxy-detail-val">{{ proxyStatus.active_provider_name }}</span>
-                </div>
-            </div>
-
-            <div class="proxy-takeover" v-if="proxyStatus?.running">
-                <div class="proxy-takeover-item">
-                    <span>Claude Code 接管</span>
-                    <label class="switch">
-                        <input
-                            type="checkbox"
-                            :checked="proxyStatus.claude_taken_over"
-                            @change="onToggleTakeover('claude', ($event.target as HTMLInputElement).checked)"
-                        >
-                        <span class="slider"></span>
-                    </label>
-                </div>
-                <div class="proxy-takeover-item">
-                    <span>Codex CLI 接管</span>
-                    <label class="switch">
-                        <input
-                            type="checkbox"
-                            :checked="proxyStatus.codex_taken_over"
-                            @change="onToggleTakeover('codex', ($event.target as HTMLInputElement).checked)"
-                        >
-                        <span class="slider"></span>
-                    </label>
-                </div>
-            </div>
-        </div>
-
-        <!-- 请求统计 -->
-        <div class="usage-panel">
-            <div class="usage-head">
-                <span class="usage-title">请求统计</span>
-                <button class="cli-refresh-btn" @click="refreshUsageSummary()">刷新</button>
-            </div>
-
-            <div class="usage-grid" v-if="usageSummary">
-                <div class="usage-stat">
-                    <span class="usage-stat-val">{{ usageSummary.totalRequests }}</span>
-                    <span class="usage-stat-label">总请求</span>
-                </div>
-                <div class="usage-stat">
-                    <span class="usage-stat-val ok">{{ usageSummary.successCount }}</span>
-                    <span class="usage-stat-label">成功</span>
-                </div>
-                <div class="usage-stat">
-                    <span class="usage-stat-val err">{{ usageSummary.errorCount }}</span>
-                    <span class="usage-stat-label">失败</span>
-                </div>
-                <div class="usage-stat">
-                    <span class="usage-stat-val">{{ fmtRate(usageSummary.successRate) }}</span>
-                    <span class="usage-stat-label">成功率</span>
-                </div>
-                <div class="usage-stat">
-                    <span class="usage-stat-val">{{ usageSummary.avgLatencyMs }}ms</span>
-                    <span class="usage-stat-label">平均延迟</span>
-                </div>
-                <div class="usage-stat">
-                    <span class="usage-stat-val">{{ usageSummary.totalInputTokens + usageSummary.totalOutputTokens }}</span>
-                    <span class="usage-stat-label">Tokens</span>
-                </div>
-            </div>
-
-            <!-- 最近请求列表 -->
-            <div class="logs-head">
-                <span>最近请求 <span class="logs-count">共 {{ logsTotal }} 条</span></span>
-                <div class="logs-head-actions">
-                    <span class="logs-page">第 {{ logsPage }} 页</span>
-                    <button v-if="requestLogs.length" class="cli-mini-btn danger" @click="onClearLogs">清空</button>
-                </div>
-            </div>
-            <div v-if="requestLogs.length === 0" class="cli-empty">暂无请求记录（启动代理并接管后产生）</div>
-            <div v-else class="logs-table">
-                <div class="logs-row logs-row-head">
-                    <span>时间</span>
-                    <span>应用</span>
-                    <span>Provider</span>
-                    <span>状态</span>
-                    <span>延迟</span>
-                    <span>Tokens</span>
-                </div>
-                <div v-for="log in requestLogs" :key="log.id" class="logs-row">
-                    <span class="mono small">{{ fmtTime(log.createdAt) }}</span>
-                    <span>{{ log.appType }}</span>
-                    <span class="small">{{ log.providerName || '-' }}</span>
-                    <span class="mono" :class="statusClass(log.statusCode)">{{ log.statusCode || 'ERR' }}</span>
-                    <span class="mono small">{{ log.latencyMs }}ms</span>
-                    <span class="mono small">{{ log.inputTokens + log.outputTokens }}</span>
-                </div>
-            </div>
-        </div>
-
         <!-- provider 列表 (卡片式) -->
         <div class="cli-providers">
             <div class="cli-providers-head">
@@ -560,7 +444,6 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
-import { listen } from '@tauri-apps/api/event';
 import { useCliConfig, type CliProvider, type AppType, type ProviderScope, type FetchedModel } from '../../composables/useCliConfig';
 import {
     CLAUDE_PRESETS,
@@ -582,19 +465,7 @@ const {
     switchProvider,
     newProviderTemplate,
     proxyStatus,
-    proxyBusy,
-    refreshProxyStatus,
-    startProxy,
-    stopProxy,
-    setTakeover,
     switchProxyTarget,
-    usageSummary,
-    requestLogs,
-    logsTotal,
-    logsPage,
-    refreshUsageSummary,
-    refreshRequestLogs,
-    clearRequestLogs,
     fetchModels,
     getLiveConfig,
     openConfigFile,
@@ -875,69 +746,13 @@ const onSwitch = async (app: AppType, id: string) => {
     }
 };
 
-// ---------- 代理 ----------
-const proxyUrl = computed(() => {
-    const p = proxyStatus.value;
-    if (!p?.running || !p.port) return '未运行';
-    return `http://${p.address}:${p.port}`;
-});
-
-const onToggleProxy = async () => {
-    try {
-        if (proxyStatus.value?.running) {
-            await stopProxy();
-            showToast('代理已停止', 'success');
-        } else {
-            const info = await startProxy();
-            showToast(`代理已启动 @${info.port}`, 'success');
-        }
-    } catch (e) {
-        showToast('代理操作失败: ' + e, 'error');
-    }
-};
-
-const onToggleTakeover = async (app: AppType, enabled: boolean) => {
-    try {
-        const result = await setTakeover(app, enabled);
-        showToast(result.message, result.success ? 'success' : 'error');
-        if (!result.success) {
-            // 失败时回滚开关视觉状态由 watch 触发刷新
-            await refreshProxyStatus();
-        }
-    } catch (e) {
-        showToast('接管操作失败: ' + e, 'error');
-    }
-};
-
+// ---------- 代理 (设为上游, 由 provider 卡片调用) ----------
 const onSetTarget = async (p: CliProvider) => {
     try {
         await switchProxyTarget(p);
         showToast(`上游已设为 ${p.name}`, 'success');
     } catch (e) {
         showToast('设置上游失败: ' + e, 'error');
-    }
-};
-
-// ---------- 统计 ----------
-const fmtRate = (r: number) => (r * 100).toFixed(1) + '%';
-const fmtTime = (ts: number) => {
-    if (!ts) return '-';
-    const d = new Date(ts * 1000);
-    return d.toLocaleTimeString();
-};
-const statusClass = (code: number) => {
-    if (code === 0) return 'err';
-    if (code < 400) return 'ok';
-    return 'err';
-};
-
-const onClearLogs = async () => {
-    if (!confirm('确定清空全部请求日志？此操作不可撤销。')) return;
-    try {
-        await clearRequestLogs();
-        showToast('日志已清空', 'success');
-    } catch (e) {
-        showToast('清空失败: ' + e, 'error');
     }
 };
 
@@ -952,31 +767,12 @@ const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     toastTimer = window.setTimeout(() => { toast.visible = false; }, 2500);
 };
 
-// ---------- 实时刷新 (后端 emit cli-usage-recorded 触发, 300ms 防抖) ----------
-let usageRefreshTimer: number | undefined;
-let unlistenUsage: (() => void) | undefined;
-const scheduleUsageRefresh = () => {
-    if (usageRefreshTimer) window.clearTimeout(usageRefreshTimer);
-    usageRefreshTimer = window.setTimeout(() => {
-        refreshUsageSummary();
-        refreshRequestLogs(logsPage.value);
-    }, 300);
-};
-
-onMounted(async () => {
+onMounted(() => {
     refreshAll();
-    refreshProxyStatus();
-    refreshUsageSummary();
-    refreshRequestLogs(1);
-
-    unlistenUsage = await listen('cli-usage-recorded', () => {
-        scheduleUsageRefresh();
-    });
 });
 
 onUnmounted(() => {
-    if (usageRefreshTimer) window.clearTimeout(usageRefreshTimer);
-    if (unlistenUsage) unlistenUsage();
+    if (toastTimer) window.clearTimeout(toastTimer);
 });
 </script>
 
