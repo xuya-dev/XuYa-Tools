@@ -2,11 +2,7 @@
   <div class="app-shell">
     <AppTitleBar />
     <main class="app-main">
-      <router-view v-slot="{ Component }">
-        <transition name="fade" mode="out-in">
-          <component :is="Component" />
-        </transition>
-      </router-view>
+      <ToolMasterDetail />
     </main>
     <ToastHost />
   </div>
@@ -14,6 +10,7 @@
 
 <script setup lang="ts">
 import AppTitleBar from './AppTitleBar.vue';
+import ToolMasterDetail from './ToolMasterDetail.vue';
 import ToastHost from '@/components/ui/ToastHost.vue';
 </script>
 
@@ -29,6 +26,6 @@ import ToastHost from '@/components/ui/ToastHost.vue';
 .app-main {
   flex: 1;
   min-height: 0;
-  overflow: auto;
+  overflow: hidden;
 }
 </style>

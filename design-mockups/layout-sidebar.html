@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>② 侧边栏导航</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+  .app { height:100%; display:flex; flex-direction:column; }
+  .body { flex:1; display:flex; min-height:0; }
+  .sidebar { width:230px; flex-shrink:0; background:var(--bg-elev); border-right:1px solid var(--border); display:flex; flex-direction:column; padding:14px 10px; overflow:auto; }
+  .sb-search { display:flex; align-items:center; gap:8px; padding:0 10px; height:36px; background:var(--input); border:1px solid var(--border); border-radius:8px; margin-bottom:16px; color:var(--text-3); }
+  .sb-search input { flex:1; border:none; background:none; color:var(--text); font-size:13px; outline:none; }
+  .sb-section { margin-bottom:14px; }
+  .nav-item { display:flex; align-items:center; gap:10px; padding:7px 10px; border-radius:7px; color:var(--text-2); font-size:13px; cursor:pointer; transition:.1s; width:100%; text-align:left; }
+  .nav-item:hover { background:var(--input); color:var(--text); }
+  .nav-item.active { background:var(--accent-soft); color:var(--accent); font-weight:600; }
+  .nav-item .badge { margin-left:auto; font-size:10px; color:var(--text-3); }
+  .main { flex:1; overflow:auto; padding:24px 28px; }
+  .main-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; }
+  .main-head h1 { font-size:18px; font-weight:700; display:flex; align-items:center; gap:10px; }
+  .sg-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:12px; }
+</style>
+</head>
+<body>
+<div class="app" id="root"></div>
+<script src="shared.js"></script>
+<script src="toolbody.js"></script>
+<script>
+let activeCat = 'all';
+function render(){
+  const list = activeCat==='all' ? TOOLS : TOOLS.filter(t=>t.cat===activeCat);
+  document.getElementById('main').innerHTML = `
+    <div class="main-head">
+      <h1>${activeCat==='all'?'全部工具':CATEGORIES[activeCat]} <span style="font-size:12px;color:var(--text-3);font-weight:400">${list.length} 个</span></h1>
+      <button class="btn primary">${svg('plus',14)} 新增工具</button>
+    </div>
+    <div class="sg-grid">${list.map(t=>`
+      <button class="tool-card" onclick="openTool('${t.id}')">
+        <div class="tool-icon">${toolIcon(t)}</div>
+        <div style="flex:1;min-width:0"><h3>${t.name}</h3><p>${t.desc}</p></div>
+      </button>`).join('')}
+    </div>`;
+}
+const counts = id => TOOLS.filter(t=>t.cat===id).length;
+document.getElementById('root').innerHTML = titlebarHTML() + `
+  <div class="body">
+    <aside class="sidebar">
+      <div class="sb-search">${svg('search',15)}<input placeholder="搜索工具..."/></div>
+      <div class="sb-section">
+        <div class="section-label" style="padding:0 10px">浏览</div>
+        <button class="nav-item ${activeCat==='all'?'active':''}" onclick="setCat('all')">${svg('grid',16)} 全部工具 <span class="badge">${TOOLS.length}</span></button>
+        <button class="nav-item" onclick="setCat('starred')">${svg('star',16)} 收藏 <span class="badge">2</span></button>
+        <button class="nav-item" onclick="setCat('recent')">${svg('history',16)} 最近使用</button>
+      </div>
+      <div class="sb-section">
+        <div class="section-label" style="padding:0 10px">分类</div>
+        ${Object.entries(CATEGORIES).map(([k,v])=>`<button class="nav-item ${activeCat===k?'active':''}" onclick="setCat('${k}')">${svg(TOOLS.find(t=>t.cat===k)?.icon||'grid',16)} ${v} <span class="badge">${counts(k)}</span></button>`).join('')}
+      </div>
+      <div style="flex:1"></div>
+      <button class="nav-item">${svg('settings',16)} 设置</button>
+    </aside>
+    <main class="main" id="main"></main>
+  </div>`;
+function setCat(c){ activeCat=c; document.querySelectorAll('.nav-item').forEach(()=>{}); render(); rebuildNav(); }
+function rebuildNav(){
+  document.querySelectorAll('.sidebar .nav-item').forEach(n=>{});
+}
+render();
+function openTool(id){
+  const t=TOOLS.find(x=>x.id===id);
+  const layer=document.createElement('div');
+  layer.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:99';
+  layer.innerHTML=`<div style="width:84%;max-width:920px;height:74%;background:var(--bg);border:1px solid var(--border);border-radius:14px;overflow:hidden;display:flex;flex-direction:column">
+    <div style="padding:12px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px">
+      <button class="btn ghost" onclick="this.closest('.layer').remove()">${svg('back',14)} 返回</button>
+      <strong>${t.name}</strong>
+    </div>
+    <div style="flex:1;overflow:auto;padding:22px">${toolBodyHTML(t)}</div></div>`;
+  layer.className='layer'; layer.onclick=e=>{if(e.target===layer)layer.remove()}; document.body.appendChild(layer);
+}
+</script>
+</body>
+</html>

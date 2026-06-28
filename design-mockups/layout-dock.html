@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>⑥ 紧凑工具栏 Dock</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+  .app { height:100%; display:flex; flex-direction:column; }
+  .body { flex:1; display:flex; min-height:0; }
+  /* 左侧窄图标栏 */
+  .rail { width:64px; flex-shrink:0; background:var(--bg-elev); border-right:1px solid var(--border); display:flex; flex-direction:column; align-items:center; padding:14px 0; gap:6px; }
+  .rail-btn { width:42px; height:42px; border-radius:11px; display:flex; align-items:center; justify-content:center; color:var(--text-2); position:relative; transition:.12s; }
+  .rail-btn:hover { background:var(--input); color:var(--text); transform:scale(1.05); }
+  .rail-btn.active { background:var(--accent-soft); color:var(--accent); }
+  .rail-btn.active::before { content:''; position:absolute; left:-8px; top:50%; transform:translateY(-50%); width:3px; height:20px; background:var(--accent); border-radius:0 2px 2px 0; }
+  .rail-tip { position:absolute; left:54px; background:var(--card); border:1px solid var(--border); padding:5px 10px; border-radius:7px; font-size:12px; white-space:nowrap; opacity:0; pointer-events:none; transition:.12s; z-index:10; }
+  .rail-btn:hover .rail-tip { opacity:1; }
+  .rail-sep { width:28px; height:1px; background:var(--border); margin:4px 0; }
+  .workspace { flex:1; display:flex; flex-direction:column; min-width:0; }
+  .ws-home { flex:1; overflow:auto; padding:30px 32px; }
+  .ws-home.hide { display:none; }
+  .recent-row { display:flex; gap:12px; overflow-x:auto; padding-bottom:4px; }
+  .recent-card { flex-shrink:0; width:150px; padding:14px; background:var(--card); border:1px solid var(--border); border-radius:var(--radius); cursor:pointer; transition:.12s; text-align:left; }
+  .recent-card:hover { border-color:var(--accent); transform:translateY(-2px); }
+  .recent-card h4 { font-size:13px; margin:8px 0 2px; }
+  .recent-card p { font-size:11px; color:var(--text-3); }
+  .ws-tool { flex:1; overflow:auto; padding:24px 28px; }
+  .ws-tool.hide { display:none; }
+  .ws-head { display:flex; align-items:center; gap:10px; margin-bottom:16px; }
+</style>
+</head>
+<body>
+<div class="app" id="root"></div>
+<script src="shared.js"></script>
+<script src="toolbody.js"></script>
+<script>
+let active=null; // null=主页
+const root=document.getElementById('root');
+root.innerHTML = titlebarHTML()+`
+  <div class="body">
+    <nav class="rail" id="rail"></nav>
+    <div class="workspace">
+      <div class="ws-home" id="home"></div>
+      <div class="ws-tool hide" id="tool"></div>
+    </div>
+  </div>`;
+
+document.getElementById('rail').innerHTML = `
+  <button class="rail-btn ${active===null?'active':''}" onclick="goHome()">
+    ${svg('grid',20)}<span class="rail-tip">主页</span>
+  </button>
+  <div class="rail-sep"></div>
+  ${TOOLS.map(t=>`<button class="rail-btn ${active===t.id?'active':''}" onclick="openTool('${t.id}')">
+    ${toolIcon(t,20)}<span class="rail-tip">${t.name}</span>
+  </button>`).join('')}
+  <div style="flex:1"></div>
+  <div class="rail-sep"></div>
+  <button class="rail-btn">${svg('settings',20)}<span class="rail-tip">设置</span></button>`;
+
+document.getElementById('home').innerHTML = `
+  <div class="ws-head"><h1 style="font-size:18px;font-weight:700">XuYa Tools</h1><span style="font-size:12px;color:var(--text-3)">点击左侧图标进入工具</span></div>
+  <div class="section-label">最近使用</div>
+  <div class="recent-row">
+    ${TOOLS.slice(0,4).map(t=>`<button class="recent-card" onclick="openTool('${t.id}')">
+      <div class="tool-icon" style="width:32px;height:32px;border-radius:8px">${toolIcon(t,16)}</div>
+      <h4>${t.name}</h4><p>${t.desc.slice(0,16)}…</p>
+    </button>`).join('')}
+  </div>
+  <div class="section-label" style="margin-top:24px">全部工具</div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px">
+    ${TOOLS.map(t=>`<button class="tool-card" onclick="openTool('${t.id}')">
+      <div class="tool-icon">${toolIcon(t)}</div>
+      <div style="flex:1;min-width:0"><h3>${t.name}</h3><p>${t.desc}</p></div>
+    </button>`).join('')}
+  </div>`;
+
+function refreshRail(){
+  document.querySelectorAll('.rail-btn').forEach(()=>{});
+  // 重建 active 状态
+  const btns=document.getElementById('rail').querySelectorAll('.rail-btn');
+  btns[0].classList.toggle('active', active===null);
+}
+function goHome(){ active=null; show(); }
+function openTool(id){ active=id; show(); }
+function show(){
+  refreshRail();
+  const btns=document.getElementById('rail').querySelectorAll('.rail-btn');
+  btns.forEach((b,i)=>{ if(i>0 && i<=TOOLS.length){ const id=TOOLS[i-1].id; b.classList.toggle('active',active===id);} });
+  document.getElementById('home').className = 'ws-home '+(active? 'hide':'');
+  document.getElementById('tool').className = 'ws-tool '+(active?'':'hide');
+  if(active){
+    const t=TOOLS.find(x=>x.id===active);
+    document.getElementById('tool').innerHTML = `
+      <div class="ws-head">
+        <div class="tool-icon" style="width:34px;height:34px;border-radius:9px">${toolIcon(t,18)}</div>
+        <h1 style="font-size:17px;font-weight:700">${t.name}</h1>
+        <span style="font-size:12px;color:var(--text-3)">${t.desc}</span>
+        <span style="flex:1"></span>
+        <button class="btn ghost" onclick="goHome()">${svg('back',14)} 主页</button>
+      </div>
+      ${toolBodyHTML(t)}`;
+  }
+}
+</script>
+</body>
+</html>

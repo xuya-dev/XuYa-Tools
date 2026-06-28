@@ -5,8 +5,7 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      name: 'home',
-      component: () => import('@/views/HomeView.vue'),
+      redirect: '/tools/json',
     },
     {
       path: '/tools/json',

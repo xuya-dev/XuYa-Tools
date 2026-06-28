@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>① 卡片网格仪表盘</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+  .app { height:100%; display:flex; flex-direction:column; }
+  .home { flex:1; overflow:auto; max-width:1200px; width:100%; margin:0 auto; padding:36px 32px 28px; }
+  .hero { text-align:center; margin-bottom:26px; }
+  .hero-badge { display:inline-flex; align-items:center; gap:6px; padding:4px 12px; font-size:12px; color:var(--accent); background:var(--accent-soft); border-radius:99px; margin-bottom:14px; }
+  .hero-title { font-size:30px; font-weight:800; letter-spacing:-.5px; background:var(--accent-grad); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; margin-bottom:8px; }
+  .hero-sub { font-size:13px; color:var(--text-2); }
+  .search { display:flex; align-items:center; gap:10px; padding:0 16px; height:44px; background:var(--input); border:1px solid var(--border); border-radius:var(--radius); margin-bottom:16px; transition:.12s; }
+  .search:focus-within { border-color:var(--accent); box-shadow:0 0 0 3px rgba(96,165,250,.18); }
+  .search input { flex:1; border:none; background:none; color:var(--text); font-size:14px; outline:none; }
+  .search input::placeholder { color:var(--text-3); }
+  .search .kbd { font-size:10px; padding:2px 6px; border:1px solid var(--border); border-radius:4px; color:var(--text-3); }
+  .filters { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:22px; }
+  .chip { padding:5px 13px; font-size:12.5px; color:var(--text-2); background:var(--input); border:1px solid var(--border); border-radius:99px; transition:.12s; }
+  .chip.active { color:#fff; background:var(--accent); border-color:var(--accent); }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:14px; }
+</style>
+</head>
+<body>
+<div class="app" id="root"></div>
+<script src="shared.js"></script>
+<script src="toolbody.js"></script>
+<script>
+document.getElementById('root').innerHTML = titlebarHTML() + `
+  <div class="home">
+    <div class="hero">
+      <div class="hero-badge">${svg('star',13)} 程序员日常开发工具箱</div>
+      <h1 class="hero-title">XuYa Tools</h1>
+      <p class="hero-sub">精选高频开发工具,开箱即用,数据本地处理,不上传服务器。</p>
+    </div>
+    <div class="search">
+      ${svg('search',16)}
+      <input placeholder="搜索工具..."/>
+      <span class="kbd">Ctrl K</span>
+    </div>
+    <div class="filters">
+      <button class="chip active">全部 (6)</button>
+      ${Object.entries(CATEGORIES).map(([k,v])=>`<button class="chip">${v} (${TOOLS.filter(t=>t.cat===k).length})</button>`).join('')}
+    </div>
+    <div class="grid" id="grid"></div>
+  </div>`;
+document.getElementById('grid').innerHTML = TOOLS.map(t=>`
+  <button class="tool-card" onclick="openTool('${t.id}')">
+    <div class="tool-icon">${toolIcon(t)}</div>
+    <div style="flex:1;min-width:0">
+      <h3>${t.name}</h3>
+      <p>${t.desc}</p>
+      <span class="tool-cat">${CATEGORIES[t.cat]}</span>
+    </div>
+    ${svg('chevronRight',16)}
+  </button>`).join('');
+
+function openTool(id){
+  const t = TOOLS.find(x=>x.id===id);
+  // 简化:展示一个浮层表示进入了工具
+  const layer = document.createElement('div');
+  layer.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:99';
+  layer.innerHTML = `<div style="width:80%;max-width:880px;height:70%;background:var(--bg);border:1px solid var(--border);border-radius:14px;overflow:hidden;display:flex;flex-direction:column">
+    <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px">
+      <button class="btn ghost" onclick="this.closest('.layer').remove()">${svg('back',14)} 返回</button>
+      <div class="tool-icon" style="width:30px;height:30px;border-radius:8px">${toolIcon(t,16)}</div>
+      <strong>${t.name}</strong>
+    </div>
+    <div style="flex:1;overflow:auto;padding:20px">${toolBodyHTML(t)}</div>
+  </div>`;
+  layer.className='layer';
+  layer.onclick=e=>{if(e.target===layer)layer.remove()};
+  document.body.appendChild(layer);
+}
+</script>
+</body>
+</html>
