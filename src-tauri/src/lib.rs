@@ -44,6 +44,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             // ---- CLI 配置 ----
             get_cli_status,
+            get_cli_live_config,
+            open_cli_config_file,
             list_cli_providers,
             save_cli_provider,
             delete_cli_provider,
@@ -124,6 +126,42 @@ pub fn run() {
 #[tauri::command]
 fn get_cli_status(svc: State<'_, CliConfigService>) -> Result<cli_config::types::CliStatus, String> {
     Ok(svc.detect_status())
+}
+
+/// 读取某 app 的 live 配置文件内容 (用于前端预览)。返回 { path, content }。
+#[derive(serde::Serialize)]
+struct LiveConfigContent {
+    path: String,
+    content: String,
+}
+
+#[tauri::command]
+fn get_cli_live_config(
+    svc: State<'_, CliConfigService>,
+    app_type: String,
+) -> Result<LiveConfigContent, String> {
+    let app = AppType::from_str(&app_type)
+        .ok_or_else(|| format!("未知 app 类型: {app_type}"))?;
+    let (path, content) = svc.read_live_config(app);
+    Ok(LiveConfigContent { path, content })
+}
+
+/// 在系统默认编辑器中打开配置文件 (通过 opener 插件)
+#[tauri::command]
+async fn open_cli_config_file(app_type: String) -> Result<(), String> {
+    let app = AppType::from_str(&app_type)
+        .ok_or_else(|| format!("未知 app 类型: {app_type}"))?;
+    let path = match app {
+        AppType::Claude => cli_config::claude::claude_settings_path(),
+        AppType::Codex => cli_config::codex::codex_config_path(),
+    };
+    if !path.exists() {
+        return Err(format!("配置文件不存在: {}", path.display()));
+    }
+    let path_str = path.to_string_lossy().to_string();
+    tauri_plugin_opener::open_path(&path_str, None::<&str>)
+        .map_err(|e| format!("打开失败: {e}"))?;
+    Ok(())
 }
 
 #[tauri::command]

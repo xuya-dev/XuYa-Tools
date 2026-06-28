@@ -1,7 +1,12 @@
 <template>
     <div class="cli-panel">
         <div class="cli-section-title">
-            <h3>CLI 配置管理</h3>
+            <div class="cli-title-left">
+                <button class="cli-back-btn" title="返回工具箱" @click="goHome">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                </button>
+                <h3>CLI 配置管理</h3>
+            </div>
             <button class="cli-refresh-btn" :disabled="loading" @click="refreshAll">
                 {{ loading ? '刷新中...' : '刷新' }}
             </button>
@@ -68,6 +73,38 @@
                     <span class="cli-status-label">配置路径</span>
                     <span class="cli-status-val mono small">{{ status?.codex.config_path || '未检测到' }}</span>
                 </div>
+            </div>
+        </div>
+
+        <!-- 配置文件预览 -->
+        <div class="config-viewer">
+            <div class="config-viewer-head">
+                <div class="config-viewer-tabs">
+                    <button
+                        class="config-tab"
+                        :class="{ active: configViewer.app === 'claude' }"
+                        @click="loadConfigViewer('claude')"
+                    >Claude 配置</button>
+                    <button
+                        class="config-tab"
+                        :class="{ active: configViewer.app === 'codex' }"
+                        @click="loadConfigViewer('codex')"
+                    >Codex 配置</button>
+                </div>
+                <div class="config-viewer-actions" v-if="configViewer.content">
+                    <button class="cli-mini-btn ghost" :disabled="configViewer.loading" @click="loadConfigViewer(configViewer.app, true)">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
+                        刷新
+                    </button>
+                    <button class="cli-mini-btn ghost" @click="onOpenConfig(configViewer.app)">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                        在编辑器中打开
+                    </button>
+                </div>
+            </div>
+            <div class="config-viewer-body" v-if="configViewer.open">
+                <div class="config-viewer-path mono" v-if="configViewer.path">{{ configViewer.path }}</div>
+                <pre class="config-viewer-code"><code v-if="configViewer.loading">加载中…</code><code v-else>{{ configViewer.content || '（无内容 / 文件不存在）' }}</code></pre>
             </div>
         </div>
 
@@ -535,6 +572,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
+import { useRouter } from 'vue-router';
 import { listen } from '@tauri-apps/api/event';
 import { useCliConfig, type CliProvider, type AppType, type ProviderScope, type FetchedModel } from '../../composables/useCliConfig';
 import {
@@ -572,7 +610,55 @@ const {
     refreshRequestLogs,
     clearRequestLogs,
     fetchModels,
+    getLiveConfig,
+    openConfigFile,
 } = useCliConfig();
+
+const router = useRouter();
+function goHome() {
+    router.push('/');
+}
+
+// ---------- 配置文件预览 ----------
+const configViewer = reactive<{ app: 'claude' | 'codex'; open: boolean; loading: boolean; path: string; content: string }>({
+    app: 'claude',
+    open: false,
+    loading: false,
+    path: '',
+    content: '',
+});
+
+async function loadConfigViewer(app: 'claude' | 'codex', force = false) {
+    // 切换 tab 时若已是打开状态则刷新; 否则首次点击展开
+    if (configViewer.app === app && configViewer.open && !force) {
+        // 同一 tab 再次点击 -> 折叠
+        configViewer.open = false;
+        return;
+    }
+    configViewer.app = app;
+    configViewer.open = true;
+    configViewer.loading = true;
+    configViewer.content = '';
+    configViewer.path = '';
+    try {
+        const res = await getLiveConfig(app);
+        configViewer.path = res.path;
+        configViewer.content = res.content;
+    } catch (e) {
+        configViewer.content = `读取失败: ${e}`;
+    } finally {
+        configViewer.loading = false;
+    }
+}
+
+async function onOpenConfig(app: 'claude' | 'codex') {
+    try {
+        await openConfigFile(app);
+        showToast('已在系统编辑器中打开', 'success');
+    } catch (e) {
+        showToast(`打开失败: ${e}`, 'error');
+    }
+}
 
 // ---------- 徽标文案 ----------
 const claudeBadgeClass = computed(() => {
@@ -928,6 +1014,31 @@ onUnmounted(() => {
     border-bottom: 1px solid var(--xuya-border, rgba(127, 127, 127, 0.12));
 }
 
+.cli-title-left {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.cli-back-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    margin-right: 4px;
+    border: none;
+    background: transparent;
+    color: var(--xuya-text-secondary, #888);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.12s, color 0.12s;
+}
+.cli-back-btn:hover {
+    background: var(--xuya-input-bg, rgba(127, 127, 127, 0.1));
+    color: var(--xuya-text, inherit);
+}
+
 .cli-section-title h3 {
     margin: 0;
     font-size: 16px;
@@ -1093,6 +1204,73 @@ onUnmounted(() => {
     color: #f59e0b;
     font-weight: 700;
     font-size: 9px;
+}
+
+/* 配置文件预览 */
+.config-viewer {
+    border-radius: 10px;
+    background: var(--xuya-card-bg, rgba(127, 127, 127, 0.08));
+    border: 1px solid var(--xuya-border, rgba(127, 127, 127, 0.15));
+    overflow: hidden;
+}
+.config-viewer-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 8px 0;
+    gap: 8px;
+}
+.config-viewer-tabs {
+    display: inline-flex;
+    background: var(--xuya-input-bg, rgba(127, 127, 127, 0.08));
+    border-radius: 8px;
+    padding: 2px;
+    gap: 2px;
+}
+.config-tab {
+    padding: 5px 14px;
+    font-size: 12px;
+    border: none;
+    background: transparent;
+    color: var(--xuya-text-secondary, #888);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.12s;
+}
+.config-tab.active {
+    background: var(--xuya-bg-elevated, #fff);
+    color: var(--xuya-accent, #3b82f6);
+    font-weight: 600;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+.config-viewer-actions {
+    display: flex;
+    gap: 6px;
+    padding-bottom: 8px;
+}
+.config-viewer-body {
+    padding: 0 12px 12px;
+}
+.config-viewer-path {
+    font-size: 10.5px;
+    color: var(--xuya-text-tertiary, #888);
+    padding: 6px 2px 8px;
+    word-break: break-all;
+}
+.config-viewer-code {
+    margin: 0;
+    padding: 12px;
+    max-height: 280px;
+    overflow: auto;
+    background: var(--xuya-input-bg, rgba(127, 127, 127, 0.06));
+    border: 1px solid var(--xuya-border, rgba(127, 127, 127, 0.12));
+    border-radius: 8px;
+    font-family: var(--xuya-font-mono, 'Consolas', 'Monaco', monospace);
+    font-size: 11.5px;
+    line-height: 1.55;
+    color: var(--xuya-text, inherit);
+    white-space: pre-wrap;
+    word-break: break-all;
 }
 
 /* 代理面板 */

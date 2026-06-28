@@ -85,6 +85,12 @@ export interface CliWidgetSnapshot {
     today_errors: number;
 }
 
+/** live 配置文件内容 (用于预览) */
+export interface LiveConfigContent {
+    path: string;
+    content: string;
+}
+
 // ==================== 代理相关类型 ====================
 export interface ProxyStatus {
     running: boolean;
@@ -224,6 +230,16 @@ async function fetchModels(
     });
 }
 
+/** 读取某 app 的 live 配置文件内容 (用于预览) */
+async function getLiveConfig(appType: AppType): Promise<LiveConfigContent> {
+    return await invoke<LiveConfigContent>('get_cli_live_config', { appType });
+}
+
+/** 在系统默认编辑器中打开配置文件 */
+async function openConfigFile(appType: AppType): Promise<void> {
+    await invoke('open_cli_config_file', { appType });
+}
+
 // ==================== 代理状态 ====================
 const proxyStatus = ref<ProxyStatus | null>(null);
 const proxyBusy = ref(false);
@@ -325,6 +341,8 @@ export function useCliConfig() {
         switchProvider,
         newProviderTemplate,
         fetchModels,
+        getLiveConfig,
+        openConfigFile,
         // 代理相关
         proxyStatus,
         proxyBusy,

@@ -71,6 +71,41 @@ impl CliConfigService {
         }
     }
 
+    /// 读取指定 app 的 live 配置文件内容 (用于前端预览)。
+    /// 返回 (path, content); 文件不存在时 content 为空字符串。
+    pub fn read_live_config(&self, app: AppType) -> (String, String) {
+        let (path, content) = match app {
+            AppType::Claude => {
+                let p = claude::claude_settings_path();
+                let c = std::fs::read_to_string(&p).unwrap_or_default();
+                (p.to_string_lossy().to_string(), c)
+            }
+            AppType::Codex => {
+                // Codex 由两个文件组成, 这里拼装成可读形式
+                let auth = codex::codex_auth_path();
+                let cfg = codex::codex_config_path();
+                let mut out = String::new();
+                if auth.exists() {
+                    out.push_str(&format!(
+                        "// ===== {} =====\n",
+                        auth.file_name().unwrap_or_default().to_string_lossy()
+                    ));
+                    out.push_str(&std::fs::read_to_string(&auth).unwrap_or_default());
+                    out.push_str("\n\n");
+                }
+                if cfg.exists() {
+                    out.push_str(&format!(
+                        "// ===== {} =====\n",
+                        cfg.file_name().unwrap_or_default().to_string_lossy()
+                    ));
+                    out.push_str(&std::fs::read_to_string(&cfg).unwrap_or_default());
+                }
+                (cfg.to_string_lossy().to_string(), out)
+            }
+        };
+        (path, content)
+    }
+
     /// 切换某 app 到指定 provider。
     /// 流程: backfill 旧 provider -> 备份 live config -> 写入新配置 -> 记录 current。
     pub fn switch(&self, app: AppType, provider_id: &str) -> SwitchResult {
