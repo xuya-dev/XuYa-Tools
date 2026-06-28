@@ -19,7 +19,6 @@ import {
   ListTree,
   Globe,
   Network,
-  BarChart3,
 } from '@lucide/vue';
 
 export type ToolCategory =
@@ -187,20 +186,11 @@ export const tools: ToolMeta[] = [
   },
   {
     id: 'proxy',
-    name: '本地反代',
-    description: '启动本地代理,接管 Claude Code / Codex CLI,将请求导向配置的上游供应商。',
+    name: '反代 / 统计',
+    description: '启动本地代理接管 CLI,实时查看请求数据、Token 用量与费用日志。',
     category: 'devops',
     icon: Network,
     route: '/tools/proxy',
-    keywords: ['proxy', '反代', '代理', 'takeover', '接管', '上游', 'upstream'],
-  },
-  {
-    id: 'usage',
-    name: '请求统计',
-    description: '查看反代记录的请求数据:成功率、延迟、Token 用量、费用与明细日志。',
-    category: 'devops',
-    icon: BarChart3,
-    route: '/tools/usage',
-    keywords: ['usage', 'stats', '统计', '日志', 'log', 'token', '费用', '延迟'],
+    keywords: ['proxy', '反代', '代理', 'takeover', '接管', '上游', 'usage', 'stats', '统计', '日志', 'token', '费用'],
   },
 ];
