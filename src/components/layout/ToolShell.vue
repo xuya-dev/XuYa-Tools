@@ -8,6 +8,9 @@
       <div class="tool-title">
         <component :is="icon" :size="18" class="tool-icon" />
         <h1>{{ title }}</h1>
+        <div v-if="$slots.actions" class="tool-actions">
+          <slot name="actions" />
+        </div>
       </div>
       <p v-if="description" class="tool-desc">{{ description }}</p>
     </header>
@@ -82,6 +85,12 @@ function goBack() {
 .tool-icon {
   color: var(--xuya-accent);
   flex-shrink: 0;
+}
+.tool-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .tool-desc {

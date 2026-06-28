@@ -1,17 +1,5 @@
 <template>
     <div class="cli-panel">
-        <div class="cli-section-title">
-            <div class="cli-title-left">
-                <button class="cli-back-btn" title="返回工具箱" @click="goHome">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-                </button>
-                <h3>CLI 配置管理</h3>
-            </div>
-            <button class="cli-refresh-btn" :disabled="loading" @click="refreshAll">
-                {{ loading ? '刷新中...' : '刷新' }}
-            </button>
-        </div>
-
         <!-- 当前 live 状态卡 -->
         <div class="cli-status-grid">
             <div class="cli-status-card" :class="{ active: status?.claude.matched_provider_id }">
@@ -572,7 +560,6 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
-import { useRouter } from 'vue-router';
 import { listen } from '@tauri-apps/api/event';
 import { useCliConfig, type CliProvider, type AppType, type ProviderScope, type FetchedModel } from '../../composables/useCliConfig';
 import {
@@ -589,7 +576,6 @@ import {
 const {
     providers,
     status,
-    loading,
     refreshAll,
     saveProvider,
     deleteProvider,
@@ -613,11 +599,6 @@ const {
     getLiveConfig,
     openConfigFile,
 } = useCliConfig();
-
-const router = useRouter();
-function goHome() {
-    router.push('/');
-}
 
 // ---------- 配置文件预览 ----------
 const configViewer = reactive<{ app: 'claude' | 'codex'; open: boolean; loading: boolean; path: string; content: string }>({
@@ -1004,57 +985,6 @@ onUnmounted(() => {
     display: flex;
     flex-direction: column;
     gap: 16px;
-}
-
-.cli-section-title {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding-bottom: 8px;
-    border-bottom: 1px solid var(--xuya-border, rgba(127, 127, 127, 0.12));
-}
-
-.cli-title-left {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-}
-
-.cli-back-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 28px;
-    height: 28px;
-    margin-right: 4px;
-    border: none;
-    background: transparent;
-    color: var(--xuya-text-secondary, #888);
-    border-radius: 6px;
-    cursor: pointer;
-    transition: background 0.12s, color 0.12s;
-}
-.cli-back-btn:hover {
-    background: var(--xuya-input-bg, rgba(127, 127, 127, 0.1));
-    color: var(--xuya-text, inherit);
-}
-
-.cli-section-title h3 {
-    margin: 0;
-    font-size: 16px;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.cli-section-title h3::before {
-    content: "";
-    display: inline-block;
-    width: 3px;
-    height: 16px;
-    background: linear-gradient(180deg, #3b82f6, #6366f1);
-    border-radius: 2px;
 }
 
 .cli-refresh-btn {
