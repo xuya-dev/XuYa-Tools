@@ -58,6 +58,7 @@ import { Clock } from '@lucide/vue';
 import ToolShell from '@/components/layout/ToolShell.vue';
 import BaseCard from '@/components/ui/BaseCard.vue';
 import BaseButton from '@/components/ui/BaseButton.vue';
+import { useToolState } from '@/composables/useToolState';
 import BaseInput from '@/components/ui/BaseInput.vue';
 import { copyToClipboard } from '@/composables/useClipboard';
 
@@ -80,8 +81,8 @@ onMounted(() => {
 onUnmounted(() => clearInterval(timer));
 
 // 时间戳 → 时间
-const tsInput = ref('');
-const tsUnit = ref<'s' | 'ms'>('s');
+const tsInput = useToolState('timestamp', 'tsInput', '');
+const tsUnit = useToolState<'s' | 'ms'>('timestamp', 'tsUnit', 's');
 const tsError = ref('');
 const tsResult = computed(() => {
   tsError.value = '';

@@ -28,6 +28,11 @@ const router = createRouter({
       component: () => import('@/views/tools/MarkdownPreview.vue'),
     },
     {
+      path: '/tools/sql',
+      name: 'sql',
+      component: () => import('@/views/tools/SqlFormatter.vue'),
+    },
+    {
       path: '/tools/encoding',
       name: 'encoding',
       component: () => import('@/views/tools/EncodingTool.vue'),
@@ -81,6 +86,16 @@ const router = createRouter({
       path: '/tools/httpstatus',
       name: 'httpstatus',
       component: () => import('@/views/tools/HttpStatusTool.vue'),
+    },
+    {
+      path: '/tools/ipcalc',
+      name: 'ipcalc',
+      component: () => import('@/views/tools/IpCalculator.vue'),
+    },
+    {
+      path: '/settings',
+      name: 'settings',
+      component: () => import('@/views/SettingsView.vue'),
     },
     {
       path: '/tools/cli',

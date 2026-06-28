@@ -45,9 +45,10 @@ import ToolShell from '@/components/layout/ToolShell.vue';
 import BaseButton from '@/components/ui/BaseButton.vue';
 import { useToast } from '@/composables/useToast';
 import { copyToClipboard } from '@/composables/useClipboard';
+import { useToolState } from '@/composables/useToolState';
 
 const toast = useToast();
-const input = ref('');
+const input = useToolState('json', 'input', '');
 const output = ref('');
 const errorMsg = ref('');
 

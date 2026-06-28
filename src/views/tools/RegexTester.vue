@@ -66,10 +66,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { computed } from 'vue';
 import { Regex } from '@lucide/vue';
 import ToolShell from '@/components/layout/ToolShell.vue';
 import { copyToClipboard } from '@/composables/useClipboard';
+import { useToolState } from '@/composables/useToolState';
 
 const FLAG_LIST = [
   { ch: 'g', desc: '全局匹配' },
@@ -90,9 +91,9 @@ const CHEATS = [
   { name: '十六进制', pattern: '#?[0-9a-fA-F]{3,8}' },
 ];
 
-const pattern = ref('\\d+');
-const flags = ref('g');
-const testText = ref('订单号 20240115 共 3 件,金额 99.5 元。电话 13800138000。');
+const pattern = useToolState('regex', 'pattern', '\\d+');
+const flags = useToolState('regex', 'flags', 'g');
+const testText = useToolState('regex', 'testText', '订单号 20240115 共 3 件,金额 99.5 元。电话 13800138000。');
 
 const flagSet = computed(() => new Set(flags.value.split('')));
 

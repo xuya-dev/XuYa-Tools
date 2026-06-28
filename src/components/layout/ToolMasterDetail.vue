@@ -11,10 +11,44 @@
             placeholder="搜索工具..."
             spellcheck="false"
           />
+          <button v-if="keyword" class="md-search-clear" @click="keyword = ''">
+            <X :size="13" />
+          </button>
         </div>
       </div>
 
       <nav class="md-list">
+        <!-- 收藏区 (仅在非搜索时显示) -->
+        <template v-if="!keyword && favoriteTools.length">
+          <div class="md-group-label">
+            <Star :size="11" /> 收藏
+          </div>
+          <button
+            v-for="t in favoriteTools"
+            :key="t.id"
+            class="md-item"
+            :class="{ active: isActive(t) }"
+            @click="selectTool(t)"
+          >
+            <span class="md-item-icon">
+              <component :is="t.icon" :size="16" />
+            </span>
+            <span class="md-item-info">
+              <span class="md-item-name">{{ t.name }}</span>
+              <span class="md-item-desc">{{ t.description }}</span>
+            </span>
+            <span
+              class="md-star"
+              :class="{ on: true }"
+              @click.stop="toggleFavorite(t.id)"
+              title="取消收藏"
+            >
+              <Star :size="14" fill="currentColor" />
+            </span>
+          </button>
+        </template>
+
+        <!-- 分类分组 -->
         <template v-for="(group, cat) in groupedTools" :key="cat">
           <div class="md-group-label">{{ CATEGORY_LABELS[cat] }}</div>
           <button
@@ -31,6 +65,14 @@
               <span class="md-item-name">{{ t.name }}</span>
               <span class="md-item-desc">{{ t.description }}</span>
             </span>
+            <span
+              class="md-star"
+              :class="{ on: isFavorite(t.id) }"
+              @click.stop="toggleFavorite(t.id)"
+              :title="isFavorite(t.id) ? '取消收藏' : '添加收藏'"
+            >
+              <Star :size="14" :fill="isFavorite(t.id) ? 'currentColor' : 'none'" />
+            </span>
           </button>
         </template>
         <div v-if="!filteredTools.length" class="md-empty">
@@ -41,6 +83,9 @@
 
       <div class="md-master-foot">
         <span class="md-foot-text">v0.1.0 · {{ tools.length }} 个工具</span>
+        <button class="md-settings-btn" @click="goSettings" title="设置">
+          <Settings :size="14" />
+        </button>
       </div>
     </aside>
 
@@ -58,11 +103,13 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
-import { Search, SearchX } from '@lucide/vue';
+import { Search, SearchX, X, Star, Settings } from '@lucide/vue';
 import { tools, CATEGORY_LABELS, type ToolMeta, type ToolCategory } from '@/config/tools';
+import { useFavorites } from '@/composables/useFavorites';
 
 const router = useRouter();
 const route = useRoute();
+const { favorites, isFavorite, toggleFavorite } = useFavorites();
 
 const keyword = ref('');
 
@@ -74,7 +121,14 @@ const filteredTools = computed(() => {
   );
 });
 
-/** 按分类分组 (保持注册表顺序) */
+/** 收藏工具 (按收藏顺序) */
+const favoriteTools = computed(() =>
+  favorites.value
+    .map((id) => tools.find((t) => t.id === id))
+    .filter((t): t is ToolMeta => !!t)
+);
+
+/** 按分类分组 (排除已收藏的,避免重复显示; 搜索时显示全部) */
 const groupedTools = computed(() => {
   const groups: Partial<Record<ToolCategory, ToolMeta[]>> = {};
   for (const t of filteredTools.value) {
@@ -90,6 +144,10 @@ function isActive(t: ToolMeta) {
 
 function selectTool(t: ToolMeta) {
   router.push(t.route);
+}
+
+function goSettings() {
+  router.push('/settings');
 }
 </script>
 
@@ -118,7 +176,7 @@ function selectTool(t: ToolMeta) {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 0 12px;
+  padding: 0 10px 0 12px;
   height: 36px;
   background: var(--xuya-input-bg);
   border: 1px solid var(--xuya-border);
@@ -147,6 +205,22 @@ function selectTool(t: ToolMeta) {
 .md-search input::placeholder {
   color: var(--xuya-text-tertiary);
 }
+.md-search-clear {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: transparent;
+  color: var(--xuya-text-tertiary);
+  border-radius: 50%;
+  transition: background var(--xuya-duration-fast) var(--xuya-ease);
+}
+.md-search-clear:hover {
+  background: var(--xuya-border);
+  color: var(--xuya-text);
+}
 
 .md-list {
   flex: 1;
@@ -160,6 +234,9 @@ function selectTool(t: ToolMeta) {
   letter-spacing: 0.7px;
   color: var(--xuya-text-tertiary);
   padding: 14px 10px 5px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
 }
 .md-group-label:first-child {
   padding-top: 4px;
@@ -247,6 +324,32 @@ function selectTool(t: ToolMeta) {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* 收藏星标 */
+.md-star {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  color: var(--xuya-text-tertiary);
+  opacity: 0;
+  transition: opacity var(--xuya-duration-fast) var(--xuya-ease),
+    color var(--xuya-duration-fast) var(--xuya-ease),
+    background var(--xuya-duration-fast) var(--xuya-ease);
+}
+.md-item:hover .md-star,
+.md-star.on {
+  opacity: 1;
+}
+.md-star:hover {
+  background: var(--xuya-warn-soft);
+  color: var(--xuya-warn);
+}
+.md-star.on {
+  color: var(--xuya-warn);
+}
 
 .md-empty {
   display: flex;
@@ -262,13 +365,33 @@ function selectTool(t: ToolMeta) {
 
 .md-master-foot {
   flex-shrink: 0;
-  padding: 10px 16px;
+  padding: 8px 12px 8px 16px;
   border-top: 1px solid var(--xuya-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 .md-foot-text {
   font-size: 11px;
   color: var(--xuya-text-tertiary);
   letter-spacing: 0.2px;
+}
+.md-settings-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: var(--xuya-text-tertiary);
+  border-radius: var(--xuya-radius-sm);
+  transition: background var(--xuya-duration-fast) var(--xuya-ease),
+    color var(--xuya-duration-fast) var(--xuya-ease);
+}
+.md-settings-btn:hover {
+  background: var(--xuya-input-bg);
+  color: var(--xuya-text);
 }
 
 /* ===== 右侧 detail ===== */

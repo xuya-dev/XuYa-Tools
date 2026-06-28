@@ -21,6 +21,7 @@ import {
   Network,
   Send,
   Webhook,
+  Database,
 } from '@lucide/vue';
 
 export type ToolCategory =
@@ -90,6 +91,15 @@ export const tools: ToolMeta[] = [
     icon: FileText,
     route: '/tools/markdown',
     keywords: ['markdown', 'md', 'preview', '预览', '文档', '渲染'],
+  },
+  {
+    id: 'sql',
+    name: 'SQL 格式化',
+    description: '美化 / 压缩 SQL,关键字大写,支持多方言,智能缩进。',
+    category: 'converter',
+    icon: Database,
+    route: '/tools/sql',
+    keywords: ['sql', 'format', 'beautify', 'mysql', 'postgres', '格式化', '美化', '查询'],
   },
   // ---- 编码 / 生成 ----
   {
@@ -193,6 +203,15 @@ export const tools: ToolMeta[] = [
     icon: Globe,
     route: '/tools/httpstatus',
     keywords: ['http', 'status', 'code', '状态码', '响应码', 'rest'],
+  },
+  {
+    id: 'ipcalc',
+    name: 'IP / 子网计算器',
+    description: 'IPv4 子网划分:CIDR、掩码、网段范围、可用主机数一键计算。',
+    category: 'network',
+    icon: Network,
+    route: '/tools/ipcalc',
+    keywords: ['ip', 'subnet', 'cidr', 'mask', '网络', '子网', '掩码', 'ipv4'],
   },
   // ---- 开发配置 ----
   {

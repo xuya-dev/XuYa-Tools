@@ -49,6 +49,7 @@ import { ref, computed, watch } from 'vue';
 import { Binary, Copy, ArrowLeftRight } from '@lucide/vue';
 import ToolShell from '@/components/layout/ToolShell.vue';
 import { copyToClipboard } from '@/composables/useClipboard';
+import { useToolState } from '@/composables/useToolState';
 
 type Mode = 'base64' | 'url' | 'html' | 'hex' | 'binary';
 const modes: { id: Mode; label: string }[] = [
@@ -59,11 +60,11 @@ const modes: { id: Mode; label: string }[] = [
   { id: 'binary', label: 'Binary' },
 ];
 
-const mode = ref<Mode>('base64');
-const input = ref('');
+const mode = useToolState<Mode>('encoding', 'mode', 'base64');
+const input = useToolState('encoding', 'input', '');
 const output = ref('');
 const errorMsg = ref('');
-const reversed = ref(false);
+const reversed = useToolState('encoding', 'reversed', false);
 
 const modeLabel = computed(() => modes.find((m) => m.id === mode.value)?.label ?? '');
 const currentDirectionLabel = computed(() => (reversed.value ? '解码' : '编码'));
