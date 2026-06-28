@@ -208,10 +208,17 @@ impl ProxyService {
     }
 
     async fn restore_all_takeovers(&self) {
-        if self.state.status.read().await.claude_taken_over {
+        // 注意:必须先 clone 出标志并释放读锁, 再调用 disable_takeover。
+        // 否则 disable_takeover 内部会请求 status 的写锁, 与此处持有的读锁形成死锁,
+        // 导致 stop() 永久挂起 (反代无法关闭)。
+        let (claude_on, codex_on) = {
+            let s = self.state.status.read().await;
+            (s.claude_taken_over, s.codex_taken_over)
+        };
+        if claude_on {
             let _ = self.disable_takeover(AppType::Claude).await;
         }
-        if self.state.status.read().await.codex_taken_over {
+        if codex_on {
             let _ = self.disable_takeover(AppType::Codex).await;
         }
     }
