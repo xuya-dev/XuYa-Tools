@@ -35,7 +35,12 @@ function onInput(e: Event) {
   border: 1px solid var(--xuya-border);
   background: var(--xuya-input-bg);
   color: var(--xuya-text);
-  transition: border-color 0.12s, box-shadow 0.12s;
+  transition: border-color var(--xuya-duration-fast) var(--xuya-ease),
+    box-shadow var(--xuya-duration-fast) var(--xuya-ease),
+    background var(--xuya-duration-fast) var(--xuya-ease);
+}
+.base-input:hover:not(:focus) {
+  border-color: var(--xuya-border-strong);
 }
 .base-input::placeholder {
   color: var(--xuya-text-tertiary);
@@ -43,6 +48,7 @@ function onInput(e: Event) {
 .base-input:focus {
   outline: none;
   border-color: var(--xuya-accent);
+  background: var(--xuya-bg-elevated);
   box-shadow: 0 0 0 3px var(--xuya-accent-ring);
 }
 </style>

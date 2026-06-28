@@ -17,15 +17,17 @@ body,
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
-    'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial,
-    sans-serif;
+  font-family: var(--xuya-font-sans);
   font-size: 14px;
   line-height: 1.5;
+  /* 微妙的背景:浅色用极淡渐变,深色用纯色 (避免过亮/过暗) */
   background: var(--xuya-bg);
   color: var(--xuya-text);
+  /* 字体渲染优化 */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-variant-ligatures: common-ligatures;
   overflow: hidden;
   user-select: none;
 }
@@ -42,6 +44,10 @@ code,
 a {
   color: var(--xuya-accent);
   text-decoration: none;
+  transition: color var(--xuya-duration-fast) var(--xuya-ease);
+}
+a:hover {
+  color: var(--xuya-accent-hover);
 }
 
 button {
@@ -49,38 +55,92 @@ button {
   cursor: pointer;
 }
 
-/* 滚动条 (WebKit) */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+::selection {
+  background: var(--xuya-accent-soft-strong);
+  color: var(--xuya-text);
 }
 
+/* ===== 滚动条 (WebKit) - 更精致 ===== */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
 ::-webkit-scrollbar-track {
   background: transparent;
 }
-
 ::-webkit-scrollbar-thumb {
-  background: var(--xuya-border);
-  border-radius: 4px;
+  background: var(--xuya-border-strong);
+  border-radius: 6px;
+  /* 透明边距营造悬浮感 */
+  border: 2px solid transparent;
+  background-clip: padding-box;
 }
-
 ::-webkit-scrollbar-thumb:hover {
   background: var(--xuya-text-tertiary);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 /* 全局过渡:主题切换时颜色平滑过渡 */
 body,
 .theme-transition,
 .theme-transition * {
-  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+  transition: background-color var(--xuya-duration) var(--xuya-ease),
+    border-color var(--xuya-duration) var(--xuya-ease),
+    color var(--xuya-duration) var(--xuya-ease);
 }
 
+/* ===== 通用过渡动画 ===== */
 /* 路由切换淡入 */
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity 0.18s ease;
+  transition: opacity var(--xuya-duration) var(--xuya-ease-out),
+    transform var(--xuya-duration) var(--xuya-ease-out);
 }
-.fade-enter-from,
+.fade-enter-from {
+  opacity: 0;
+  transform: translateY(6px);
+}
 .fade-leave-to {
   opacity: 0;
+}
+
+/* 内容区入场 (工具切换) */
+@keyframes slide-up-fade {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.slide-up-enter-active {
+  animation: slide-up-fade var(--xuya-duration-slow) var(--xuya-ease-out);
+}
+
+/* 通用辅助类 */
+.mono {
+  font-family: var(--xuya-font-mono);
+}
+.section-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--xuya-text-tertiary);
+}
+
+/* 减少动画偏好 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

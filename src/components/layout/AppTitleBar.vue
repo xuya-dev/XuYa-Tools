@@ -61,14 +61,16 @@ const themeLabel = computed(
 
 <style scoped>
 .titlebar {
-  height: 40px;
+  height: 42px;
   display: flex;
   align-items: center;
-  padding: 0 6px 0 14px;
+  padding: 0 8px 0 14px;
   background: var(--xuya-bg-elevated);
   border-bottom: 1px solid var(--xuya-border);
   -webkit-app-region: drag;
   flex-shrink: 0;
+  /* 标题栏底部微弱分隔 (替代生硬边框) */
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.02);
 }
 
 .titlebar-left,
@@ -87,7 +89,7 @@ const themeLabel = computed(
 .brand {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
   -webkit-app-region: no-drag;
 }
 
@@ -95,13 +97,14 @@ const themeLabel = computed(
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 6px;
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
   background: var(--xuya-accent-gradient);
   color: #fff;
   font-size: 13px;
   font-weight: 700;
+  box-shadow: 0 2px 6px var(--xuya-accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 .brand-name {
@@ -125,13 +128,14 @@ const themeLabel = computed(
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   border: none;
   background: transparent;
   color: var(--xuya-text-secondary);
-  border-radius: 6px;
-  transition: background 0.12s, color 0.12s;
+  border-radius: var(--xuya-radius-sm);
+  transition: background var(--xuya-duration-fast) var(--xuya-ease),
+    color var(--xuya-duration-fast) var(--xuya-ease);
 }
 
 .ctrl-btn:hover {
@@ -139,12 +143,16 @@ const themeLabel = computed(
   color: var(--xuya-text);
 }
 
+.ctrl-btn:active {
+  transform: scale(0.92);
+}
+
 .theme-btn {
   margin-right: 4px;
 }
 
 .ctrl-btn.close:hover {
-  background: #ef4444;
+  background: #e5484d;
   color: #fff;
 }
 </style>

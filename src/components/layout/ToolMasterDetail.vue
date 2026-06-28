@@ -106,7 +106,7 @@ function selectTool(t: ToolMeta) {
 
 /* ===== 左侧 master ===== */
 .md-master {
-  width: 280px;
+  width: 286px;
   flex-shrink: 0;
   background: var(--xuya-bg-elevated);
   border-right: 1px solid var(--xuya-border);
@@ -121,26 +121,27 @@ function selectTool(t: ToolMeta) {
 .md-brand {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 14px;
+  gap: 9px;
+  margin-bottom: 16px;
 }
 .md-logo {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 26px;
+  height: 26px;
   border-radius: 7px;
   background: var(--xuya-accent-gradient);
   color: #fff;
   font-size: 14px;
   font-weight: 700;
+  box-shadow: 0 2px 8px var(--xuya-accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 .md-brand-name {
-  font-size: 14px;
+  font-size: 14.5px;
   font-weight: 700;
   color: var(--xuya-text);
-  letter-spacing: 0.2px;
+  letter-spacing: 0.1px;
 }
 .md-search {
   display: flex;
@@ -152,10 +153,16 @@ function selectTool(t: ToolMeta) {
   border: 1px solid var(--xuya-border);
   border-radius: var(--xuya-radius);
   color: var(--xuya-text-tertiary);
-  transition: border-color 0.12s, box-shadow 0.12s;
+  transition: border-color var(--xuya-duration-fast) var(--xuya-ease),
+    box-shadow var(--xuya-duration-fast) var(--xuya-ease),
+    background var(--xuya-duration-fast) var(--xuya-ease);
+}
+.md-search:hover {
+  border-color: var(--xuya-border-strong);
 }
 .md-search:focus-within {
   border-color: var(--xuya-accent);
+  background: var(--xuya-bg-elevated);
   box-shadow: 0 0 0 3px var(--xuya-accent-ring);
 }
 .md-search input {
@@ -173,28 +180,35 @@ function selectTool(t: ToolMeta) {
 .md-list {
   flex: 1;
   overflow: auto;
-  padding: 4px 10px 12px;
+  padding: 2px 10px 12px;
 }
 .md-group-label {
-  font-size: 11px;
+  font-size: 10.5px;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.7px;
   color: var(--xuya-text-tertiary);
-  padding: 12px 10px 4px;
+  padding: 14px 10px 5px;
+}
+.md-group-label:first-child {
+  padding-top: 4px;
 }
 .md-item {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 11px;
   width: 100%;
   text-align: left;
-  padding: 8px 10px;
+  padding: 7px 10px;
   border-radius: var(--xuya-radius-sm);
   cursor: pointer;
-  transition: background 0.1s, color 0.1s;
+  transition: background var(--xuya-duration-fast) var(--xuya-ease),
+    color var(--xuya-duration-fast) var(--xuya-ease),
+    transform var(--xuya-duration-fast) var(--xuya-ease);
   border: none;
   background: none;
   color: var(--xuya-text);
+  position: relative;
 }
 .md-item:hover {
   background: var(--xuya-input-bg);
@@ -202,9 +216,22 @@ function selectTool(t: ToolMeta) {
 .md-item.active {
   background: var(--xuya-accent-soft);
 }
+/* 激活态左侧指示条 */
+.md-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 18px;
+  background: var(--xuya-accent-gradient);
+  border-radius: 0 2px 2px 0;
+}
 .md-item.active .md-item-icon {
-  background: var(--xuya-accent);
+  background: var(--xuya-accent-gradient);
   color: #fff;
+  box-shadow: 0 2px 6px var(--xuya-accent-glow);
 }
 .md-item.active .md-item-name {
   color: var(--xuya-accent);
@@ -220,7 +247,13 @@ function selectTool(t: ToolMeta) {
   border-radius: 8px;
   background: var(--xuya-input-bg);
   color: var(--xuya-text-secondary);
-  transition: background 0.1s, color 0.1s;
+  transition: background var(--xuya-duration-fast) var(--xuya-ease),
+    color var(--xuya-duration-fast) var(--xuya-ease),
+    box-shadow var(--xuya-duration-fast) var(--xuya-ease),
+    transform var(--xuya-duration-fast) var(--xuya-ease);
+}
+.md-item:hover .md-item-icon {
+  color: var(--xuya-text);
 }
 .md-item-info {
   flex: 1;
@@ -264,6 +297,7 @@ function selectTool(t: ToolMeta) {
 .md-foot-text {
   font-size: 11px;
   color: var(--xuya-text-tertiary);
+  letter-spacing: 0.2px;
 }
 
 /* ===== 右侧 detail ===== */
