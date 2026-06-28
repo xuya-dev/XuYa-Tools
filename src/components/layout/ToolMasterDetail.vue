@@ -3,10 +3,6 @@
     <!-- 左侧:工具列表(常驻) -->
     <aside class="md-master">
       <div class="md-master-head">
-        <div class="md-brand">
-          <span class="md-logo">⌘</span>
-          <span class="md-brand-name">XuYa Tools</span>
-        </div>
         <div class="md-search">
           <Search :size="15" />
           <input
@@ -116,32 +112,7 @@ function selectTool(t: ToolMeta) {
 
 .md-master-head {
   flex-shrink: 0;
-  padding: 16px 14px 12px;
-}
-.md-brand {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  margin-bottom: 16px;
-}
-.md-logo {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 7px;
-  background: var(--xuya-accent-gradient);
-  color: #fff;
-  font-size: 14px;
-  font-weight: 700;
-  box-shadow: 0 2px 8px var(--xuya-accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.25);
-}
-.md-brand-name {
-  font-size: 14.5px;
-  font-weight: 700;
-  color: var(--xuya-text);
-  letter-spacing: 0.1px;
+  padding: 14px 14px 10px;
 }
 .md-search {
   display: flex;
