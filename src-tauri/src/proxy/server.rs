@@ -155,11 +155,15 @@ impl ProxyServer {
         }
         if let Some(handle) = self.server_handle.write().await.take() {
             handle.abort();
-            match tokio::time::timeout(std::time::Duration::from_secs(5), handle).await {
-                Ok(Ok(())) => Ok(()),
-                Ok(Err(_)) => Ok(()), // 被 abort 也算正常停止
-                Err(_) => Err("停止超时(5s)".to_string()),
-            }
+            // 等待任务真正结束 (被 abort 时返回 Err, 也算正常停止)
+            let _ = tokio::time::timeout(std::time::Duration::from_secs(5), handle).await;
+            // 重要:任务被 abort 时, 其内部 axum::serve 之后的清理代码不会执行,
+            // 因此必须在此显式重置运行状态, 否则前端始终认为代理在运行。
+            let mut status = self.state.status.write().await;
+            status.running = false;
+            status.port = 0;
+            status.started_at = 0;
+            Ok(())
         } else {
             Ok(())
         }

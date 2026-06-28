@@ -233,3 +233,51 @@ impl ProxyService {
         &self.data_dir
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// 回归测试 1: stop() 在接管标志置位时不应死锁。
+    /// 此前 restore_all_takeovers 持有 status 读锁的同时调用
+    /// disable_takeover (内部请求 status 写锁), 形成读→写死锁。
+    #[tokio::test]
+    async fn stop_does_not_deadlock_with_takeover_flag_set() {
+        let dir = std::env::temp_dir().join(format!("xuya_test_stop_deadlock_{}", std::process::id()));
+        let svc = ProxyService::new(dir.clone());
+
+        {
+            let mut s = svc.state.status.write().await;
+            s.claude_taken_over = true;
+        }
+
+        let _info = svc.start().await.expect("start failed");
+
+        let result = tokio::time::timeout(std::time::Duration::from_secs(5), svc.stop()).await;
+        assert!(result.is_ok(), "stop() 死锁, 未在 5s 内返回");
+        assert!(result.unwrap().is_ok(), "stop() 返回错误");
+        assert!(!svc.status().await.running, "停止后 running 仍为 true");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// 回归测试 2: stop() 后 status.running 必须为 false。
+    /// 此前服务器任务被 abort, 其内部的 status 重置代码不会执行,
+    /// 导致前端始终认为代理在运行 (反代无法关闭)。
+    #[tokio::test]
+    async fn stop_resets_running_status() {
+        let dir = std::env::temp_dir().join(format!("xuya_test_stop_status_{}", std::process::id()));
+        let svc = ProxyService::new(dir.clone());
+
+        let info = svc.start().await.expect("start failed");
+        assert!(svc.status().await.running, "启动后 running 应为 true");
+        assert!(info.port > 0, "应分配到非零端口");
+
+        svc.stop().await.expect("stop failed");
+
+        let st = svc.status().await;
+        assert!(!st.running, "停止后 running 必须为 false");
+        assert_eq!(st.port, 0, "停止后端口应清零");
+        assert_eq!(st.started_at, 0, "停止后 started_at 应清零");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+}

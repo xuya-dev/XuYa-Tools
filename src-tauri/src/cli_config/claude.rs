@@ -246,6 +246,7 @@ fn write_atomic_json(path: &PathBuf, value: &Value) -> std::io::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::cli_config::types::*;
 
     #[test]
     fn test_one_m_marker_helpers() {
