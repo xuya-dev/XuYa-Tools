@@ -68,6 +68,16 @@ const router = createRouter({
       component: () => import('@/views/tools/CronParser.vue'),
     },
     {
+      path: '/tools/http',
+      name: 'http',
+      component: () => import('@/views/tools/HttpTool.vue'),
+    },
+    {
+      path: '/tools/websocket',
+      name: 'websocket',
+      component: () => import('@/views/tools/WebSocketTool.vue'),
+    },
+    {
       path: '/tools/httpstatus',
       name: 'httpstatus',
       component: () => import('@/views/tools/HttpStatusTool.vue'),

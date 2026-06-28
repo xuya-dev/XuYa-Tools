@@ -21,6 +21,9 @@ use proxy::ProxyService;
 mod db;
 mod usage;
 
+mod http_client;
+use http_client::WsManager;
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -41,6 +44,8 @@ pub fn run() {
         .manage(CliConfigService::new(cli_data_dir()))
         // 本地代理服务 (内部持有统计数据库,与 CLI 服务解耦)
         .manage(ProxyService::new(cli_data_dir()))
+        // WebSocket 连接管理器
+        .manage(WsManager::new())
         .invoke_handler(tauri::generate_handler![
             // ---- CLI 配置 ----
             get_cli_status,
@@ -63,6 +68,11 @@ pub fn run() {
             get_usage_summary,
             get_request_logs,
             clear_request_logs,
+            // ---- HTTP / WebSocket 请求工具 ----
+            http_client::http_request,
+            http_client::ws_connect,
+            http_client::ws_send,
+            http_client::ws_disconnect,
         ])
         .setup(|app| {
             // 注入 AppHandle 给代理服务, 用于 emit 告警事件

@@ -19,6 +19,8 @@ import {
   ListTree,
   Globe,
   Network,
+  Send,
+  Webhook,
 } from '@lucide/vue';
 
 export type ToolCategory =
@@ -165,6 +167,24 @@ export const tools: ToolMeta[] = [
     keywords: ['cron', 'crontab', 'schedule', '定时', '计划任务', '表达式'],
   },
   // ---- 网络参考 ----
+  {
+    id: 'http',
+    name: 'HTTP 请求',
+    description: '发送 HTTP 请求测试接口,支持 Headers / Query / Body,完整展示响应。',
+    category: 'network',
+    icon: Send,
+    route: '/tools/http',
+    keywords: ['http', 'request', 'api', 'postman', 'get', 'post', 'rest', '请求', '接口测试'],
+  },
+  {
+    id: 'websocket',
+    name: 'WebSocket 调试',
+    description: '连接 WebSocket 服务,双向收发消息,实时查看消息流。',
+    category: 'network',
+    icon: Webhook,
+    route: '/tools/websocket',
+    keywords: ['websocket', 'ws', 'socket', 'wss', '实时', '推送', '调试', 'echo'],
+  },
   {
     id: 'httpstatus',
     name: 'HTTP 状态码速查',

@@ -31,6 +31,10 @@ uuid = { version = "1", features = ["v4"] }
 reqwest = { version = "0.12", features = ["json"] }
 tokio = { version = "1", features = ["full", "rt-multi-thread"] }
 
+# WebSocket 支持 (HTTP 工具复用 reqwest)
+tokio-tungstenite = { version = "0.24", features = ["native-tls"] }
+futures-util = "0.3"
+
 # 本地代理所需依赖
 axum = { version = "0.7", features = ["http1"] }
 hyper = { version = "1", features = ["full"] }
