@@ -9,9 +9,10 @@ import {
   KeyRound,
   Clock,
   Fingerprint,
+  Terminal,
 } from '@lucide/vue';
 
-export type ToolCategory = 'converter' | 'encoder' | 'crypto' | 'datetime';
+export type ToolCategory = 'converter' | 'encoder' | 'crypto' | 'datetime' | 'devops';
 
 export interface ToolMeta {
   id: string;
@@ -29,6 +30,7 @@ export const CATEGORY_LABELS: Record<ToolCategory, string> = {
   encoder: '编码解码',
   crypto: '加密 / 生成',
   datetime: '日期时间',
+  devops: '开发配置',
 };
 
 export const tools: ToolMeta[] = [
@@ -76,5 +78,14 @@ export const tools: ToolMeta[] = [
     icon: Fingerprint,
     route: '/tools/hashgen',
     keywords: ['uuid', 'password', 'md5', 'sha', 'hash', '密码', '哈希', '随机'],
+  },
+  {
+    id: 'cli',
+    name: 'CLI 配置 / 反代',
+    description: '管理 Claude Code / Codex CLI 供应商配置,本地反代与请求统计。',
+    category: 'devops',
+    icon: Terminal,
+    route: '/tools/cli',
+    keywords: ['claude', 'codex', 'cli', 'proxy', '反代', '代理', '统计', '配置', 'provider'],
   },
 ];

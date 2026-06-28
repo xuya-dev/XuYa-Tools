@@ -33,6 +33,11 @@ const router = createRouter({
       name: 'hashgen',
       component: () => import('@/views/tools/HashGenerator.vue'),
     },
+    {
+      path: '/tools/cli',
+      name: 'cli',
+      component: () => import('@/views/tools/CliManager.vue'),
+    },
   ],
 });
 

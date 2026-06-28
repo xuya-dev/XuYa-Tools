@@ -1,13 +1,25 @@
 // XuYa Tools - 程序员日常开发工具箱
-// 极简后端:单实例 + 系统托盘 + 关闭转隐藏 + 自启动 + 打开链接
-// 业务逻辑全部在前端完成,后端只提供桌面能力
+// 后端:单实例 + 系统托盘 + 关闭转隐藏 + 自启动 + 打开链接
+//      + Claude/Codex CLI 配置管理 + 本地反代 + 请求统计
 
+use std::path::PathBuf;
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    Manager, WindowEvent,
+    Manager, State, WindowEvent,
 };
 use tauri_plugin_autostart::{MacosLauncher, ManagerExt};
+
+// ==================== 业务模块 ====================
+mod cli_config;
+use cli_config::CliConfigService;
+use cli_config::types::{ApiFormat, AppType, AuthField, CliProvider, ProviderCategory, ProviderKind, ProviderScope};
+
+mod proxy;
+use proxy::ProxyService;
+
+mod db;
+mod usage;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -25,7 +37,35 @@ pub fn run() {
                 let _ = window.set_focus();
             }
         }))
+        // CLI 配置切换服务
+        .manage(CliConfigService::new(cli_data_dir()))
+        // 本地代理服务 (内部持有统计数据库,与 CLI 服务解耦)
+        .manage(ProxyService::new(cli_data_dir()))
+        .invoke_handler(tauri::generate_handler![
+            // ---- CLI 配置 ----
+            get_cli_status,
+            list_cli_providers,
+            save_cli_provider,
+            delete_cli_provider,
+            switch_cli_provider,
+            get_cli_widget_snapshot,
+            new_cli_provider_template,
+            fetch_cli_models,
+            // ---- 本地代理 ----
+            start_cli_proxy,
+            stop_cli_proxy,
+            get_cli_proxy_status,
+            set_cli_takeover,
+            switch_proxy_target,
+            // ---- 请求统计 ----
+            get_usage_summary,
+            get_request_logs,
+            clear_request_logs,
+        ])
         .setup(|app| {
+            // 注入 AppHandle 给代理服务, 用于 emit 告警事件
+            app.state::<ProxyService>().set_app_handle(app.handle().clone());
+
             // 构建系统托盘:仅一个"退出"菜单项
             let quit_item = MenuItem::with_id(app, "quit", "退出 XuYa Tools", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&quit_item])?;
@@ -60,7 +100,6 @@ pub fn run() {
 
             #[cfg(debug_assertions)]
             {
-                // 开发模式下打印自启动状态,便于排查
                 let autostart = app.autolaunch();
                 println!("[xuya-tools] autostart enabled = {:?}", autostart.is_enabled().ok());
             }
@@ -78,4 +117,215 @@ pub fn run() {
         })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+// ==================== CLI 配置切换命令 ====================
+
+#[tauri::command]
+fn get_cli_status(svc: State<'_, CliConfigService>) -> Result<cli_config::types::CliStatus, String> {
+    Ok(svc.detect_status())
+}
+
+#[tauri::command]
+fn list_cli_providers(svc: State<'_, CliConfigService>) -> Result<Vec<CliProvider>, String> {
+    Ok(svc.list_providers())
+}
+
+#[tauri::command]
+fn save_cli_provider(svc: State<'_, CliConfigService>, provider: CliProvider) -> Result<CliProvider, String> {
+    Ok(svc.save_provider(provider))
+}
+
+#[tauri::command]
+fn delete_cli_provider(svc: State<'_, CliConfigService>, id: String) -> Result<bool, String> {
+    Ok(svc.delete_provider(&id))
+}
+
+#[tauri::command]
+fn switch_cli_provider(
+    svc: State<'_, CliConfigService>,
+    app_type: String,
+    provider_id: String,
+) -> Result<cli_config::types::SwitchResult, String> {
+    let app = AppType::from_str(&app_type)
+        .ok_or_else(|| format!("未知 app 类型: {app_type}"))?;
+    Ok(svc.switch(app, &provider_id))
+}
+
+/// 仪表盘快照: 一次性返回 CLI 当前状态摘要
+#[derive(serde::Serialize)]
+struct CliWidgetSnapshot {
+    claude_provider: Option<String>,
+    claude_base_url: String,
+    claude_installed: bool,
+    codex_provider: Option<String>,
+    codex_base_url: String,
+    codex_installed: bool,
+    proxy_running: bool,
+    today_requests: u64,
+    today_errors: u64,
+}
+
+#[tauri::command]
+async fn get_cli_widget_snapshot(
+    cli: State<'_, CliConfigService>,
+    proxy: State<'_, ProxyService>,
+) -> Result<CliWidgetSnapshot, String> {
+    let status = cli.detect_status();
+    let proxy_status = proxy.status().await;
+    let (today_requests, today_errors, _today_latency) = if let Some(db) = proxy.db() {
+        usage::stats::today_summary(db).unwrap_or((0, 0, 0))
+    } else {
+        (0, 0, 0)
+    };
+    Ok(CliWidgetSnapshot {
+        claude_provider: status.claude.matched_provider_name.clone(),
+        claude_base_url: status.claude.base_url.clone(),
+        claude_installed: status.claude.installed,
+        codex_provider: status.codex.matched_provider_name.clone(),
+        codex_base_url: status.codex.base_url.clone(),
+        codex_installed: status.codex.installed,
+        proxy_running: proxy_status.running,
+        today_requests,
+        today_errors,
+    })
+}
+
+/// 前端用于构造新 provider 的辅助命令 (生成空壳 + id)
+#[tauri::command]
+fn new_cli_provider_template() -> Result<CliProvider, String> {
+    Ok(CliProvider {
+        id: String::new(),
+        name: String::new(),
+        scope: ProviderScope::Claude,
+        kind: ProviderKind::Relay,
+        category: ProviderCategory::Custom,
+        base_url: String::new(),
+        api_key: String::new(),
+        model: String::new(),
+        model_sonnet: String::new(),
+        model_haiku: String::new(),
+        model_opus: String::new(),
+        sonnet_name: String::new(),
+        opus_name: String::new(),
+        haiku_name: String::new(),
+        sonnet_1m: false,
+        opus_1m: false,
+        haiku_1m: false,
+        note: String::new(),
+        website_url: String::new(),
+        auth_field: AuthField::AnthropicAuthToken,
+        api_format: ApiFormat::Anthropic,
+        custom_user_agent: String::new(),
+        models_url: String::new(),
+        preset_id: String::new(),
+        icon: String::new(),
+        icon_color: String::new(),
+        codex_auth_json: String::new(),
+        codex_config_toml: String::new(),
+        updated_at: 0,
+    })
+}
+
+#[tauri::command]
+async fn fetch_cli_models(
+    base_url: String,
+    api_key: String,
+    custom_user_agent: Option<String>,
+    models_url: Option<String>,
+) -> Result<Vec<cli_config::model_fetch::FetchedModel>, String> {
+    cli_config::model_fetch::fetch_models(
+        &base_url,
+        &api_key,
+        custom_user_agent.as_deref(),
+        models_url.as_deref(),
+    )
+    .await
+}
+
+// ==================== 本地代理命令 ====================
+
+#[tauri::command]
+async fn start_cli_proxy(svc: State<'_, ProxyService>) -> Result<proxy::types::ProxyServerInfo, String> {
+    svc.start().await
+}
+
+#[tauri::command]
+async fn stop_cli_proxy(svc: State<'_, ProxyService>) -> Result<(), String> {
+    svc.stop().await
+}
+
+#[tauri::command]
+async fn get_cli_proxy_status(svc: State<'_, ProxyService>) -> Result<proxy::types::ProxyStatus, String> {
+    Ok(svc.status().await)
+}
+
+#[tauri::command]
+async fn set_cli_takeover(
+    svc: State<'_, ProxyService>,
+    app_type: String,
+    enabled: bool,
+) -> Result<proxy::types::TakeoverResult, String> {
+    let app = AppType::from_str(&app_type)
+        .ok_or_else(|| format!("未知 app 类型: {app_type}"))?;
+    Ok(svc.set_takeover(app, enabled).await)
+}
+
+#[tauri::command]
+async fn switch_proxy_target(
+    svc: State<'_, ProxyService>,
+    provider_id: String,
+    provider_name: String,
+    base_url: String,
+    api_key: String,
+    api_format: Option<String>,
+) -> Result<(), String> {
+    svc.set_target(
+        provider_id,
+        provider_name,
+        base_url,
+        api_key,
+        api_format.unwrap_or_else(|| "anthropic".to_string()),
+    )
+    .await
+}
+
+// ==================== 请求统计命令 ====================
+
+#[tauri::command]
+fn get_usage_summary(
+    svc: State<'_, ProxyService>,
+    start_date: Option<i64>,
+    end_date: Option<i64>,
+) -> Result<usage::types::UsageSummary, String> {
+    let db = svc.db().ok_or("数据库未初始化")?;
+    usage::stats::get_summary(db, start_date, end_date)
+}
+
+#[tauri::command]
+fn get_request_logs(
+    svc: State<'_, ProxyService>,
+    filters: usage::types::LogFilters,
+    page: Option<u32>,
+    page_size: Option<u32>,
+) -> Result<usage::types::PaginatedLogs, String> {
+    let db = svc.db().ok_or("数据库未初始化")?;
+    usage::stats::get_logs(db, filters, page.unwrap_or(1), page_size.unwrap_or(20))
+}
+
+#[tauri::command]
+fn clear_request_logs(svc: State<'_, ProxyService>) -> Result<(), String> {
+    let db = svc.db().ok_or("数据库未初始化")?;
+    usage::stats::clear_logs(db)
+}
+
+/// CLI 配置数据目录: 优先用应用数据目录, 回退到 home / exe 同级
+fn cli_data_dir() -> PathBuf {
+    if let Some(dir) = dirs::data_dir() {
+        return dir.join("XuYaTools");
+    }
+    if let Some(dir) = dirs::home_dir() {
+        return dir.join(".xuya-tools");
+    }
+    PathBuf::from("./data")
 }
