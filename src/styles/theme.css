@@ -1,0 +1,88 @@
+/**
+ * XuYa Tools 主题令牌系统
+ * 统一使用 --xuya-* 命名空间,供所有工具组件复用。
+ * 主题切换通过 <html> 上的 .dark-theme 类实现 (见 useTheme.ts)。
+ * 默认 (无类) = 浅色;.dark-theme = 深色。暗色优先设计。
+ */
+
+:root {
+  /* 背景层级 */
+  --xuya-bg: #f6f7f9;
+  --xuya-bg-elevated: #ffffff;
+  --xuya-card-bg: #ffffff;
+  --xuya-input-bg: #f1f3f5;
+
+  /* 文字 */
+  --xuya-text: #1a1d23;
+  --xuya-text-secondary: #5b6470;
+  --xuya-text-tertiary: #8b94a0;
+
+  /* 边框 / 分隔 */
+  --xuya-border: #e4e7eb;
+  --xuya-border-light: #eef0f3;
+  --xuya-overlay: rgba(15, 23, 42, 0.35);
+
+  /* 主题色 (品牌蓝→靛 渐变) */
+  --xuya-accent: #3b82f6;
+  --xuya-accent-2: #6366f1;
+  --xuya-accent-gradient: linear-gradient(135deg, #3b82f6, #6366f1);
+  --xuya-accent-soft: rgba(59, 130, 246, 0.1);
+  --xuya-accent-ring: rgba(59, 130, 246, 0.18);
+
+  /* 语义色 */
+  --xuya-success: #10b981;
+  --xuya-success-soft: rgba(16, 185, 129, 0.1);
+  --xuya-warn: #f59e0b;
+  --xuya-warn-soft: rgba(245, 158, 11, 0.12);
+  --xuya-danger: #ef4444;
+  --xuya-danger-soft: rgba(239, 68, 68, 0.1);
+
+  /* 卡片阴影 */
+  --xuya-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.03);
+  --xuya-shadow-hover: 0 8px 24px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04);
+
+  /* 圆角 */
+  --xuya-radius-sm: 6px;
+  --xuya-radius: 10px;
+  --xuya-radius-lg: 14px;
+
+  /* 等宽字体 */
+  --xuya-font-mono: 'JetBrains Mono', 'Cascadia Code', 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+.dark-theme {
+  /* 背景层级 (深色优先:偏冷的深灰,非纯黑) */
+  --xuya-bg: #16181c;
+  --xuya-bg-elevated: #1c1f24;
+  --xuya-card-bg: #1f2228;
+  --xuya-input-bg: #262a31;
+
+  /* 文字 */
+  --xuya-text: #e6e9ef;
+  --xuya-text-secondary: #9aa3b2;
+  --xuya-text-tertiary: #6b7380;
+
+  /* 边框 / 分隔 */
+  --xuya-border: #2e323a;
+  --xuya-border-light: #252930;
+  --xuya-overlay: rgba(0, 0, 0, 0.55);
+
+  /* 主题色 */
+  --xuya-accent: #60a5fa;
+  --xuya-accent-2: #818cf8;
+  --xuya-accent-gradient: linear-gradient(135deg, #60a5fa, #818cf8);
+  --xuya-accent-soft: rgba(96, 165, 250, 0.14);
+  --xuya-accent-ring: rgba(96, 165, 250, 0.25);
+
+  /* 语义色 */
+  --xuya-success: #34d399;
+  --xuya-success-soft: rgba(52, 211, 153, 0.14);
+  --xuya-warn: #fbbf24;
+  --xuya-warn-soft: rgba(251, 191, 36, 0.16);
+  --xuya-danger: #f87171;
+  --xuya-danger-soft: rgba(248, 113, 113, 0.14);
+
+  /* 阴影 */
+  --xuya-shadow: 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
+  --xuya-shadow-hover: 0 8px 24px rgba(0, 0, 0, 0.4), 0 2px 6px rgba(0, 0, 0, 0.25);
+}

@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>XuYa Tools · 程序员工具箱</title>
+    <style>
+      /* 初始加载占位,避免白屏 */
+      html, body, #app { height: 100%; margin: 0; }
+      #app { background: #16181c; }
+    </style>
+    <script>
+      // 防闪烁:在 Vue 挂载前根据 localStorage 预先应用主题
+      (function () {
+        try {
+          var saved = localStorage.getItem('xuya_theme_mode');
+          var sysDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          var isDark = saved === 'light' ? false : (saved === 'dark' ? true : sysDark !== false ? true : true);
+          if (isDark) document.documentElement.classList.add('dark-theme');
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
