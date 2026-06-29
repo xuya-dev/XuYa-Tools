@@ -239,6 +239,7 @@ async function copy(text: string) {
   background: var(--xuya-input-bg); color: var(--xuya-text); transition: border-color var(--xuya-duration-fast), box-shadow var(--xuya-duration-fast);
 }
 .url-input:focus { outline: none; border-color: var(--xuya-accent); box-shadow: 0 0 0 3px var(--xuya-accent-ring); }
+.url-input::placeholder { color: var(--xuya-text-tertiary); }
 
 .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--xuya-border); margin-bottom: 14px; align-items: center; }
 .tab {
@@ -272,6 +273,7 @@ async function copy(text: string) {
 .body-hint { font-size: 11px; color: var(--xuya-text-tertiary); }
 .body-editor { width: 100%; min-height: 120px; padding: 10px; border-radius: var(--xuya-radius); border: 1px solid var(--xuya-border); background: var(--xuya-input-bg); color: var(--xuya-text); font-family: var(--xuya-font-mono); font-size: 12.5px; line-height: 1.6; resize: vertical; }
 .body-editor:focus { outline: none; border-color: var(--xuya-accent); box-shadow: 0 0 0 3px var(--xuya-accent-ring); }
+.body-editor::placeholder { color: var(--xuya-text-tertiary); }
 
 .response { background: var(--xuya-card-bg); border: 1px solid var(--xuya-border); border-radius: var(--xuya-radius-lg); padding: 16px; }
 .resp-head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
