@@ -129,11 +129,20 @@
                         Codex
                     </button>
                 </div>
+                <div class="provider-search-wrap">
+                    <input
+                        v-model="providerSearch"
+                        class="provider-search"
+                        type="text"
+                        placeholder="搜索..."
+                        spellcheck="false"
+                    />
+                </div>
                 <button class="cli-add-btn" @click="openAdd">+ 新增</button>
             </div>
 
             <div v-if="filteredProviders.length === 0" class="cli-empty">
-                暂无 {{ providerTab === 'claude' ? 'Claude Code' : 'Codex CLI' }} 的 Provider,点击「新增」创建
+                {{ providerSearch ? `没有匹配 "${providerSearch}" 的 Provider` : `暂无 ${providerTab === 'claude' ? 'Claude Code' : 'Codex CLI'} 的 Provider,点击「新增」创建` }}
             </div>
 
             <div v-else class="provider-card-grid">
@@ -289,13 +298,22 @@
                             <!-- API Key (官方分类禁用) -->
                             <label class="cli-field">
                                 <span>API Key</span>
-                                <input
-                                    v-model="editor.form.api_key"
-                                    class="mono"
-                                    type="password"
-                                    :disabled="editor.form.category === 'official'"
-                                    :placeholder="editor.form.category === 'official' ? '官方无需 API Key' : '输入 API Key，将自动填充到配置'"
-                                />
+                                <div class="api-key-wrap">
+                                    <input
+                                        v-model="editor.form.api_key"
+                                        class="mono"
+                                        :type="apiKeyVisible ? 'text' : 'password'"
+                                        autocomplete="off"
+                                        :disabled="editor.form.category === 'official'"
+                                        :placeholder="editor.form.category === 'official' ? '官方无需 API Key' : '输入 API Key，将自动填充到配置'"
+                                    />
+                                    <button
+                                        v-if="editor.form.api_key && editor.form.category !== 'official'"
+                                        type="button"
+                                        class="key-toggle"
+                                        @click="apiKeyVisible = !apiKeyVisible"
+                                    >{{ apiKeyVisible ? '🙈' : '👁' }}</button>
+                                </div>
                                 <a v-if="selectedPreset?.apiKeyUrl" :href="selectedPreset.apiKeyUrl" target="_blank" class="get-key-link">获取 API Key ↗</a>
                             </label>
 
@@ -665,15 +683,22 @@ const claudeModels = computed(() => {
 
 // ---------- Provider Tab (Claude / Codex) ----------
 const providerTab = ref<'claude' | 'codex'>('claude');
+const providerSearch = ref('');
 
-/** 按 Tab 过滤 provider (scope='both' 在两个 Tab 都显示) */
-const filteredProviders = computed(() =>
-    providers.value.filter((p) =>
+/** 按 Tab + 搜索关键词过滤 provider */
+const filteredProviders = computed(() => {
+    const byTab = providers.value.filter((p) =>
         providerTab.value === 'claude'
             ? p.scope === 'claude' || p.scope === 'both'
             : p.scope === 'codex' || p.scope === 'both',
-    ),
-);
+    );
+    const kw = providerSearch.value.trim().toLowerCase();
+    if (!kw) return byTab;
+    return byTab.filter((p) =>
+        [p.name, p.note, p.base_url, p.website_url, p.model]
+            .some((f) => f?.toLowerCase().includes(kw)),
+    );
+});
 
 /** 该 provider 是否为当前 Tab 对应 CLI 的活动 provider */
 const isCurrentForTab = (p: CliProvider) => {
@@ -711,6 +736,7 @@ const editor = reactive({
 // 预设选择器状态
 const presetSearch = ref('');
 const advancedOpen = ref(false);
+const apiKeyVisible = ref(false);
 const lastPresetName = ref('');
 
 // ---------- 表单校验 ----------
@@ -816,11 +842,22 @@ const availablePresets = computed(() => {
     return editor.appTab === 'claude' ? CLAUDE_PRESETS : CODEX_PRESETS;
 });
 
-/** 搜索过滤后的预设 */
+/** 搜索过滤后的预设 (增强: 匹配 name/id/baseUrl, 官方置顶) */
 const filteredPresets = computed(() => {
     const kw = presetSearch.value.trim().toLowerCase();
-    if (!kw) return availablePresets.value;
-    return availablePresets.value.filter((p) => p.name.toLowerCase().includes(kw));
+    const list = availablePresets.value;
+    const matched = kw
+        ? list.filter((p) =>
+              [p.name, p.id, p.baseUrl, p.websiteUrl]
+                  .some((f) => f?.toLowerCase().includes(kw)),
+          )
+        : list;
+    // 官方分类置顶
+    return [...matched].sort((a, b) => {
+        const aOff = a.category === 'official' ? 0 : 1;
+        const bOff = b.category === 'official' ? 0 : 1;
+        return aOff - bOff;
+    });
 });
 
 /** 当前选中的预设对象 */
@@ -900,9 +937,32 @@ const onDelete = async (p: CliProvider) => {
 };
 
 const onSwitch = async (app: AppType, id: string) => {
+    const p = providers.value.find((item) => item.id === id);
+    if (!p) return;
+    // 前置校验: 非官方 + 非原生格式 + 未开代理 → 提示需先启动代理
+    const isProxyOn = !!proxyStatus.value?.running;
+    if (
+        p.category !== 'official' &&
+        p.api_format !== 'anthropic' &&
+        !isProxyOn &&
+        app === 'claude'
+    ) {
+        showToast(`该供应商使用 ${p.api_format} 格式,Claude Code 需先启动代理才能正常工作`, 'error');
+        return;
+    }
     try {
         const result = await switchProvider(app, id);
-        showToast(result.message, result.success ? 'success' : 'error');
+        if (result.success) {
+            // 差异化提示
+            const suffix = app === 'codex'
+                ? ',请重启 Codex CLI 生效'
+                : app === 'claude' && !claudeProxyOn.value
+                    ? ''
+                    : '';
+            showToast(result.message + suffix, 'success');
+        } else {
+            showToast(result.message, 'error');
+        }
     } catch (e) {
         showToast('切换失败: ' + e, 'error');
     }
@@ -1282,6 +1342,30 @@ onUnmounted(() => {
     color: var(--xuya-accent);
     font-size: 9px;
     font-weight: 600;
+}
+
+.provider-search-wrap {
+    flex: 1;
+    max-width: 200px;
+}
+.provider-search {
+    width: 100%;
+    padding: 5px 10px;
+    font-size: 12px;
+    border-radius: var(--xuya-radius);
+    border: 1px solid var(--xuya-border);
+    background: var(--xuya-input-bg);
+    color: var(--xuya-text);
+    transition: border-color var(--xuya-duration-fast) var(--xuya-ease),
+        box-shadow var(--xuya-duration-fast) var(--xuya-ease);
+}
+.provider-search:focus {
+    outline: none;
+    border-color: var(--xuya-accent);
+    box-shadow: 0 0 0 3px var(--xuya-accent-ring);
+}
+.provider-search::placeholder {
+    color: var(--xuya-text-tertiary);
 }
 
 .cli-add-btn {
@@ -1950,6 +2034,50 @@ onUnmounted(() => {
 
 .cli-field select {
     cursor: pointer;
+}
+
+.api-key-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+.api-key-wrap input {
+    width: 100%;
+    padding: 8px 36px 8px 11px;
+    border-radius: var(--xuya-radius-sm);
+    border: 1px solid var(--xuya-border);
+    background: var(--xuya-input-bg);
+    color: var(--xuya-text);
+    font-size: 13px;
+    transition: border-color var(--xuya-duration-fast) var(--xuya-ease),
+        box-shadow var(--xuya-duration-fast) var(--xuya-ease);
+}
+.api-key-wrap input:focus {
+    outline: none;
+    border-color: var(--xuya-accent);
+    box-shadow: 0 0 0 3px var(--xuya-accent-ring);
+}
+.api-key-wrap input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+.api-key-wrap input::placeholder {
+    color: var(--xuya-text-tertiary);
+}
+.key-toggle {
+    position: absolute;
+    right: 8px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    padding: 2px;
+    opacity: 0.5;
+    transition: opacity var(--xuya-duration-fast) var(--xuya-ease);
+}
+.key-toggle:hover {
+    opacity: 1;
 }
 
 .get-key-link {
