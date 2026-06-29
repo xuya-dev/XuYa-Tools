@@ -1045,15 +1045,16 @@ fn parse_usage_from_json(json: &serde_json::Value) -> ParsedUsage {
 }
 
 /// 从流式 SSE 响应体解析 token 用量。
-/// 遍历所有 data: 行, 自动适配 Anthropic (message_start + message_delta) 或 OpenAI (末 chunk usage)。
+/// 参考 cc-switch: 遍历所有 data: 行, 兼容 Anthropic / OpenAI / Codex 三种 SSE 格式,
+/// 从任何包含 usage 的事件中提取数据。部分中转商可能不在 message_start 携带 usage,
+/// 因此对每个事件都检查所有可能的 usage 位置。
 fn parse_usage_from_sse(body: &[u8]) -> ParsedUsage {
     let text = String::from_utf8_lossy(body);
     let mut input = 0u64;
     let mut output = 0u64;
     let mut cache_read = 0u64;
     let mut cache_creation = 0u64;
-    let mut found_anthropic = false;
-    let mut found_openai_usage = false;
+    let mut found = false;
 
     for line in text.lines() {
         let line = line.trim();
@@ -1068,54 +1069,68 @@ fn parse_usage_from_sse(body: &[u8]) -> ParsedUsage {
             continue;
         };
 
-        // Anthropic SSE: message_start 携带 input + cache, message_delta 携带 output
-        let evt_type = evt.get("type").and_then(|t| t.as_str()).unwrap_or("");
-        if evt_type == "message_start" {
-            if let Some(usage) = evt.pointer("/message/usage") {
-                found_anthropic = true;
-                input = usage
-                    .get("input_tokens")
-                    .and_then(|v| v.as_u64())
-                    .unwrap_or(input);
-                cache_read = usage
-                    .get("cache_read_input_tokens")
-                    .and_then(|v| v.as_u64())
-                    .unwrap_or(cache_read);
-                cache_creation = usage
-                    .get("cache_creation_input_tokens")
-                    .and_then(|v| v.as_u64())
-                    .unwrap_or(cache_creation);
+        // 尝试从多个位置提取 usage:
+        // 1. Anthropic message_start: evt.message.usage
+        // 2. Anthropic message_delta / OpenAI 末 chunk: evt.usage
+        // 3. Codex response.completed: evt.response.usage
+        let usage_candidates: Vec<Option<&serde_json::Value>> = vec![
+            evt.pointer("/message/usage"),
+            evt.get("usage"),
+            evt.pointer("/response/usage"),
+        ];
+
+        for usage_opt in usage_candidates {
+            let Some(usage) = usage_opt else { continue };
+            if usage.is_null() {
+                continue;
             }
-        } else if evt_type == "message_delta" {
-            if let Some(usage) = evt.get("usage") {
-                found_anthropic = true;
-                if let Some(v) = usage.get("output_tokens").and_then(|v| v.as_u64()) {
-                    output = v;
-                }
-            }
-        } else if let Some(usage) = evt.get("usage") {
-            // OpenAI SSE: 末 chunk 带 usage
-            if usage.get("prompt_tokens").is_some() || usage.get("completion_tokens").is_some() {
-                found_openai_usage = true;
-                let prompt = usage
-                    .get("prompt_tokens")
-                    .and_then(|v| v.as_u64())
-                    .unwrap_or(0);
+
+            // OpenAI 格式: prompt_tokens (包含 cache_read)
+            if let Some(prompt) = usage.get("prompt_tokens").and_then(|v| v.as_u64()) {
+                found = true;
                 let cached = usage
                     .pointer("/prompt_tokens_details/cached_tokens")
                     .and_then(|v| v.as_u64())
                     .unwrap_or(0);
                 input = prompt.saturating_sub(cached);
-                output = usage
-                    .get("completion_tokens")
-                    .and_then(|v| v.as_u64())
-                    .unwrap_or(output);
                 cache_read = cached;
+            }
+
+            // Anthropic / Codex 格式: input_tokens (fresh, 不含 cache)
+            if let Some(v) = usage.get("input_tokens").and_then(|v| v.as_u64()) {
+                found = true;
+                if input == 0 {
+                    input = v;
+                }
+                if let Some(cr) = usage
+                    .get("cache_read_input_tokens")
+                    .and_then(|v| v.as_u64())
+                {
+                    cache_read = cr;
+                }
+                if let Some(cc) = usage
+                    .get("cache_creation_input_tokens")
+                    .and_then(|v| v.as_u64())
+                {
+                    cache_creation = cc;
+                }
+            }
+
+            // output tokens (两种格式)
+            if let Some(v) = usage
+                .get("output_tokens")
+                .or_else(|| usage.get("completion_tokens"))
+                .and_then(|v| v.as_u64())
+            {
+                found = true;
+                if output == 0 {
+                    output = v;
+                }
             }
         }
     }
 
-    if !found_anthropic && !found_openai_usage {
+    if !found {
         return ParsedUsage::default();
     }
 
@@ -1126,7 +1141,6 @@ fn parse_usage_from_sse(body: &[u8]) -> ParsedUsage {
         cache_creation,
     }
 }
-
 /// 拼接 base_url + 原始 path/query
 fn build_upstream_url(base_url: &str, original_uri: &http::Uri) -> Result<String, String> {
     let base = base_url.trim_end_matches('/');
