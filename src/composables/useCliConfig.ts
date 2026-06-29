@@ -206,7 +206,9 @@ async function deleteProvider(id: string): Promise<boolean> {
 /** 切换某 app 到指定 provider */
 async function switchProvider(appType: AppType, providerId: string): Promise<SwitchResult> {
     const result = await invoke<SwitchResult>('switch_cli_provider', { appType, providerId });
-    await refreshStatus();
+    // 正常模式: status 会变 (live config 被重写)
+    // 接管模式: proxyStatus 会变 (代理上游变了, live config 没动)
+    await Promise.all([refreshStatus(), refreshProxyStatus()]);
     return result;
 }
 
