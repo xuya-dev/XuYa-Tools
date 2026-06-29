@@ -280,11 +280,11 @@ pub async fn ws_connect(
 
     // 注册连接
     {
-        let mut conns = state.connections.lock().unwrap();
-        conns.insert(
-            conn_id.clone(),
-            WsConnection { tx: out_tx },
-        );
+        let mut conns = state
+            .connections
+            .lock()
+            .expect("WebSocket 连接表锁被毒化");
+        conns.insert(conn_id.clone(), WsConnection { tx: out_tx });
     }
 
     // emit open
@@ -395,9 +395,11 @@ pub async fn ws_send(
     message: String,
 ) -> Result<(), String> {
     let tx = {
-        let conns = state.connections.lock().unwrap();
-        conns.get(&connection_id)
-            .map(|c| c.tx.clone())
+        let conns = state
+            .connections
+            .lock()
+            .expect("WebSocket 连接表锁被毒化");
+        conns.get(&connection_id).map(|c| c.tx.clone())
     };
     match tx {
         Some(tx) => {
@@ -415,7 +417,10 @@ pub async fn ws_disconnect(
     connection_id: String,
 ) -> Result<(), String> {
     let conn = {
-        let mut conns = state.connections.lock().unwrap();
+        let mut conns = state
+            .connections
+            .lock()
+            .expect("WebSocket 连接表锁被毒化");
         conns.remove(&connection_id)
     };
     if let Some(c) = conn {

@@ -83,7 +83,11 @@ pub fn run() {
             let menu = Menu::with_items(app, &[&quit_item])?;
 
             let _tray = TrayIconBuilder::with_id("main-tray")
-                .icon(app.default_window_icon().unwrap().clone())
+                .icon(
+                    app.default_window_icon()
+                        .expect("应用缺少默认窗口图标,无法创建托盘")
+                        .clone(),
+                )
                 .tooltip("XuYa Tools")
                 .menu(&menu)
                 .show_menu_on_left_click(false)

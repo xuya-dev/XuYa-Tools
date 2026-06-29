@@ -44,10 +44,12 @@ impl Database {
 }
 
 /// 获取锁的辅助宏 (复制自 cc-switch 的模式)
+/// 说明:锁被毒化 (持有线程 panic) 时仍取出内部数据,避免单点 panic 扩散;
+/// 此时数据可能不一致,但日志功能降级运行优于整体崩溃。
 #[macro_export]
 macro_rules! lock_conn {
     ($conn:expr) => {
-        $conn.lock().unwrap()
+        $conn.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
     };
 }
 

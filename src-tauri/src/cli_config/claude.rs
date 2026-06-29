@@ -99,14 +99,18 @@ pub fn write_live(provider: &CliProvider) -> std::io::Result<()> {
     if !root.is_object() {
         root = json!({});
     }
-    let root_obj = root.as_object_mut().unwrap();
+    let root_obj = root
+        .as_object_mut()
+        .expect("已校验 root.is_object(),此处必为对象");
     let env_entry = root_obj
         .entry("env".to_string())
         .or_insert_with(|| json!({}));
     if !env_entry.is_object() {
         *env_entry = json!({});
     }
-    let env = env_entry.as_object_mut().unwrap();
+    let env = env_entry
+        .as_object_mut()
+        .expect("已重置 env_entry 为对象,此处必为对象");
 
     set_env(env, provider);
     write_atomic_json(&path, &root)

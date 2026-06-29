@@ -116,7 +116,9 @@ fn write_auth_from_fields(provider: &CliProvider, auth_path: &PathBuf) -> std::i
     if !auth.is_object() {
         auth = json!({});
     }
-    let auth_obj = auth.as_object_mut().unwrap();
+    let auth_obj = auth
+        .as_object_mut()
+        .expect("已重置 auth 为对象,此处必为对象");
 
     if !provider.api_key.is_empty() {
         auth_obj.insert("OPENAI_API_KEY".into(), json!(provider.api_key));

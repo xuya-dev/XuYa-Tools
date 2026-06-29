@@ -61,7 +61,11 @@ impl ProxyService {
 
     /// 注入 AppHandle, 用于 emit 告警事件 (在 setup 阶段调用)
     pub fn set_app_handle(&self, handle: tauri::AppHandle) {
-        *self.state.app_handle.write().unwrap() = Some(handle);
+        *self
+            .state
+            .app_handle
+            .write()
+            .expect("app_handle 写锁被毒化,无法注入 handle") = Some(handle);
     }
 
     /// 启动代理。若已设置上游则自动生效。

@@ -542,7 +542,11 @@ fn log_request_with_first_token(
         let _ = crate::usage::logger::log_request(db, &log);
 
         // 通知前端有新日志 (前端自行防抖刷新)
-        let handle_opt = state.app_handle.read().unwrap().clone();
+        let handle_opt = state
+            .app_handle
+            .read()
+            .expect("app_handle 锁被毒化,无法读取")
+            .clone();
         if let Some(handle) = &handle_opt {
             let _ = handle.emit("cli-usage-recorded", ());
         }
@@ -551,7 +555,11 @@ fn log_request_with_first_token(
     // 严重错误 (status >= 500 或转发完全失败 status=0) 时通知前端告警抢占
     let is_severe = status_code == 0 || status_code >= 500;
     if is_severe {
-        let handle_opt = state.app_handle.read().unwrap().clone();
+        let handle_opt = state
+            .app_handle
+            .read()
+            .expect("app_handle 锁被毒化,无法读取告警")
+            .clone();
         if let Some(handle) = handle_opt {
             let _ = handle.emit(
                 "cli-alert",
@@ -793,7 +801,7 @@ fn error_response(status: u16, msg: &str) -> Response<Body> {
     Response::builder()
         .status(status)
         .body(Body::from(msg.to_string()))
-        .unwrap()
+        .expect("构造错误响应失败: status 与 body 均合法,不应失败")
 }
 
 fn now_secs() -> i64 {

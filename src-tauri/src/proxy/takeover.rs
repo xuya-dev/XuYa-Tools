@@ -22,9 +22,13 @@ pub fn takeover_claude(proxy_url: &str) -> TakeoverResult {
     }
 
     let mut root: Value = read_json_or_empty(&path);
-    let env_entry = root
+    if !root.is_object() {
+        root = json!({});
+    }
+    let root_obj = root
         .as_object_mut()
-        .unwrap()
+        .expect("已重置 root 为对象,此处必为对象");
+    let env_entry = root_obj
         .entry("env".to_string())
         .or_insert_with(|| json!({}));
     if !env_entry.is_object() {
@@ -32,7 +36,7 @@ pub fn takeover_claude(proxy_url: &str) -> TakeoverResult {
     }
     env_entry
         .as_object_mut()
-        .unwrap()
+        .expect("已重置 env_entry 为对象,此处必为对象")
         .insert("ANTHROPIC_BASE_URL".into(), json!(proxy_url));
 
     write_or_fail(&path, &root, "Claude Code 已接管")
@@ -45,8 +49,11 @@ pub fn takeover_codex(proxy_url: &str) -> TakeoverResult {
     let path = codex::codex_auth_path();
 
     let mut root = read_json_or_empty(&path);
+    if !root.is_object() {
+        root = json!({});
+    }
     root.as_object_mut()
-        .unwrap()
+        .expect("已重置 root 为对象,此处必为对象")
         .insert("OPENAI_BASE_URL".into(), json!(proxy_url));
 
     write_or_fail(&path, &root, "Codex CLI 已接管")

@@ -40,12 +40,12 @@ impl ProviderStore {
     }
 
     pub fn list(&self) -> Vec<CliProvider> {
-        self.data.lock().unwrap().providers.clone()
+        self.data.lock().expect("ProviderStore 数据锁被毒化").providers.clone()
     }
 
     #[allow(dead_code)]
     pub fn current_id(&self, app: AppType) -> Option<String> {
-        let data = self.data.lock().unwrap();
+        let data = self.data.lock().expect("ProviderStore 数据锁被毒化");
         match app {
             AppType::Claude => data.current_claude.clone(),
             AppType::Codex => data.current_codex.clone(),
@@ -55,7 +55,7 @@ impl ProviderStore {
     pub fn get(&self, id: &str) -> Option<CliProvider> {
         self.data
             .lock()
-            .unwrap()
+            .expect("ProviderStore 数据锁被毒化")
             .providers
             .iter()
             .find(|p| p.id == id)
@@ -68,7 +68,7 @@ impl ProviderStore {
             provider.id = uuid::Uuid::new_v4().to_string();
         }
         provider.updated_at = now_secs();
-        let mut data = self.data.lock().unwrap();
+        let mut data = self.data.lock().expect("ProviderStore 数据锁被毒化");
         if let Some(existing) = data
             .providers
             .iter_mut()
@@ -83,7 +83,7 @@ impl ProviderStore {
     }
 
     pub fn delete(&self, id: &str) -> bool {
-        let mut data = self.data.lock().unwrap();
+        let mut data = self.data.lock().expect("ProviderStore 数据锁被毒化");
         let before = data.providers.len();
         data.providers.retain(|p| p.id != id);
         let changed = data.providers.len() != before;
@@ -102,7 +102,7 @@ impl ProviderStore {
 
     /// 设置某 app 的当前 provider。传 None 表示清除。
     pub fn set_current(&self, app: AppType, id: Option<String>) {
-        let mut data = self.data.lock().unwrap();
+        let mut data = self.data.lock().expect("ProviderStore 数据锁被毒化");
         match app {
             AppType::Claude => data.current_claude = id,
             AppType::Codex => data.current_codex = id,
