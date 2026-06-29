@@ -116,6 +116,34 @@ pub fn write_live(provider: &CliProvider) -> std::io::Result<()> {
     write_atomic_json(&path, &root)
 }
 
+/// 接管模式下只更新 live config 的模型字段 (base_url / token 保持指向代理不变)。
+/// 用于代理接管期间切换 provider: CLI 读到的 base_url 仍是代理地址,
+/// 但模型名已更新为新 provider 的模型, 请求才会带上正确的 model 字段。
+pub fn update_live_models(provider: &CliProvider) -> std::io::Result<()> {
+    let path = claude_settings_path();
+    let mut root: Value = fs::read_to_string(&path)
+        .ok()
+        .and_then(|s| serde_json::from_str(&s).ok())
+        .unwrap_or_else(|| json!({}));
+    if !root.is_object() {
+        root = json!({});
+    }
+    let root_obj = root
+        .as_object_mut()
+        .expect("已校验 root.is_object(),此处必为对象");
+    let env_entry = root_obj
+        .entry("env".to_string())
+        .or_insert_with(|| json!({}));
+    if !env_entry.is_object() {
+        *env_entry = json!({});
+    }
+    let env = env_entry
+        .as_object_mut()
+        .expect("已重置 env_entry 为对象,此处必为对象");
+    set_models(env, provider);
+    write_atomic_json(&path, &root)
+}
+
 fn set_env(env: &mut Map<String, Value>, provider: &CliProvider) {
     // base URL
     if !provider.base_url.is_empty() {
@@ -148,6 +176,13 @@ fn set_env(env: &mut Map<String, Value>, provider: &CliProvider) {
         );
     }
 
+    // 模型字段
+    set_models(env, provider);
+}
+
+/// 只设置模型相关 env 字段 (Sonnet / Opus / Haiku + 显示名 + 兜底)。
+/// 被 set_env (完整写入) 和 update_live_models (接管模式只更新模型) 共享。
+fn set_models(env: &mut Map<String, Value>, provider: &CliProvider) {
     // 模型: 对齐 cc-switch, 按角色分别写入 ANTHROPIC_DEFAULT_{SONNET,OPUS,HAIKU}_MODEL。
     // Claude Code 会按角色用对应模型; 1M 上下文通过模型名 [1M] 后缀声明 (Claude Code 原生识别)。
     let sonnet = with_one_m_marker(&provider.model_sonnet, provider.sonnet_1m);

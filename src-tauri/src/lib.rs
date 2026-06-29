@@ -255,9 +255,10 @@ async fn switch_cli_provider(
         };
 
     if is_taken_over {
-        // 接管模式: 不重写 live config, 只更新 current 指针 + 同步代理上游
+        // 接管模式: base_url 保持代理地址不变, 但模型必须更新 (否则 CLI 发旧模型名)
         cli.set_current_only(app, &provider_id);
         if app == AppType::Claude {
+            let _ = cli_config::claude::update_live_models(&provider);
             sync_proxy_from_current_claude(&cli, &proxy).await;
         }
         return Ok(cli_config::types::SwitchResult {
