@@ -3,7 +3,7 @@
 use rusqlite::Connection;
 
 /// 当前 schema 版本
-const SCHEMA_VERSION: u32 = 1;
+const SCHEMA_VERSION: u32 = 2;
 
 /// 执行 schema 迁移 (幂等)
 pub fn migrate(conn: &Connection) -> Result<(), rusqlite::Error> {
@@ -52,6 +52,17 @@ pub fn migrate(conn: &Connection) -> Result<(), rusqlite::Error> {
         conn.execute(
             "INSERT INTO schema_version(version) VALUES (?1)",
             rusqlite::params![1],
+        )?;
+    }
+
+    if current < 2 {
+        conn.execute_batch(
+            "ALTER TABLE proxy_request_logs ADD COLUMN cache_read_tokens INTEGER NOT NULL DEFAULT 0;
+             ALTER TABLE proxy_request_logs ADD COLUMN cache_creation_tokens INTEGER NOT NULL DEFAULT 0;",
+        )?;
+        conn.execute(
+            "INSERT INTO schema_version(version) VALUES (?1)",
+            rusqlite::params![2],
         )?;
     }
 

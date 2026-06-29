@@ -69,7 +69,7 @@
     <div class="settings-section">
       <div class="settings-section-title">关于</div>
       <div class="about-card">
-        <div class="about-logo">⌘</div>
+        <img class="about-logo" src="/Logo.png" alt="" aria-hidden="true" />
         <div class="about-info">
           <div class="about-name">XuYa Tools</div>
           <div class="about-version">v0.1.0 · 程序员日常开发工具箱</div>
@@ -168,7 +168,7 @@ onMounted(async () => {
 .switch input:checked + .slider::before { transform: translateX(20px); }
 
 .about-card { display: flex; align-items: center; gap: 14px; padding: 20px; background: var(--xuya-card-bg); border: 1px solid var(--xuya-border); border-radius: var(--xuya-radius); }
-.about-logo { display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; border-radius: var(--xuya-radius); background: var(--xuya-accent-gradient); color: #fff; font-size: 22px; font-weight: 700; box-shadow: 0 4px 12px var(--xuya-accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.25); }
+.about-logo { width: 48px; height: 48px; border-radius: var(--xuya-radius); object-fit: cover; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18); flex-shrink: 0; }
 .about-name { font-size: 16px; font-weight: 700; color: var(--xuya-text); }
 .about-version { font-size: 12.5px; color: var(--xuya-text-secondary); margin-top: 3px; }
 .about-tech { font-size: 11px; color: var(--xuya-text-tertiary); margin-top: 6px; font-family: var(--xuya-font-mono); }

@@ -3,7 +3,7 @@
     <!-- 左侧:拖拽区 + 品牌 -->
     <div class="titlebar-left">
       <div class="brand">
-        <span class="brand-logo">⌘</span>
+        <img class="brand-logo" src="/Logo.png" alt="" aria-hidden="true" />
         <span class="brand-name">XuYa Tools</span>
       </div>
     </div>
@@ -94,17 +94,11 @@ const themeLabel = computed(
 }
 
 .brand-logo {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
   width: 24px;
   height: 24px;
-  border-radius: 7px;
-  background: var(--xuya-accent-gradient);
-  color: #fff;
-  font-size: 13px;
-  font-weight: 700;
-  box-shadow: 0 2px 6px var(--xuya-accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  object-fit: cover;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
 }
 
 .brand-name {

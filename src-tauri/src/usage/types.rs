@@ -13,6 +13,8 @@ pub struct RequestLog {
     pub request_model: Option<String>,
     pub input_tokens: u64,
     pub output_tokens: u64,
+    pub cache_read_tokens: u64,
+    pub cache_creation_tokens: u64,
     pub total_cost_usd: f64,
     pub latency_ms: u64,
     pub first_token_ms: Option<u64>,
@@ -31,8 +33,12 @@ pub struct UsageSummary {
     pub error_count: u64,
     pub success_rate: f64,
     pub avg_latency_ms: u64,
+    pub avg_first_token_ms: u64,
+    pub streaming_count: u64,
     pub total_input_tokens: u64,
     pub total_output_tokens: u64,
+    pub total_cache_read_tokens: u64,
+    pub total_cache_creation_tokens: u64,
     pub total_cost_usd: f64,
 }
 
@@ -44,11 +50,32 @@ impl Default for UsageSummary {
             error_count: 0,
             success_rate: 0.0,
             avg_latency_ms: 0,
+            avg_first_token_ms: 0,
+            streaming_count: 0,
             total_input_tokens: 0,
             total_output_tokens: 0,
+            total_cache_read_tokens: 0,
+            total_cache_creation_tokens: 0,
             total_cost_usd: 0.0,
         }
     }
+}
+
+/// 单日统计 (用于图表)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DailyStat {
+    pub date: String,   // YYYY-MM-DD
+    pub timestamp: i64, // 当天 0 点 Unix 秒
+    pub request_count: u64,
+    pub success_count: u64,
+    pub error_count: u64,
+    pub input_tokens: u64,
+    pub output_tokens: u64,
+    pub cache_read_tokens: u64,
+    pub cache_creation_tokens: u64,
+    pub cost_usd: f64,
+    pub avg_latency_ms: u64,
 }
 
 /// 日志过滤器
@@ -82,6 +109,8 @@ pub struct RequestLogDetail {
     pub model: Option<String>,
     pub input_tokens: u64,
     pub output_tokens: u64,
+    pub cache_read_tokens: u64,
+    pub cache_creation_tokens: u64,
     pub total_cost_usd: f64,
     pub latency_ms: u64,
     pub first_token_ms: Option<u64>,

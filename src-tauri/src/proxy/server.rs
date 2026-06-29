@@ -409,7 +409,12 @@ async fn forward_handler(req: Request<Body>, state: ProxyState) -> Response<Body
                         }
                     }
                     let parsed = parse_usage(&buf);
-                    let (in_tok, out_tok) = (parsed.input, parsed.output);
+                    let (in_tok, out_tok, cache_read, cache_create) = (
+                        parsed.input,
+                        parsed.output,
+                        parsed.cache_read,
+                        parsed.cache_creation,
+                    );
                     let cost = calculate_cost_full(&collect_app_type, &buf, &parsed);
                     // 首 token 延迟 (从请求开始到第一个 chunk)
                     let first_token_ms = ft_clone
@@ -427,7 +432,7 @@ async fn forward_handler(req: Request<Body>, state: ProxyState) -> Response<Body
                         status_code,
                         total_latency,
                         first_token_ms,
-                        Some((in_tok, out_tok)),
+                        Some((in_tok, out_tok, cache_read, cache_create)),
                         cost,
                         if status_code >= 400 {
                             Some(format!("HTTP {status_code}"))
@@ -574,7 +579,12 @@ async fn forward_handler(req: Request<Body>, state: ProxyState) -> Response<Body
 
             // 尝试从响应体解析 token usage + 计算成本 (基于转换后的 anthropic 格式, 含 cache)
             let parsed = parse_usage(&final_bytes);
-            let (in_tok, out_tok) = (parsed.input, parsed.output);
+            let (in_tok, out_tok, cache_read, cache_create) = (
+                parsed.input,
+                parsed.output,
+                parsed.cache_read,
+                parsed.cache_creation,
+            );
             let cost = calculate_cost_full(&app_type, &final_bytes, &parsed);
 
             log_request(
@@ -585,7 +595,7 @@ async fn forward_handler(req: Request<Body>, state: ProxyState) -> Response<Body
                 &original_path,
                 status_code,
                 latency_ms,
-                Some((in_tok, out_tok)),
+                Some((in_tok, out_tok, cache_read, cache_create)),
                 cost,
                 if status_code >= 400 {
                     Some(format!("HTTP {status_code}"))
@@ -646,7 +656,7 @@ fn log_request(
     path: &str,
     status_code: u16,
     latency_ms: u64,
-    usage: Option<(u64, u64)>,
+    usage: Option<(u64, u64, u64, u64)>,
     cost_usd: f64,
     error_message: Option<String>,
     body_model: Option<&str>,
@@ -678,7 +688,7 @@ fn log_request_with_cost(
     path: &str,
     status_code: u16,
     latency_ms: u64,
-    usage: Option<(u64, u64)>,
+    usage: Option<(u64, u64, u64, u64)>,
     cost_usd: f64,
     error_message: Option<String>,
     body_model: Option<&str>,
@@ -712,14 +722,14 @@ fn log_request_with_first_token(
     status_code: u16,
     latency_ms: u64,
     first_token_ms: Option<u64>,
-    usage: Option<(u64, u64)>,
+    usage: Option<(u64, u64, u64, u64)>,
     cost_usd: f64,
     error_message: Option<String>,
     body_model: Option<&str>,
     is_stream: bool,
 ) {
     if let Some(db) = &state.db {
-        let (in_tok, out_tok) = usage.unwrap_or((0, 0));
+        let (in_tok, out_tok, cache_read, cache_create) = usage.unwrap_or((0, 0, 0, 0));
         let log = crate::usage::types::RequestLog {
             request_id: request_id.to_string(),
             app_type: app_type.to_string(),
@@ -731,6 +741,8 @@ fn log_request_with_first_token(
             request_model: body_model.map(String::from),
             input_tokens: in_tok,
             output_tokens: out_tok,
+            cache_read_tokens: cache_read,
+            cache_creation_tokens: cache_create,
             total_cost_usd: cost_usd,
             latency_ms,
             first_token_ms,

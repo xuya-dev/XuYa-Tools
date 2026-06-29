@@ -69,6 +69,7 @@ pub fn run() {
             get_usage_summary,
             get_request_logs,
             clear_request_logs,
+            get_daily_stats,
             // ---- HTTP / WebSocket 请求工具 ----
             http_client::http_request,
             http_client::ws_connect,
@@ -463,6 +464,16 @@ fn get_request_logs(
 fn clear_request_logs(svc: State<'_, ProxyService>) -> Result<(), String> {
     let db = svc.db().ok_or("数据库未初始化")?;
     usage::stats::clear_logs(db)
+}
+
+#[tauri::command]
+fn get_daily_stats(
+    svc: State<'_, ProxyService>,
+    start_date: Option<i64>,
+    end_date: Option<i64>,
+) -> Result<Vec<usage::types::DailyStat>, String> {
+    let db = svc.db().ok_or("数据库未初始化")?;
+    usage::stats::get_daily_stats(db, start_date, end_date)
 }
 
 /// CLI 配置数据目录: 优先用应用数据目录, 回退到 home / exe 同级

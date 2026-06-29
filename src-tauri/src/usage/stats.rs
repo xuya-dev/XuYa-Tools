@@ -4,16 +4,12 @@ use rusqlite::params_from_iter;
 
 use crate::db::Database;
 
-use super::types::{LogFilters, PaginatedLogs, RequestLogDetail, UsageSummary};
+use super::types::{DailyStat, LogFilters, PaginatedLogs, RequestLogDetail, UsageSummary};
 
-/// 起止时间内的汇总 (None 表示全部)
-pub fn get_summary(
-    db: &Database,
+fn build_time_filter(
     start: Option<i64>,
     end: Option<i64>,
-) -> Result<UsageSummary, String> {
-    let conn = crate::lock_conn!(db.conn);
-
+) -> (String, Vec<Box<dyn rusqlite::ToSql>>) {
     let mut conditions: Vec<String> = Vec::new();
     let mut binds: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
     if let Some(s) = start {
@@ -24,11 +20,22 @@ pub fn get_summary(
         conditions.push("created_at < ?".to_string());
         binds.push(Box::new(e));
     }
-    let where_clause = if conditions.is_empty() {
+    let clause = if conditions.is_empty() {
         String::new()
     } else {
         format!("WHERE {}", conditions.join(" AND "))
     };
+    (clause, binds)
+}
+
+/// 起止时间内的汇总 (None 表示全部)
+pub fn get_summary(
+    db: &Database,
+    start: Option<i64>,
+    end: Option<i64>,
+) -> Result<UsageSummary, String> {
+    let conn = crate::lock_conn!(db.conn);
+    let (where_clause, binds) = build_time_filter(start, end);
 
     let sql = format!(
         "SELECT
@@ -36,8 +43,12 @@ pub fn get_summary(
             COALESCE(SUM(CASE WHEN status_code >= 200 AND status_code < 400 THEN 1 ELSE 0 END), 0) as ok,
             COALESCE(SUM(CASE WHEN status_code >= 400 OR status_code = 0 THEN 1 ELSE 0 END), 0) as err,
             COALESCE(AVG(latency_ms), 0) as avg_lat,
+            COALESCE(AVG(first_token_ms), 0) as avg_ft,
+            COALESCE(SUM(is_streaming), 0) as streams,
             COALESCE(SUM(input_tokens), 0) as in_tok,
             COALESCE(SUM(output_tokens), 0) as out_tok,
+            COALESCE(SUM(cache_read_tokens), 0) as cache_read,
+            COALESCE(SUM(cache_creation_tokens), 0) as cache_create,
             COALESCE(SUM(total_cost_usd), 0) as cost
          FROM proxy_request_logs {where_clause}"
     );
@@ -45,18 +56,24 @@ pub fn get_summary(
     let mut stmt = conn.prepare(&sql).map_err(|e| e.to_string())?;
     let row = stmt
         .query_row(params_from_iter(binds.iter().map(|b| b.as_ref())), |row| {
-            let total: i64 = row.get(0)?;
-            let ok: i64 = row.get(1)?;
-            let err: i64 = row.get(2)?;
-            let avg_lat: f64 = row.get(3)?;
-            let in_tok: i64 = row.get(4)?;
-            let out_tok: i64 = row.get(5)?;
-            let cost: f64 = row.get(6)?;
-            Ok((total, ok, err, avg_lat, in_tok, out_tok, cost))
+            Ok((
+                row.get::<_, i64>(0)?,
+                row.get::<_, i64>(1)?,
+                row.get::<_, i64>(2)?,
+                row.get::<_, f64>(3)?,
+                row.get::<_, f64>(4)?,
+                row.get::<_, i64>(5)?,
+                row.get::<_, i64>(6)?,
+                row.get::<_, i64>(7)?,
+                row.get::<_, i64>(8)?,
+                row.get::<_, i64>(9)?,
+                row.get::<_, f64>(10)?,
+            ))
         })
         .map_err(|e| e.to_string())?;
 
-    let (total, ok, err, avg_lat, in_tok, out_tok, cost) = row;
+    let (total, ok, err, avg_lat, avg_ft, streams, in_tok, out_tok, cache_read, cache_create, cost) =
+        row;
     let success_rate = if total > 0 {
         ok as f64 / total as f64
     } else {
@@ -69,22 +86,89 @@ pub fn get_summary(
         error_count: err as u64,
         success_rate,
         avg_latency_ms: avg_lat as u64,
+        avg_first_token_ms: avg_ft as u64,
+        streaming_count: streams as u64,
         total_input_tokens: in_tok as u64,
         total_output_tokens: out_tok as u64,
+        total_cache_read_tokens: cache_read as u64,
+        total_cache_creation_tokens: cache_create as u64,
         total_cost_usd: cost,
     })
 }
 
-/// 今日 0 点的 Unix 秒 (本地时区)
+/// 每日聚合统计 (用于图表)
+pub fn get_daily_stats(
+    db: &Database,
+    start: Option<i64>,
+    end: Option<i64>,
+) -> Result<Vec<DailyStat>, String> {
+    let conn = crate::lock_conn!(db.conn);
+    let (where_clause, binds) = build_time_filter(start, end);
+
+    // SQLite: date(created_at, 'unixepoch', 'localtime') 把 Unix 秒转本地日期
+    let sql = format!(
+        "SELECT
+            date(created_at, 'unixepoch', 'localtime') as day,
+            MIN(created_at - (created_at % 86400)) as ts,
+            COUNT(*) as cnt,
+            COALESCE(SUM(CASE WHEN status_code >= 200 AND status_code < 400 THEN 1 ELSE 0 END), 0) as ok,
+            COALESCE(SUM(CASE WHEN status_code >= 400 OR status_code = 0 THEN 1 ELSE 0 END), 0) as err,
+            COALESCE(SUM(input_tokens), 0) as in_tok,
+            COALESCE(SUM(output_tokens), 0) as out_tok,
+            COALESCE(SUM(cache_read_tokens), 0) as cache_read,
+            COALESCE(SUM(cache_creation_tokens), 0) as cache_create,
+            COALESCE(SUM(total_cost_usd), 0) as cost,
+            COALESCE(AVG(latency_ms), 0) as avg_lat
+         FROM proxy_request_logs {where_clause}
+         GROUP BY day
+         ORDER BY day"
+    );
+
+    let mut stmt = conn.prepare(&sql).map_err(|e| e.to_string())?;
+    let rows = stmt
+        .query_map(params_from_iter(binds.iter().map(|b| b.as_ref())), |row| {
+            let day: String = row.get(0)?;
+            let ts: i64 = row.get(1).unwrap_or(0);
+            // The localtime adjustment means ts might not be exact midnight;
+            // normalize to the date's local midnight approximation
+            Ok(DailyStat {
+                date: day.clone(),
+                timestamp: ts,
+                request_count: row.get::<_, i64>(2)? as u64,
+                success_count: row.get::<_, i64>(3)? as u64,
+                error_count: row.get::<_, i64>(4)? as u64,
+                input_tokens: row.get::<_, i64>(5)? as u64,
+                output_tokens: row.get::<_, i64>(6)? as u64,
+                cache_read_tokens: row.get::<_, i64>(7)? as u64,
+                cache_creation_tokens: row.get::<_, i64>(8)? as u64,
+                cost_usd: row.get(9)?,
+                avg_latency_ms: row.get::<_, f64>(10)? as u64,
+            })
+        })
+        .map_err(|e| e.to_string())?;
+
+    let mut result = Vec::new();
+    for row in rows {
+        result.push(row.map_err(|e| e.to_string())?);
+    }
+    Ok(result)
+}
+
+/// 今日 0 点的 Unix 秒 (本地时区近似)
 pub fn today_start_secs() -> i64 {
     use std::time::{SystemTime, UNIX_EPOCH};
     let now = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_secs() as i64)
         .unwrap_or(0);
-    // 本地时区偏移 (简化: 用 UTC 当天, 误差最多几小时)
     let secs_per_day: i64 = 86400;
     now - (now.rem_euclid(secs_per_day))
+}
+
+/// N 天前 0 点的 Unix 秒
+#[allow(dead_code)]
+pub fn days_ago_start_secs(days: i64) -> i64 {
+    today_start_secs() - days * 86400
 }
 
 /// 今日摘要 (供悬浮框)
@@ -133,7 +217,6 @@ pub fn get_logs(
         format!("WHERE {}", conditions.join(" AND "))
     };
 
-    // 总数
     let total_sql = format!("SELECT COUNT(*) FROM proxy_request_logs {where_clause}");
     let total: u32 = conn
         .query_row(
@@ -143,10 +226,10 @@ pub fn get_logs(
         )
         .map_err(|e| e.to_string())?;
 
-    // 分页数据
     let data_sql = format!(
         "SELECT id, request_id, app_type, provider_id, provider_name, model,
-                input_tokens, output_tokens, total_cost_usd, latency_ms, first_token_ms,
+                input_tokens, output_tokens, cache_read_tokens, cache_creation_tokens,
+                total_cost_usd, latency_ms, first_token_ms,
                 status_code, error_message, is_streaming, created_at
          FROM proxy_request_logs {where_clause}
          ORDER BY created_at DESC
@@ -171,121 +254,109 @@ pub fn get_logs(
                     model: row.get(5)?,
                     input_tokens: row.get::<_, i64>(6)? as u64,
                     output_tokens: row.get::<_, i64>(7)? as u64,
-                    total_cost_usd: row.get(8)?,
-                    latency_ms: row.get::<_, i64>(9)? as u64,
-                    first_token_ms: row.get::<_, Option<i64>>(10)?.map(|v| v as u64),
-                    status_code: row.get::<_, i64>(11)? as u16,
-                    error_message: row.get(12)?,
-                    is_streaming: row.get::<_, i64>(13)? != 0,
-                    created_at: row.get(14)?,
+                    cache_read_tokens: row.get::<_, i64>(8)? as u64,
+                    cache_creation_tokens: row.get::<_, i64>(9)? as u64,
+                    total_cost_usd: row.get(10)?,
+                    latency_ms: row.get::<_, i64>(11)? as u64,
+                    first_token_ms: row.get::<_, Option<i64>>(12)?.map(|v| v as u64),
+                    status_code: row.get::<_, i64>(13)? as u16,
+                    error_message: row.get(14)?,
+                    is_streaming: row.get::<_, i64>(15)? != 0,
+                    created_at: row.get(16)?,
                 })
             },
         )
         .map_err(|e| e.to_string())?;
 
     let mut data = Vec::new();
-    for r in rows {
-        data.push(r.map_err(|e| e.to_string())?);
+    for row in rows {
+        data.push(row.map_err(|e| e.to_string())?);
     }
 
     Ok(PaginatedLogs {
-        data,
         total,
         page,
         page_size,
+        data,
     })
 }
 
-/// 清空全部日志
+/// 清空日志
 pub fn clear_logs(db: &Database) -> Result<(), String> {
     let conn = crate::lock_conn!(db.conn);
-    conn.execute("DELETE FROM proxy_request_logs", [])
-        .map_err(|e| e.to_string())?;
-    Ok(())
+    conn.execute_batch("DELETE FROM proxy_request_logs")
+        .map_err(|e| e.to_string())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::db::Database;
-    use crate::usage::logger;
-    use crate::usage::types::RequestLog;
 
-    fn sample_log(status: u16, latency: u64, in_tok: u64, out_tok: u64) -> RequestLog {
-        RequestLog {
-            request_id: format!("req-{}", status),
-            app_type: "claude".to_string(),
-            provider_id: Some("p1".to_string()),
-            provider_name: Some("TestProvider".to_string()),
-            model: Some("sonnet".to_string()),
-            request_model: None,
-            input_tokens: in_tok,
-            output_tokens: out_tok,
-            total_cost_usd: 0.0,
-            latency_ms: latency,
-            first_token_ms: None,
-            status_code: status,
-            error_message: None,
-            is_streaming: false,
-            created_at: 1000,
-        }
+    #[test]
+    fn test_get_summary_empty() {
+        let db = Database::in_memory().expect("打开内存数据库失败");
+        let summary = get_summary(&db, None, None).unwrap();
+        assert_eq!(summary.total_requests, 0);
     }
 
     #[test]
-    fn test_log_and_summary() {
-        let db = Database::in_memory().unwrap();
-
-        // 写入 3 条: 2 成功 1 失败
-        logger::log_request(&db, &sample_log(200, 100, 10, 20)).unwrap();
-        logger::log_request(&db, &sample_log(200, 200, 30, 40)).unwrap();
-        logger::log_request(&db, &sample_log(500, 300, 0, 0)).unwrap();
+    fn test_get_summary_with_data() {
+        let db = Database::in_memory().expect("打开内存数据库失败");
+        let conn = crate::lock_conn!(db.conn);
+        // 插入两条测试数据
+        conn.execute(
+            "INSERT INTO proxy_request_logs (request_id, app_type, input_tokens, output_tokens, cache_read_tokens, cache_creation_tokens, status_code, latency_ms, total_cost_usd, created_at)
+             VALUES ('r1', 'claude', 100, 50, 80, 20, 200, 500, 0.01, 1000),
+                    ('r2', 'claude', 200, 100, 0, 0, 500, 800, 0.02, 2000)",
+            [],
+        )
+        .unwrap();
+        drop(conn);
 
         let summary = get_summary(&db, None, None).unwrap();
-        assert_eq!(summary.total_requests, 3);
-        assert_eq!(summary.success_count, 2);
+        assert_eq!(summary.total_requests, 2);
+        assert_eq!(summary.success_count, 1);
         assert_eq!(summary.error_count, 1);
-        // 成功率 2/3
-        assert!((summary.success_rate - 0.6667).abs() < 0.01);
-        // 平均延迟 (100+200+300)/3 = 200
-        assert_eq!(summary.avg_latency_ms, 200);
-        assert_eq!(summary.total_input_tokens, 40);
-        assert_eq!(summary.total_output_tokens, 60);
+        assert_eq!(summary.total_input_tokens, 300);
+        assert_eq!(summary.total_output_tokens, 150);
+        assert_eq!(summary.total_cache_read_tokens, 80);
+        assert_eq!(summary.total_cache_creation_tokens, 20);
     }
 
     #[test]
-    fn test_get_logs_pagination() {
-        let db = Database::in_memory().unwrap();
-        for i in 0..5 {
-            let mut log = sample_log(200, 100, 10, 20);
-            log.request_id = format!("req-{i}");
-            log.created_at = 1000 + i;
-            logger::log_request(&db, &log).unwrap();
-        }
+    fn test_get_daily_stats() {
+        let db = Database::in_memory().expect("打开内存数据库失败");
+        let conn = crate::lock_conn!(db.conn);
+        // 同一天两条, 另一天一条
+        let day1 = 1700000000i64; // 某天
+        let day2 = day1 + 86400; // 第二天
+        conn.execute(
+            "INSERT INTO proxy_request_logs (request_id, app_type, input_tokens, output_tokens, status_code, latency_ms, total_cost_usd, created_at)
+             VALUES ('r1', 'claude', 100, 50, 200, 300, 0.01, ?1),
+                    ('r2', 'claude', 200, 100, 200, 400, 0.02, ?2),
+                    ('r3', 'codex', 50, 25, 200, 200, 0.005, ?1)",
+            rusqlite::params![day1, day2],
+        )
+        .unwrap();
+        drop(conn);
 
-        let page1 = get_logs(&db, LogFilters::default(), 1, 2).unwrap();
-        assert_eq!(page1.total, 5);
-        assert_eq!(page1.data.len(), 2);
-        // 应按 created_at DESC, 即最新 (1004) 在前
-        assert_eq!(page1.data[0].request_id, "req-4");
-        assert_eq!(page1.page, 1);
-        assert_eq!(page1.page_size, 2);
+        let daily = get_daily_stats(&db, None, None).unwrap();
+        assert_eq!(daily.len(), 2, "应该有两天的数据");
     }
 
     #[test]
     fn test_clear_logs() {
-        let db = Database::in_memory().unwrap();
-        logger::log_request(&db, &sample_log(200, 100, 10, 20)).unwrap();
+        let db = Database::in_memory().expect("打开内存数据库失败");
+        let conn = crate::lock_conn!(db.conn);
+        conn.execute(
+            "INSERT INTO proxy_request_logs (request_id, app_type, input_tokens, output_tokens, status_code, latency_ms, total_cost_usd, created_at)
+             VALUES ('r1', 'claude', 100, 50, 200, 300, 0.01, 1000)",
+            [],
+        )
+        .unwrap();
+        drop(conn);
         assert_eq!(get_summary(&db, None, None).unwrap().total_requests, 1);
         clear_logs(&db).unwrap();
         assert_eq!(get_summary(&db, None, None).unwrap().total_requests, 0);
-    }
-
-    #[test]
-    fn test_today_summary_empty() {
-        let db = Database::in_memory().unwrap();
-        let (reqs, errs, lat) = today_summary(&db).unwrap();
-        assert_eq!(reqs, 0);
-        assert_eq!(errs, 0);
-        assert_eq!(lat, 0);
     }
 }

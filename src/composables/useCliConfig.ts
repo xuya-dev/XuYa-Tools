@@ -123,8 +123,12 @@ export interface UsageSummary {
     errorCount: number;
     successRate: number;
     avgLatencyMs: number;
+    avgFirstTokenMs: number;
+    streamingCount: number;
     totalInputTokens: number;
     totalOutputTokens: number;
+    totalCacheReadTokens: number;
+    totalCacheCreationTokens: number;
     totalCostUsd: number;
 }
 
@@ -143,6 +147,8 @@ export interface RequestLogDetail {
     model: string | null;
     inputTokens: number;
     outputTokens: number;
+    cacheReadTokens: number;
+    cacheCreationTokens: number;
     totalCostUsd: number;
     latencyMs: number;
     firstTokenMs: number | null;
@@ -151,6 +157,22 @@ export interface RequestLogDetail {
     isStreaming: boolean;
     createdAt: number;
 }
+
+export interface DailyStat {
+    date: string;
+    timestamp: number;
+    requestCount: number;
+    successCount: number;
+    errorCount: number;
+    inputTokens: number;
+    outputTokens: number;
+    cacheReadTokens: number;
+    cacheCreationTokens: number;
+    costUsd: number;
+    avgLatencyMs: number;
+}
+
+export type TimeRange = 'today' | '7d' | '30d';
 
 export interface PaginatedLogs {
     data: RequestLogDetail[];
@@ -285,20 +307,51 @@ async function setTakeover(appType: AppType, enabled: boolean): Promise<Takeover
 
 // ==================== 请求统计状态 ====================
 const usageSummary = ref<UsageSummary | null>(null);
+const dailyStats = ref<DailyStat[]>([]);
 const requestLogs = ref<RequestLogDetail[]>([]);
 const logsTotal = ref(0);
 const logsPage = ref(1);
 const logsPageSize = ref(20);
+const statsTimeRange = ref<TimeRange>('today');
+
+function rangeToTimestamps(range: TimeRange): { start: number | null; end: number | null } {
+    const now = Math.floor(Date.now() / 1000);
+    const daySec = 86400;
+    const todayStart = now - (now % daySec);
+    switch (range) {
+        case 'today': return { start: todayStart, end: null };
+        case '7d': return { start: todayStart - 6 * daySec, end: null };
+        case '30d': return { start: todayStart - 29 * daySec, end: null };
+    }
+}
 
 async function refreshUsageSummary() {
     try {
+        const { start, end } = rangeToTimestamps(statsTimeRange.value);
         usageSummary.value = await invoke<UsageSummary>('get_usage_summary', {
-            startDate: null,
-            endDate: null,
+            startDate: start,
+            endDate: end,
         });
     } catch (e) {
         console.error('拉取统计失败', e);
     }
+}
+
+async function refreshDailyStats() {
+    try {
+        const { start, end } = rangeToTimestamps(statsTimeRange.value);
+        dailyStats.value = await invoke<DailyStat[]>('get_daily_stats', {
+            startDate: start,
+            endDate: end,
+        });
+    } catch (e) {
+        console.error('拉取每日统计失败', e);
+    }
+}
+
+async function setStatsTimeRange(range: TimeRange) {
+    statsTimeRange.value = range;
+    await Promise.all([refreshUsageSummary(), refreshDailyStats()]);
 }
 
 async function refreshRequestLogs(page = logsPage.value) {
@@ -345,11 +398,15 @@ export function useCliConfig() {
         setTakeover,
         // 统计相关
         usageSummary,
+        dailyStats,
+        statsTimeRange,
         requestLogs,
         logsTotal,
         logsPage,
         logsPageSize,
         refreshUsageSummary,
+        refreshDailyStats,
+        setStatsTimeRange,
         refreshRequestLogs,
         clearRequestLogs,
     };
