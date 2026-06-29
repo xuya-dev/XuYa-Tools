@@ -391,10 +391,10 @@
                             <span v-if="fetchedModels.length" class="field-hint">✅ 已获取 {{ fetchedModels.length }} 个模型，可在输入框下拉选择</span>
                         </div>
 
-                        <!-- ===== 分区: Codex 配置 (仅 Codex) ===== -->
+                        <!-- ===== 分区: 模型与凭据 (仅 Codex) ===== -->
                         <div v-if="editor.appTab === 'codex'" class="form-section">
                             <div class="form-section-title">
-                                <span>Codex 配置</span>
+                                <span>模型与凭据</span>
                                 <button
                                     class="fetch-models-btn"
                                     :disabled="modelsLoading || !editor.form.base_url || editor.form.category === 'official'"
@@ -428,7 +428,7 @@
                                     rows="8"
                                     :placeholder='codexConfigPlaceholder'
                                 ></textarea>
-                                <span class="field-hint">Codex 行为配置，留空则使用默认</span>
+                                <span class="field-hint">Codex 行为配置。模型和 base_url 已由上方字段控制,此处留空则使用默认</span>
                             </label>
                         </div>
 
@@ -474,13 +474,13 @@
                         <button
                             v-if="!editor.isEdit && editor.step === 'form'"
                             class="cli-modal-btn primary"
-                            :disabled="!editor.form.name.trim()"
+                            :disabled="!canSave"
                             @click="onSave"
                         >添加</button>
                         <button
                             v-else-if="editor.isEdit"
                             class="cli-modal-btn primary"
-                            :disabled="!editor.form.name.trim()"
+                            :disabled="!canSave"
                             @click="onSave"
                         >保存</button>
                     </div>
@@ -689,7 +689,8 @@ const emptyForm = (): CliProvider => ({
     sonnet_name: '', opus_name: '', haiku_name: '',
     sonnet_1m: false, opus_1m: false, haiku_1m: false,
     note: '', website_url: '',
-    auth_field: 'ANTHROPIC_AUTH_TOKEN', api_format: 'anthropic',
+    auth_field: 'ANTHROPIC_AUTH_TOKEN',
+    api_format: editor.appTab === 'codex' ? 'openai_chat' : 'anthropic',
     custom_user_agent: '', models_url: '', preset_id: '',
     icon: '', icon_color: '', codex_auth_json: '', codex_config_toml: '',
     updated_at: 0,
@@ -709,6 +710,14 @@ const editor = reactive({
 const presetSearch = ref('');
 const advancedOpen = ref(false);
 const lastPresetName = ref('');
+
+// ---------- 表单校验 ----------
+/** P1-1: Codex tab 追加 model 必填校验 */
+const canSave = computed(() => {
+    if (!editor.form.name.trim()) return false;
+    if (editor.appTab === 'codex' && !editor.form.model.trim()) return false;
+    return true;
+});
 
 // ---------- 模型获取 ----------
 const fetchedModels = ref<FetchedModel[]>([]);
@@ -737,10 +746,24 @@ function modelSummary(p: CliProvider): { role: string; model: string; oneM: bool
     return out;
 }
 
+/** 从 auth.json 文本中提取 OPENAI_API_KEY (Codex tab 回退) */
+function parseKeyFromAuthJson(authJson: string): string {
+    try {
+        const parsed = JSON.parse(authJson);
+        return parsed.OPENAI_API_KEY || parsed.openai_api_key || '';
+    } catch {
+        return '';
+    }
+}
+
 /** 从当前 base_url + api_key 拉取可用模型列表 */
 async function onFetchModels() {
     const baseUrl = editor.form.base_url.trim();
-    const apiKey = editor.form.api_key.trim();
+    // P1-2: Codex tab 时若 api_key 为空, 从 auth.json 回退解析
+    let apiKey = editor.form.api_key.trim();
+    if (!apiKey && editor.appTab === 'codex' && editor.form.codex_auth_json.trim()) {
+        apiKey = parseKeyFromAuthJson(editor.form.codex_auth_json).trim();
+    }
     if (!baseUrl) {
         showToast('请先填写 API 端点地址', 'error');
         return;
