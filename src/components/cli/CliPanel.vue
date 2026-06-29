@@ -63,6 +63,12 @@
                     <span class="cli-status-label">{{ codexProxyOn ? '代理地址' : 'Base URL' }}</span>
                     <span class="cli-status-val mono">{{ codexDisplayUrl || '官方默认' }}</span>
                 </div>
+                <div v-if="codexModels" class="cli-status-row">
+                    <span class="cli-status-label">当前模型</span>
+                    <span class="cli-status-val">
+                        <span class="live-model-pill">{{ codexModels }}</span>
+                    </span>
+                </div>
                 <div class="cli-status-row">
                     <span class="cli-status-label">配置路径</span>
                     <span class="cli-status-val mono small">{{ status?.codex.config_path || '未检测到' }}</span>
@@ -367,7 +373,12 @@
 
                         <!-- ===== 分区: Codex 凭据 (仅 Codex) ===== -->
                         <div v-if="editor.appTab === 'codex'" class="form-section">
-                            <div class="form-section-title">Codex 凭据</div>
+                            <div class="form-section-title">Codex 配置</div>
+                            <label class="cli-field">
+                                <span>模型 <span class="req">*</span></span>
+                                <input v-model="editor.form.model" class="mono" placeholder="如 gpt-4o、o3、claude-sonnet-4" />
+                                <span class="field-hint">Codex CLI 使用的主模型 ID</span>
+                            </label>
                             <label class="cli-field">
                                 <span><span class="file-badge">auth.json</span> <span class="req">*</span></span>
                                 <textarea
@@ -535,12 +546,12 @@ const claudeBadgeText = computed(() => {
 });
 const codexBadgeClass = computed(() => {
     if (!status.value?.codex.installed) return 'off';
-    return status.value?.codex.matched_provider_id ? 'on' : 'warn';
+    return status.value?.codex.matched_provider_id || codexActiveProvider.value ? 'on' : 'warn';
 });
 const codexBadgeText = computed(() => {
     const s = status.value?.codex;
     if (!s?.installed) return '未安装';
-    return s.matched_provider_id ? '已匹配' : '未匹配';
+    return s.matched_provider_id || codexActiveProvider.value ? '已匹配' : '未匹配';
 });
 
 // ---------- 代理回显 ----------
@@ -566,8 +577,12 @@ const claudeActiveProvider = computed(
         : (status.value?.claude.matched_provider_name || ''),
 );
 
-/** Codex 当前 Provider 名称 */
-const codexActiveProvider = computed(() => status.value?.codex.matched_provider_name || '');
+/** Codex 当前 Provider 名称 (接管时用代理上游名, 否则用 live 匹配名) */
+const codexActiveProvider = computed(() =>
+    codexProxyOn.value
+        ? (proxyStatus.value?.active_provider_name || '')
+        : (status.value?.codex.matched_provider_name || ''),
+);
 
 /** Claude 展示的 URL (接管时显示代理地址, 否则显示 live base_url) */
 const claudeDisplayUrl = computed(() =>
@@ -575,7 +590,19 @@ const claudeDisplayUrl = computed(() =>
 );
 
 /** Codex 展示的 URL */
-const codexDisplayUrl = computed(() => status.value?.codex.base_url || '');
+const codexDisplayUrl = computed(() =>
+    codexProxyOn.value ? proxyUrl.value : (status.value?.codex.base_url || ''),
+);
+
+/** Codex 当前模型 — 接管时从 provider 数据取, 否则从 live config 取 */
+const codexModels = computed(() => {
+    if (codexProxyOn.value) {
+        const pid = proxyStatus.value?.active_provider_id;
+        const p = providers.value.find((item) => item.id === pid);
+        return p?.model || '';
+    }
+    return status.value?.codex.model || '';
+});
 
 /**
  * Claude 当前模型 — 接管时从 provider 数据取 (live config 没变), 否则从 live config 取。
