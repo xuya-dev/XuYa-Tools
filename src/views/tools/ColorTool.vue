@@ -175,9 +175,9 @@ async function copy(v: string) { await copyToClipboard(v, '已复制 ' + v); }
 .formats { flex: 1; display: flex; flex-direction: column; gap: 8px; justify-content: center; }
 .fmt-row { display: flex; align-items: center; gap: 8px; }
 .fmt-label { width: 40px; font-size: 12px; color: var(--xuya-text-secondary); font-weight: 600; }
-.fmt-input { flex: 1; padding: 7px 12px; font-size: 13px; border-radius: var(--xuya-radius-sm); border: 1px solid var(--xuya-border); background: var(--xuya-input-bg); color: var(--xuya-text); transition: border-color .12s; }
+.fmt-input { flex: 1; padding: 7px 12px; font-size: 13px; border-radius: var(--xuya-radius-sm); border: 1px solid var(--xuya-border); background: var(--xuya-input-bg); color: var(--xuya-text); transition: border-color var(--xuya-duration-fast); }
 .fmt-input:focus { outline: none; border-color: var(--xuya-accent); }
-.mini-btn { width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: var(--xuya-radius-sm); color: var(--xuya-text-secondary); border: 1px solid var(--xuya-border); background: var(--xuya-input-bg); transition: .1s; }
+.mini-btn { width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: var(--xuya-radius-sm); color: var(--xuya-text-secondary); border: 1px solid var(--xuya-border); background: var(--xuya-input-bg); transition: var(--xuya-duration-fast); }
 .mini-btn:hover { color: var(--xuya-text); border-color: var(--xuya-accent); }
 
 .contrast-section, .scheme-section { margin-bottom: 24px; }
@@ -194,6 +194,6 @@ async function copy(v: string) { await copyToClipboard(v, '已复制 ' + v); }
 .scheme-row { display: flex; align-items: center; gap: 12px; }
 .scheme-name { width: 60px; font-size: 12px; color: var(--xuya-text-secondary); flex-shrink: 0; }
 .swatches { display: flex; gap: 6px; flex: 1; }
-.swatch-btn { flex: 1; height: 44px; border-radius: var(--xuya-radius-sm); border: 1px solid var(--xuya-border); font-size: 9px; color: rgba(255,255,255,.9); text-shadow: var(--xuya-shadow-sm); transition: transform .1s; font-family: var(--xuya-font-mono); }
+.swatch-btn { flex: 1; height: 44px; border-radius: var(--xuya-radius-sm); border: 1px solid var(--xuya-border); font-size: 9px; color: rgba(255,255,255,.9); text-shadow: var(--xuya-shadow-sm); transition: transform var(--xuya-duration-fast); font-family: var(--xuya-font-mono); }
 .swatch-btn:hover { transform: translateY(-2px); }
 </style>

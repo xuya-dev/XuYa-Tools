@@ -138,13 +138,13 @@ async function copyText() {
 .qr-controls { display: flex; flex-direction: column; gap: 14px; }
 .control-block { display: flex; flex-direction: column; gap: 6px; }
 .ctrl-label { font-size: 12px; font-weight: 600; color: var(--xuya-text-secondary); }
-.text-input { width: 100%; min-height: 100px; padding: 12px; border-radius: var(--xuya-radius); border: 1px solid var(--xuya-border); background: var(--xuya-input-bg); color: var(--xuya-text); font-size: 13px; line-height: 1.5; resize: vertical; font-family: var(--xuya-font-mono); transition: border-color .12s, box-shadow .12s; }
+.text-input { width: 100%; min-height: 100px; padding: 12px; border-radius: var(--xuya-radius); border: 1px solid var(--xuya-border); background: var(--xuya-input-bg); color: var(--xuya-text); font-size: 13px; line-height: 1.5; resize: vertical; font-family: var(--xuya-font-mono); transition: border-color var(--xuya-duration-fast), box-shadow var(--xuya-duration-fast); }
 .text-input:focus { outline: none; border-color: var(--xuya-accent); box-shadow: 0 0 0 3px var(--xuya-accent-ring); }
 .char-count { font-size: 11px; color: var(--xuya-text-tertiary); text-align: right; }
 .control-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .ctrl-item { display: flex; flex-direction: column; gap: 6px; }
 .seg { display: inline-flex; background: var(--xuya-input-bg); border-radius: var(--xuya-radius-sm); padding: 2px; gap: 2px; }
-.seg button { flex: 1; padding: 5px 8px; font-size: 11.5px; color: var(--xuya-text-secondary); background: transparent; border: none; border-radius: var(--xuya-radius-sm); transition: .1s; }
+.seg button { flex: 1; padding: 5px 8px; font-size: 11.5px; color: var(--xuya-text-secondary); background: transparent; border: none; border-radius: var(--xuya-radius-sm); transition: var(--xuya-duration-fast); }
 .seg button.active { background: var(--xuya-bg-elevated); color: var(--xuya-accent); font-weight: 600; box-shadow: var(--xuya-shadow); }
 .range { width: 100%; accent-color: var(--xuya-accent); }
 .color-pick { width: 100%; height: 34px; border: 1px solid var(--xuya-border); border-radius: var(--xuya-radius-sm); background: none; cursor: pointer; }

@@ -104,7 +104,7 @@ function clear() { leftText.value = ''; rightText.value = ''; }
 <style scoped>
 .diff-toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
 .seg { display: inline-flex; background: var(--xuya-input-bg); border-radius: var(--xuya-radius-sm); padding: 2px; gap: 2px; }
-.seg button { padding: 5px 14px; font-size: 12px; color: var(--xuya-text-secondary); background: transparent; border: none; border-radius: var(--xuya-radius-sm); transition: .1s; }
+.seg button { padding: 5px 14px; font-size: 12px; color: var(--xuya-text-secondary); background: transparent; border: none; border-radius: var(--xuya-radius-sm); transition: var(--xuya-duration-fast); }
 .seg button.active { background: var(--xuya-bg-elevated); color: var(--xuya-accent); font-weight: 600; box-shadow: var(--xuya-shadow); }
 .sep { width: 1px; height: 20px; background: var(--xuya-border); }
 .diff-stats { display: flex; gap: 8px; font-family: var(--xuya-font-mono); font-size: 12px; font-weight: 600; }
@@ -114,8 +114,9 @@ function clear() { leftText.value = ''; rightText.value = ''; }
 .input-col { display: flex; flex-direction: column; gap: 6px; }
 .col-head { display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; color: var(--xuya-text-secondary); }
 .col-head .stat { font-size: 10.5px; font-weight: 400; opacity: .75; }
-.editor { height: 140px; padding: 10px; border-radius: var(--xuya-radius); border: 1px solid var(--xuya-border); background: var(--xuya-input-bg); color: var(--xuya-text); font-family: var(--xuya-font-mono); font-size: 12px; line-height: 1.5; resize: vertical; transition: border-color .12s, box-shadow .12s; }
+.editor { height: 140px; padding: 10px; border-radius: var(--xuya-radius); border: 1px solid var(--xuya-border); background: var(--xuya-input-bg); color: var(--xuya-text); font-family: var(--xuya-font-mono); font-size: 12px; line-height: 1.5; resize: vertical; transition: border-color var(--xuya-duration-fast), box-shadow var(--xuya-duration-fast); }
 .editor:focus { outline: none; border-color: var(--xuya-accent); box-shadow: 0 0 0 3px var(--xuya-accent-ring); }
+.editor::placeholder { color: var(--xuya-text-tertiary); }
 
 .diff-result { flex: 1; min-height: 0; }
 .section-label { font-size: 11px; text-transform: uppercase; letter-spacing: .5px; color: var(--xuya-text-tertiary); margin-bottom: 8px; }

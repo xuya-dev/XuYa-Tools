@@ -240,7 +240,7 @@ async function copy() {
 .sql-toolbar { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
 .sep { width: 1px; height: 20px; background: var(--xuya-border); margin: 0 2px; }
 .seg { display: inline-flex; background: var(--xuya-input-bg); border-radius: var(--xuya-radius-sm); padding: 2px; gap: 2px; }
-.seg button { padding: 4px 12px; font-size: 12px; color: var(--xuya-text-secondary); background: transparent; border: none; border-radius: var(--xuya-radius-sm); transition: .1s; }
+.seg button { padding: 4px 12px; font-size: 12px; color: var(--xuya-text-secondary); background: transparent; border: none; border-radius: var(--xuya-radius-sm); transition: var(--xuya-duration-fast); }
 .seg button.active { background: var(--xuya-bg-elevated); color: var(--xuya-accent); font-weight: 600; box-shadow: var(--xuya-shadow-sm); }
 .check { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--xuya-text-secondary); cursor: pointer; }
 .check input { accent-color: var(--xuya-accent); width: 15px; height: 15px; }
@@ -250,8 +250,9 @@ async function copy() {
 .col-head { display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; color: var(--xuya-text-secondary); }
 .stat { font-size: 10.5px; font-weight: 400; opacity: .75; }
 .stat.err { color: var(--xuya-danger); opacity: 1; }
-.editor { flex: 1; min-height: 280px; padding: 12px; border-radius: var(--xuya-radius); border: 1px solid var(--xuya-border); background: var(--xuya-input-bg); color: var(--xuya-text); font-family: var(--xuya-font-mono); font-size: 12.5px; line-height: 1.6; resize: none; transition: border-color .12s, box-shadow .12s; }
+.editor { flex: 1; min-height: 280px; padding: 12px; border-radius: var(--xuya-radius); border: 1px solid var(--xuya-border); background: var(--xuya-input-bg); color: var(--xuya-text); font-family: var(--xuya-font-mono); font-size: 12.5px; line-height: 1.6; resize: none; transition: border-color var(--xuya-duration-fast), box-shadow var(--xuya-duration-fast); }
 .editor:focus { outline: none; border-color: var(--xuya-accent); box-shadow: 0 0 0 3px var(--xuya-accent-ring); }
+.editor::placeholder { color: var(--xuya-text-tertiary); }
 .output { flex: 1; min-height: 280px; margin: 0; padding: 12px; border-radius: var(--xuya-radius); border: 1px solid var(--xuya-border); background: var(--xuya-input-bg); overflow: auto; font-family: var(--xuya-font-mono); font-size: 12.5px; line-height: 1.6; white-space: pre-wrap; word-break: break-all; color: var(--xuya-text); }
 .output.has-error code { color: var(--xuya-danger); }
 </style>

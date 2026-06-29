@@ -137,7 +137,7 @@ async function copyResult() {
 .ctrl-label { font-size: 11px; font-weight: 600; color: var(--xuya-text-secondary); }
 .count-group { min-width: 140px; }
 .seg { display: inline-flex; background: var(--xuya-input-bg); border-radius: var(--xuya-radius-sm); padding: 2px; gap: 2px; }
-.seg button { padding: 5px 12px; font-size: 12px; color: var(--xuya-text-secondary); background: transparent; border: none; border-radius: var(--xuya-radius-sm); transition: .1s; }
+.seg button { padding: 5px 12px; font-size: 12px; color: var(--xuya-text-secondary); background: transparent; border: none; border-radius: var(--xuya-radius-sm); transition: var(--xuya-duration-fast); }
 .seg button.active { background: var(--xuya-bg-elevated); color: var(--xuya-accent); font-weight: 600; }
 .range { width: 100%; accent-color: var(--xuya-accent); }
 .check { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--xuya-text-secondary); cursor: pointer; }
@@ -146,6 +146,6 @@ async function copyResult() {
 
 .lorem-result { display: flex; flex-direction: column; gap: 6px; flex: 1; min-height: 0; }
 .col-head { display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 600; color: var(--xuya-text-secondary); }
-.result-box { flex: 1; min-height: 200px; padding: 16px; border-radius: var(--xuya-radius); border: 1px solid var(--xuya-border); background: var(--xuya-input-bg); color: var(--xuya-text); font-size: 13px; line-height: 1.8; overflow: auto; white-space: pre-wrap; cursor: pointer; transition: border-color .12s; }
+.result-box { flex: 1; min-height: 200px; padding: 16px; border-radius: var(--xuya-radius); border: 1px solid var(--xuya-border); background: var(--xuya-input-bg); color: var(--xuya-text); font-size: 13px; line-height: 1.8; overflow: auto; white-space: pre-wrap; cursor: pointer; transition: border-color var(--xuya-duration-fast); }
 .result-box:hover { border-color: var(--xuya-accent); }
 </style>

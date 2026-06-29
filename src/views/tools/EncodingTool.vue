@@ -190,7 +190,7 @@ watch([input, mode, reversed], run, { immediate: true });
   border: none;
   border-bottom: 2px solid transparent;
   margin-bottom: -1px;
-  transition: color 0.12s, border-color 0.12s;
+  transition: color 0var(--xuya-duration-fast), border-color 0var(--xuya-duration-fast);
 }
 .mode-tab:hover {
   color: var(--xuya-text);
@@ -236,7 +236,7 @@ watch([input, mode, reversed], run, { immediate: true });
   background: var(--xuya-input-bg);
   border: 1px solid var(--xuya-border);
   border-radius: var(--xuya-radius-sm);
-  transition: all 0.12s;
+  transition: all 0var(--xuya-duration-fast);
 }
 .mini-btn:hover:not(:disabled) {
   color: var(--xuya-text);
@@ -259,13 +259,14 @@ watch([input, mode, reversed], run, { immediate: true });
   font-size: 12.5px;
   line-height: 1.6;
   resize: none;
-  transition: border-color 0.12s, box-shadow 0.12s;
+  transition: border-color 0var(--xuya-duration-fast), box-shadow 0var(--xuya-duration-fast);
 }
 .editor:focus {
   outline: none;
   border-color: var(--xuya-accent);
   box-shadow: 0 0 0 3px var(--xuya-accent-ring);
 }
+.editor::placeholder { color: var(--xuya-text-tertiary); }
 
 .output {
   flex: 1;

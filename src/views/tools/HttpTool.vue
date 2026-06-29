@@ -236,7 +236,7 @@ async function copy(text: string) {
 .url-input {
   flex: 1; padding: 9px 14px; font-size: 13px; font-family: var(--xuya-font-mono);
   border-radius: var(--xuya-radius-sm); border: 1px solid var(--xuya-border);
-  background: var(--xuya-input-bg); color: var(--xuya-text); transition: border-color .12s, box-shadow .12s;
+  background: var(--xuya-input-bg); color: var(--xuya-text); transition: border-color var(--xuya-duration-fast), box-shadow var(--xuya-duration-fast);
 }
 .url-input:focus { outline: none; border-color: var(--xuya-accent); box-shadow: 0 0 0 3px var(--xuya-accent-ring); }
 
@@ -244,7 +244,7 @@ async function copy(text: string) {
 .tab {
   padding: 8px 14px; font-size: 13px; color: var(--xuya-text-secondary);
   background: transparent; border: none; border-bottom: 2px solid transparent; margin-bottom: -1px;
-  display: inline-flex; align-items: center; gap: 6px; transition: color .12s, border-color .12s;
+  display: inline-flex; align-items: center; gap: 6px; transition: color var(--xuya-duration-fast), border-color var(--xuya-duration-fast);
 }
 .tab:hover { color: var(--xuya-text); }
 .tab.active { color: var(--xuya-accent); border-bottom-color: var(--xuya-accent); font-weight: 600; }
@@ -258,16 +258,16 @@ async function copy(text: string) {
 .kv-editor { display: flex; flex-direction: column; gap: 6px; }
 .kv-row { display: flex; gap: 6px; align-items: center; }
 .kv-check { accent-color: var(--xuya-accent); width: 15px; height: 15px; flex-shrink: 0; }
-.kv-input { flex: 1; padding: 6px 10px; font-size: 12.5px; border-radius: var(--xuya-radius-sm); border: 1px solid var(--xuya-border); background: var(--xuya-input-bg); color: var(--xuya-text); transition: border-color .12s; }
+.kv-input { flex: 1; padding: 6px 10px; font-size: 12.5px; border-radius: var(--xuya-radius-sm); border: 1px solid var(--xuya-border); background: var(--xuya-input-bg); color: var(--xuya-text); transition: border-color var(--xuya-duration-fast); }
 .kv-input:focus { outline: none; border-color: var(--xuya-accent); }
-.kv-del { width: 28px; height: 28px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: var(--xuya-radius-sm); color: var(--xuya-text-tertiary); transition: .1s; }
+.kv-del { width: 28px; height: 28px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: var(--xuya-radius-sm); color: var(--xuya-text-tertiary); transition: var(--xuya-duration-fast); }
 .kv-del:hover { color: var(--xuya-danger); background: var(--xuya-danger-soft); }
-.kv-add { align-self: flex-start; display: inline-flex; align-items: center; gap: 4px; padding: 5px 12px; font-size: 12px; color: var(--xuya-accent); border: 1px dashed var(--xuya-border); border-radius: var(--xuya-radius-sm); margin-top: 4px; transition: .1s; }
+.kv-add { align-self: flex-start; display: inline-flex; align-items: center; gap: 4px; padding: 5px 12px; font-size: 12px; color: var(--xuya-accent); border: 1px dashed var(--xuya-border); border-radius: var(--xuya-radius-sm); margin-top: 4px; transition: var(--xuya-duration-fast); }
 .kv-add:hover { border-color: var(--xuya-accent); }
 
 .body-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
 .seg { display: inline-flex; background: var(--xuya-input-bg); border-radius: var(--xuya-radius-sm); padding: 2px; gap: 2px; }
-.seg button { padding: 4px 12px; font-size: 11px; color: var(--xuya-text-secondary); background: transparent; border: none; border-radius: var(--xuya-radius-sm); transition: .1s; }
+.seg button { padding: 4px 12px; font-size: 11px; color: var(--xuya-text-secondary); background: transparent; border: none; border-radius: var(--xuya-radius-sm); transition: var(--xuya-duration-fast); }
 .seg button.active { background: var(--xuya-bg-elevated); color: var(--xuya-accent); font-weight: 600; }
 .body-hint { font-size: 11px; color: var(--xuya-text-tertiary); }
 .body-editor { width: 100%; min-height: 120px; padding: 10px; border-radius: var(--xuya-radius); border: 1px solid var(--xuya-border); background: var(--xuya-input-bg); color: var(--xuya-text); font-family: var(--xuya-font-mono); font-size: 12.5px; line-height: 1.6; resize: vertical; }
@@ -280,7 +280,7 @@ async function copy(text: string) {
 .status-badge.warn { background: var(--xuya-warn-soft); color: var(--xuya-warn); }
 .status-badge.err { background: var(--xuya-danger-soft); color: var(--xuya-danger); }
 .resp-meta { font-size: 12px; color: var(--xuya-text-tertiary); font-family: var(--xuya-font-mono); }
-.mini-btn { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; font-size: 11px; color: var(--xuya-text-secondary); border: 1px solid var(--xuya-border); background: var(--xuya-input-bg); border-radius: var(--xuya-radius-sm); transition: .1s; }
+.mini-btn { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; font-size: 11px; color: var(--xuya-text-secondary); border: 1px solid var(--xuya-border); background: var(--xuya-input-bg); border-radius: var(--xuya-radius-sm); transition: var(--xuya-duration-fast); }
 .mini-btn:hover { color: var(--xuya-text); border-color: var(--xuya-accent); }
 .resp-error { padding: 10px 14px; background: var(--xuya-danger-soft); color: var(--xuya-danger); border-radius: var(--xuya-radius-sm); font-size: 12.5px; margin-bottom: 12px; }
 
@@ -298,7 +298,7 @@ async function copy(text: string) {
 .history { margin-top: 16px; }
 .section-label { font-size: 11px; text-transform: uppercase; letter-spacing: .5px; color: var(--xuya-text-tertiary); margin-bottom: 8px; }
 .history-list { display: flex; flex-direction: column; gap: 4px; }
-.history-item { display: flex; align-items: center; gap: 10px; padding: 6px 10px; font-size: 12px; border-radius: var(--xuya-radius-sm); transition: .1s; text-align: left; width: 100%; }
+.history-item { display: flex; align-items: center; gap: 10px; padding: 6px 10px; font-size: 12px; border-radius: var(--xuya-radius-sm); transition: var(--xuya-duration-fast); text-align: left; width: 100%; }
 .history-item:hover { background: var(--xuya-input-bg); }
 .hist-status { font-family: var(--xuya-font-mono); font-size: 11px; font-weight: 700; padding: 1px 6px; border-radius: var(--xuya-radius-sm); min-width: 36px; text-align: center; }
 .hist-status.ok { background: var(--xuya-success-soft); color: var(--xuya-success); }

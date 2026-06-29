@@ -124,15 +124,16 @@ function clear() { md.value = ''; }
 <style scoped>
 .md-toolbar { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
 .seg { display: inline-flex; background: var(--xuya-input-bg); border-radius: var(--xuya-radius-sm); padding: 2px; gap: 2px; margin-left: auto; }
-.seg button { padding: 5px 14px; font-size: 12px; color: var(--xuya-text-secondary); background: transparent; border: none; border-radius: var(--xuya-radius-sm); transition: .1s; }
+.seg button { padding: 5px 14px; font-size: 12px; color: var(--xuya-text-secondary); background: transparent; border: none; border-radius: var(--xuya-radius-sm); transition: var(--xuya-duration-fast); }
 .seg button.active { background: var(--xuya-bg-elevated); color: var(--xuya-accent); font-weight: 600; }
 .md-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; flex: 1; min-height: 0; }
 .md-grid.preview-only { grid-template-columns: 1fr; }
 .md-edit-col, .md-preview-col { display: flex; flex-direction: column; gap: 6px; min-height: 0; }
 .col-head { display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; color: var(--xuya-text-secondary); }
 .stat { font-size: 10.5px; font-weight: 400; opacity: .75; }
-.editor { flex: 1; min-height: 320px; padding: 14px; border-radius: var(--xuya-radius); border: 1px solid var(--xuya-border); background: var(--xuya-input-bg); color: var(--xuya-text); font-family: var(--xuya-font-mono); font-size: 13px; line-height: 1.6; resize: none; transition: border-color .12s, box-shadow .12s; }
+.editor { flex: 1; min-height: 320px; padding: 14px; border-radius: var(--xuya-radius); border: 1px solid var(--xuya-border); background: var(--xuya-input-bg); color: var(--xuya-text); font-family: var(--xuya-font-mono); font-size: 13px; line-height: 1.6; resize: none; transition: border-color var(--xuya-duration-fast), box-shadow var(--xuya-duration-fast); }
 .editor:focus { outline: none; border-color: var(--xuya-accent); box-shadow: 0 0 0 3px var(--xuya-accent-ring); }
+.editor::placeholder { color: var(--xuya-text-tertiary); }
 .preview { flex: 1; min-height: 320px; padding: 16px 18px; border-radius: var(--xuya-radius); border: 1px solid var(--xuya-border); background: var(--xuya-input-bg); overflow: auto; font-size: 14px; line-height: 1.7; color: var(--xuya-text); }
 .preview :deep(h1) { font-size: 22px; font-weight: 700; margin: 0 0 12px; padding-bottom: 8px; border-bottom: 1px solid var(--xuya-border); }
 .preview :deep(h2) { font-size: 18px; font-weight: 600; margin: 18px 0 8px; }

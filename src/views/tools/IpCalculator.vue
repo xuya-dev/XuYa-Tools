@@ -189,7 +189,7 @@ compute();
 .ip-input-row { display: flex; align-items: flex-end; gap: 12px; margin-bottom: 18px; }
 .ip-field { flex: 1; display: flex; flex-direction: column; gap: 6px; }
 .ctrl-label { font-size: 12px; font-weight: 600; color: var(--xuya-text-secondary); }
-.ip-input { padding: 10px 14px; font-size: 14px; border-radius: var(--xuya-radius); border: 1px solid var(--xuya-border); background: var(--xuya-input-bg); color: var(--xuya-text); transition: border-color .12s, box-shadow .12s; }
+.ip-input { padding: 10px 14px; font-size: 14px; border-radius: var(--xuya-radius); border: 1px solid var(--xuya-border); background: var(--xuya-input-bg); color: var(--xuya-text); transition: border-color var(--xuya-duration-fast), box-shadow var(--xuya-duration-fast); }
 .ip-input:focus { outline: none; border-color: var(--xuya-accent); box-shadow: 0 0 0 3px var(--xuya-accent-ring); }
 .ip-result-badge { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; font-size: 12px; font-weight: 600; border-radius: var(--xuya-radius); background: var(--xuya-input-bg); color: var(--xuya-text-tertiary); border: 1px solid var(--xuya-border); }
 .ip-result-badge.valid { color: var(--xuya-success); background: var(--xuya-success-soft); border-color: transparent; }
@@ -198,17 +198,17 @@ compute();
 .ip-error { padding: 12px 16px; background: var(--xuya-danger-soft); color: var(--xuya-danger); border-radius: var(--xuya-radius); font-size: 13px; margin-bottom: 16px; }
 
 .ip-results { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; margin-bottom: 20px; }
-.ip-card { position: relative; padding: 14px 16px; background: var(--xuya-card-bg); border: 1px solid var(--xuya-border); border-radius: var(--xuya-radius); cursor: pointer; transition: border-color .12s, transform .12s, box-shadow .12s; }
+.ip-card { position: relative; padding: 14px 16px; background: var(--xuya-card-bg); border: 1px solid var(--xuya-border); border-radius: var(--xuya-radius); cursor: pointer; transition: border-color var(--xuya-duration-fast), transform var(--xuya-duration-fast), box-shadow var(--xuya-duration-fast); }
 .ip-card:hover { border-color: var(--xuya-accent); transform: translateY(-1px); box-shadow: var(--xuya-shadow-hover); }
 .ip-card-label { display: block; font-size: 11px; color: var(--xuya-text-tertiary); margin-bottom: 4px; }
 .ip-card-value { display: block; font-size: 14px; font-weight: 600; color: var(--xuya-text); word-break: break-all; }
-.ip-card-copy { position: absolute; top: 12px; right: 12px; color: var(--xuya-text-tertiary); opacity: 0; transition: opacity .12s; }
+.ip-card-copy { position: absolute; top: 12px; right: 12px; color: var(--xuya-text-tertiary); opacity: 0; transition: opacity var(--xuya-duration-fast); }
 .ip-card:hover .ip-card-copy { opacity: 1; }
 
 .cidr-table { background: var(--xuya-card-bg); border: 1px solid var(--xuya-border); border-radius: var(--xuya-radius); padding: 12px 16px; }
 .cidr-table summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--xuya-text-secondary); }
 .cidr-grid { margin-top: 12px; }
-.cidr-row { display: grid; grid-template-columns: 60px 130px 100px 1fr; gap: 8px; padding: 6px 10px; font-size: 12px; align-items: center; border-radius: var(--xuya-radius-sm); cursor: pointer; transition: background .1s; }
+.cidr-row { display: grid; grid-template-columns: 60px 130px 100px 1fr; gap: 8px; padding: 6px 10px; font-size: 12px; align-items: center; border-radius: var(--xuya-radius-sm); cursor: pointer; transition: background var(--xuya-duration-fast); }
 .cidr-row:hover { background: var(--xuya-input-bg); }
 .cidr-row.cidr-head { font-weight: 600; color: var(--xuya-text-tertiary); font-size: 11px; cursor: default; }
 .cidr-row.cidr-head:hover { background: none; }

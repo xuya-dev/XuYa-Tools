@@ -206,7 +206,10 @@ function loadSample() {
   font-size: 12.5px;
   line-height: 1.6;
   resize: none;
-  transition: border-color 0.12s, box-shadow 0.12s;
+  transition: border-color 0var(--xuya-duration-fast), box-shadow 0var(--xuya-duration-fast);
+}
+.editor::placeholder {
+  color: var(--xuya-text-tertiary);
 }
 .editor:focus {
   outline: none;
@@ -228,9 +231,13 @@ function loadSample() {
   line-height: 1.6;
   white-space: pre-wrap;
   word-break: break-all;
+  transition: border-color var(--xuya-duration-fast) var(--xuya-ease);
 }
 .output code {
   color: var(--xuya-text);
+}
+.output.has-error {
+  border-color: var(--xuya-danger);
 }
 .output.has-error code {
   color: var(--xuya-danger);

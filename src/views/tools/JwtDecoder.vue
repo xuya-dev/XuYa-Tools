@@ -176,7 +176,7 @@ async function copy(text: string | undefined) {
   line-height: 1.5;
   resize: vertical;
   word-break: break-all;
-  transition: border-color 0.12s, box-shadow 0.12s;
+  transition: border-color 0var(--xuya-duration-fast), box-shadow 0var(--xuya-duration-fast);
 }
 .jwt-input:focus {
   outline: none;
@@ -302,7 +302,7 @@ async function copy(text: string | undefined) {
   background: var(--xuya-input-bg);
   border: 1px solid var(--xuya-border);
   border-radius: var(--xuya-radius-sm);
-  transition: all 0.12s;
+  transition: all 0var(--xuya-duration-fast);
 }
 .mini-btn:hover {
   color: var(--xuya-text);

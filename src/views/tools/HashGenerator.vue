@@ -224,7 +224,7 @@ watch(tab, (t) => {
   border: none;
   border-bottom: 2px solid transparent;
   margin-bottom: -1px;
-  transition: color 0.12s, border-color 0.12s;
+  transition: color 0var(--xuya-duration-fast), border-color 0var(--xuya-duration-fast);
 }
 .tab:hover {
   color: var(--xuya-text);
@@ -303,7 +303,7 @@ watch(tab, (t) => {
   border-radius: var(--xuya-radius-sm);
   color: var(--xuya-text-tertiary);
   cursor: pointer;
-  transition: all 0.12s;
+  transition: all 0var(--xuya-duration-fast);
 }
 .history-item:hover {
   color: var(--xuya-text);
@@ -334,7 +334,7 @@ watch(tab, (t) => {
 .strength-fill {
   height: 100%;
   border-radius: var(--xuya-radius-sm);
-  transition: width 0.2s, background 0.2s;
+  transition: width 0var(--xuya-duration), background 0var(--xuya-duration);
 }
 .strength-fill.weak {
   background: var(--xuya-danger);
@@ -403,7 +403,7 @@ watch(tab, (t) => {
   font-family: var(--xuya-font-mono);
   font-size: 13px;
   resize: vertical;
-  transition: border-color 0.12s, box-shadow 0.12s;
+  transition: border-color 0var(--xuya-duration-fast), box-shadow 0var(--xuya-duration-fast);
 }
 .hash-input:focus {
   outline: none;
@@ -442,7 +442,7 @@ watch(tab, (t) => {
   background: var(--xuya-bg-elevated);
   border: 1px solid var(--xuya-border);
   border-radius: var(--xuya-radius-sm);
-  transition: all 0.12s;
+  transition: all 0var(--xuya-duration-fast);
 }
 .mini-btn:hover:not(:disabled) {
   color: var(--xuya-text);

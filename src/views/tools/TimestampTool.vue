@@ -182,7 +182,7 @@ function copyResult(e: MouseEvent) {
   background: transparent;
   border: none;
   border-radius: var(--xuya-radius-sm);
-  transition: all 0.12s;
+  transition: all 0var(--xuya-duration-fast);
 }
 
 .unit-toggle button.active {
@@ -200,7 +200,7 @@ function copyResult(e: MouseEvent) {
   border: 1px solid var(--xuya-border);
   background: var(--xuya-input-bg);
   color: var(--xuya-text);
-  transition: border-color 0.12s, box-shadow 0.12s;
+  transition: border-color 0var(--xuya-duration-fast), box-shadow 0var(--xuya-duration-fast);
 }
 .dt-input:focus {
   outline: none;

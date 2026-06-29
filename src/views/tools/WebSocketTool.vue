@@ -176,7 +176,7 @@ onUnmounted(() => {
 
 <style scoped>
 .conn-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
-.url-input { flex: 1; padding: 9px 14px; font-size: 13px; font-family: var(--xuya-font-mono); border-radius: var(--xuya-radius-sm); border: 1px solid var(--xuya-border); background: var(--xuya-input-bg); color: var(--xuya-text); transition: border-color .12s, box-shadow .12s; }
+.url-input { flex: 1; padding: 9px 14px; font-size: 13px; font-family: var(--xuya-font-mono); border-radius: var(--xuya-radius-sm); border: 1px solid var(--xuya-border); background: var(--xuya-input-bg); color: var(--xuya-text); transition: border-color var(--xuya-duration-fast), box-shadow var(--xuya-duration-fast); }
 .url-input:focus { outline: none; border-color: var(--xuya-accent); box-shadow: 0 0 0 3px var(--xuya-accent-ring); }
 .status-light { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
 .status-light.on { background: var(--xuya-success); box-shadow: 0 0 8px var(--xuya-success); }
@@ -191,7 +191,7 @@ onUnmounted(() => {
 .pane-actions { display: flex; align-items: center; gap: 10px; }
 .auto-scroll { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: var(--xuya-text-tertiary); font-weight: 400; cursor: pointer; }
 .auto-scroll input { accent-color: var(--xuya-accent); }
-.mini-btn { padding: 3px 10px; font-size: 11px; color: var(--xuya-text-secondary); border: 1px solid var(--xuya-border); background: var(--xuya-input-bg); border-radius: var(--xuya-radius-sm); transition: .1s; }
+.mini-btn { padding: 3px 10px; font-size: 11px; color: var(--xuya-text-secondary); border: 1px solid var(--xuya-border); background: var(--xuya-input-bg); border-radius: var(--xuya-radius-sm); transition: var(--xuya-duration-fast); }
 .mini-btn:hover { color: var(--xuya-text); border-color: var(--xuya-accent); }
 .msg-list { flex: 1; overflow: auto; padding: 10px; }
 .empty { text-align: center; color: var(--xuya-text-tertiary); font-size: 13px; padding: 40px 0; }
@@ -208,15 +208,15 @@ onUnmounted(() => {
 
 .send-pane { display: flex; flex-direction: column; gap: 10px; }
 .seg { display: inline-flex; background: var(--xuya-input-bg); border-radius: var(--xuya-radius-sm); padding: 2px; gap: 2px; }
-.seg button { padding: 4px 12px; font-size: 11px; color: var(--xuya-text-secondary); background: transparent; border: none; border-radius: 4px; transition: .1s; }
+.seg button { padding: 4px 12px; font-size: 11px; color: var(--xuya-text-secondary); background: transparent; border: none; border-radius: 4px; transition: var(--xuya-duration-fast); }
 .seg button.active { background: var(--xuya-bg-elevated); color: var(--xuya-accent); font-weight: 600; }
-.send-editor { width: 100%; min-height: 120px; padding: 10px; border-radius: var(--xuya-radius); border: 1px solid var(--xuya-border); background: var(--xuya-input-bg); color: var(--xuya-text); font-family: var(--xuya-font-mono); font-size: 12.5px; line-height: 1.5; resize: vertical; transition: border-color .12s; }
+.send-editor { width: 100%; min-height: 120px; padding: 10px; border-radius: var(--xuya-radius); border: 1px solid var(--xuya-border); background: var(--xuya-input-bg); color: var(--xuya-text); font-family: var(--xuya-font-mono); font-size: 12.5px; line-height: 1.5; resize: vertical; transition: border-color var(--xuya-duration-fast); }
 .send-editor:focus { outline: none; border-color: var(--xuya-accent); box-shadow: 0 0 0 3px var(--xuya-accent-ring); }
 .send-actions { display: flex; gap: 8px; align-items: center; }
 .quick-send { margin-top: 4px; }
 .section-label { font-size: 11px; text-transform: uppercase; letter-spacing: .5px; color: var(--xuya-text-tertiary); margin-bottom: 6px; }
 .quick-list { display: flex; flex-direction: column; gap: 4px; }
-.quick-item { text-align: left; padding: 6px 10px; font-size: 11.5px; font-family: var(--xuya-font-mono); color: var(--xuya-text-secondary); background: var(--xuya-input-bg); border: 1px solid var(--xuya-border); border-radius: var(--xuya-radius-sm); transition: .1s; }
+.quick-item { text-align: left; padding: 6px 10px; font-size: 11.5px; font-family: var(--xuya-font-mono); color: var(--xuya-text-secondary); background: var(--xuya-input-bg); border: 1px solid var(--xuya-border); border-radius: var(--xuya-radius-sm); transition: var(--xuya-duration-fast); }
 .quick-item:hover { color: var(--xuya-text); border-color: var(--xuya-accent); }
 
 .spin { animation: spin .8s linear infinite; }
