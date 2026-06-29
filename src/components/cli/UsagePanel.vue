@@ -327,7 +327,7 @@ onUnmounted(() => {
 .logs-count { font-size: 11px; font-weight: 400; color: var(--xuya-text-tertiary); }
 .logs-head-actions { display: flex; gap: 6px; }
 .logs-table { border: 1px solid var(--xuya-border); border-radius: var(--xuya-radius); overflow: hidden; }
-.logs-row { display: grid; grid-template-columns: 110px 55px 1fr 90px 45px 50px 50px 50px 50px 50px 60px; gap: 5px; padding: 7px 10px; font-size: 11px; align-items: center; border-bottom: 1px solid var(--xuya-border-light); }
+.logs-row { display: grid; grid-template-columns: repeat(11, 1fr); gap: 5px; padding: 7px 10px; font-size: 11px; align-items: center; border-bottom: 1px solid var(--xuya-border-light); }
 .logs-row:last-child { border-bottom: none; }
 .logs-row-head { background: var(--xuya-input-bg); font-size: 10.5px; font-weight: 600; color: var(--xuya-text-tertiary); text-transform: uppercase; letter-spacing: 0.3px; }
 .logs-row:not(.logs-row-head):hover { background: var(--xuya-input-bg); }
