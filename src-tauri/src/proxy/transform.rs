@@ -490,14 +490,392 @@ fn resolve_reasoning_effort(body: &Value) -> Option<&'static str> {
     }
 }
 
+// ==================== 反向转换: OpenAI → Anthropic ====================
+
+/// SSE 转换器 trait (正向和反向共用)
+pub trait SseConvert: Send {
+    fn feed(&mut self, data: &[u8]) -> Vec<u8>;
+    fn flush(&mut self) -> Vec<u8>;
+}
+
+impl SseConvert for SseConverter {
+    fn feed(&mut self, data: &[u8]) -> Vec<u8> {
+        SseConverter::feed(self, data)
+    }
+    fn flush(&mut self) -> Vec<u8> {
+        SseConverter::flush(self)
+    }
+}
+
+impl SseConvert for AnthropicSseConverter {
+    fn feed(&mut self, data: &[u8]) -> Vec<u8> {
+        AnthropicSseConverter::feed(self, data)
+    }
+    fn flush(&mut self) -> Vec<u8> {
+        AnthropicSseConverter::flush(self)
+    }
+}
+
+/// OpenAI Chat Completions 请求 → Anthropic Messages 请求
+///
+/// 用于 Codex CLI (发 /v1/chat/completions) 指向 Anthropic 原生上游的场景。
+pub fn openai_to_anthropic_request(body: &Value) -> Result<Value, String> {
+    let messages = body
+        .get("messages")
+        .and_then(|v| v.as_array())
+        .ok_or("缺少 messages")?;
+
+    // 提取 system message → Anthropic 顶层 system 字段
+    let mut system_text = String::new();
+    let mut anthropic_messages: Vec<Value> = Vec::new();
+    for msg in messages {
+        let role = msg.get("role").and_then(|r| r.as_str()).unwrap_or("user");
+        if role == "system" {
+            if let Some(content) = msg.get("content") {
+                if let Some(s) = content.as_str() {
+                    if !system_text.is_empty() {
+                        system_text.push('\n');
+                    }
+                    system_text.push_str(s);
+                }
+            }
+            continue;
+        }
+        let content = msg.get("content");
+        let anthropic_content = match content {
+            Some(Value::String(s)) => json!(s),
+            Some(Value::Array(parts)) => {
+                let blocks: Vec<Value> = parts.iter().filter_map(|part| {
+                    let ptype = part.get("type").and_then(|t| t.as_str())?;
+                    match ptype {
+                        "text" => Some(json!({"type": "text", "text": part.get("text").and_then(|t| t.as_str()).unwrap_or("")})),
+                        "image_url" => {
+                            let url = part.get("image_url")
+                                .and_then(|iu| iu.get("url"))
+                                .and_then(|u| u.as_str())
+                                .unwrap_or("");
+                            if let Some(b64) = url.strip_prefix("data:") {
+                                let (mime, data) = b64.split_once(',').unwrap_or(("image/png", b64));
+                                let clean_mime = mime.split(';').next().unwrap_or("image/png");
+                                Some(json!({"type": "image", "source": {"type": "base64", "media_type": clean_mime, "data": data}}))
+                            } else { None }
+                        }
+                        _ => None,
+                    }
+                }).collect();
+                Value::Array(blocks)
+            }
+            _ => json!(""),
+        };
+
+        let mapped_role = if role == "assistant" {
+            "assistant"
+        } else {
+            "user"
+        };
+        anthropic_messages.push(json!({"role": mapped_role, "content": anthropic_content}));
+    }
+
+    let mut result = json!({"messages": anthropic_messages});
+    if !system_text.is_empty() {
+        result["system"] = json!(system_text);
+    }
+    if let Some(m) = body.get("model") {
+        result["model"] = m.clone();
+    }
+    if let Some(mt) = body.get("max_tokens").or(body.get("max_completion_tokens")) {
+        result["max_tokens"] = mt.clone();
+    } else {
+        result["max_tokens"] = json!(4096);
+    }
+    for key in &["temperature", "top_p", "stop"] {
+        if let Some(v) = body.get(key) {
+            result[key] = v.clone();
+        }
+    }
+    if let Some(s) = body.get("stream") {
+        result["stream"] = s.clone();
+    }
+
+    // tools: OpenAI functions → Anthropic tools
+    if let Some(tools) = body.get("tools").and_then(|t| t.as_array()) {
+        let anthropic_tools: Vec<Value> = tools.iter().filter_map(|tool| {
+            let func = tool.get("function")?;
+            Some(json!({
+                "name": func.get("name").and_then(|n| n.as_str()).unwrap_or(""),
+                "description": func.get("description").and_then(|d| d.as_str()).unwrap_or(""),
+                "input_schema": func.get("parameters").cloned().unwrap_or(json!({"type": "object", "properties": {}}))
+            }))
+        }).collect();
+        if !anthropic_tools.is_empty() {
+            result["tools"] = json!(anthropic_tools);
+        }
+    }
+
+    Ok(result)
+}
+
+/// Anthropic 响应 → OpenAI Chat Completions 响应 (非流式)
+pub fn anthropic_to_openai_response(resp: &Value) -> Result<Value, String> {
+    let content_blocks = resp.get("content").and_then(|c| c.as_array());
+    let mut text_parts: Vec<String> = Vec::new();
+    let mut tool_calls: Vec<Value> = Vec::new();
+
+    if let Some(blocks) = content_blocks {
+        for block in blocks {
+            match block.get("type").and_then(|t| t.as_str()) {
+                Some("text") => {
+                    if let Some(t) = block.get("text").and_then(|t| t.as_str()) {
+                        text_parts.push(t.to_string());
+                    }
+                }
+                Some("tool_use") => {
+                    let id = block.get("id").and_then(|i| i.as_str()).unwrap_or("call_0");
+                    let name = block.get("name").and_then(|n| n.as_str()).unwrap_or("");
+                    let args = block.get("input").cloned().unwrap_or(json!({}));
+                    let args_str = serde_json::to_string(&args).unwrap_or_default();
+                    tool_calls.push(json!({
+                        "id": id,
+                        "type": "function",
+                        "function": {"name": name, "arguments": args_str}
+                    }));
+                }
+                _ => {}
+            }
+        }
+    }
+
+    let stop_reason = resp
+        .get("stop_reason")
+        .and_then(|s| s.as_str())
+        .unwrap_or("end_turn");
+    let finish_reason = match stop_reason {
+        "end_turn" | "stop_sequence" => "stop",
+        "max_tokens" => "length",
+        "tool_use" => "tool_calls",
+        _ => "stop",
+    };
+
+    let mut message = json!({"role": "assistant", "content": text_parts.join("")});
+    if !tool_calls.is_empty() {
+        message["tool_calls"] = json!(tool_calls);
+    }
+
+    let usage = resp.get("usage").cloned().unwrap_or(json!({}));
+    let input_tokens = usage
+        .get("input_tokens")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(0);
+    let output_tokens = usage
+        .get("output_tokens")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(0);
+
+    Ok(json!({
+        "id": resp.get("id").and_then(|i| i.as_str()).unwrap_or("chatcmpl-proxy"),
+        "object": "chat.completion",
+        "model": resp.get("model").and_then(|m| m.as_str()).unwrap_or(""),
+        "choices": [{
+            "index": 0,
+            "message": message,
+            "finish_reason": finish_reason
+        }],
+        "usage": {
+            "prompt_tokens": input_tokens,
+            "completion_tokens": output_tokens,
+            "total_tokens": input_tokens + output_tokens
+        }
+    }))
+}
+
+/// Anthropic SSE → OpenAI SSE 流式转换器。
+///
+/// 用于 Codex CLI 指向 Anthropic 原生上游时, 把 Anthropic 流式响应转回 OpenAI 格式。
+pub struct AnthropicSseConverter {
+    buf: String,
+    started: bool,
+    finished: bool,
+    tool_call_index: u32,
+}
+
+impl AnthropicSseConverter {
+    pub fn new() -> Self {
+        Self {
+            buf: String::new(),
+            started: false,
+            finished: false,
+            tool_call_index: 0,
+        }
+    }
+
+    pub fn feed(&mut self, data: &[u8]) -> Vec<u8> {
+        let text = String::from_utf8_lossy(data);
+        self.buf.push_str(&text.replace("\r\n", "\n"));
+        let mut out = String::new();
+
+        while let Some(pos) = self.buf.find("\n\n") {
+            let raw = self.buf[..pos].to_string();
+            self.buf = self.buf[pos + 2..].to_string();
+            self.process_event(&raw, &mut out);
+        }
+        out.into_bytes()
+    }
+
+    pub fn flush(&mut self) -> Vec<u8> {
+        let mut out = String::new();
+        if !self.buf.is_empty() {
+            self.process_event(&self.buf.clone(), &mut out);
+            self.buf.clear();
+        }
+        if !self.finished {
+            out.push_str(
+                "data: {\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}]}\n\n",
+            );
+            out.push_str("data: [DONE]\n\n");
+            self.finished = true;
+        }
+        out.into_bytes()
+    }
+
+    fn process_event(&mut self, raw: &str, out: &mut String) {
+        let mut event_type = String::new();
+        let mut data_str = String::new();
+        for line in raw.lines() {
+            let line = line.trim();
+            if let Some(et) = line.strip_prefix("event:") {
+                event_type = et.trim().to_string();
+            } else if let Some(dt) = line.strip_prefix("data:") {
+                data_str = dt.trim().to_string();
+            }
+        }
+        if data_str.is_empty() || data_str == "[DONE]" {
+            return;
+        }
+        let Ok(data) = serde_json::from_str::<Value>(&data_str) else {
+            return;
+        };
+
+        match event_type.as_str() {
+            "message_start" => {
+                self.started = true;
+                let model = data
+                    .pointer("/message/model")
+                    .and_then(|m| m.as_str())
+                    .unwrap_or("");
+                let id = data
+                    .pointer("/message/id")
+                    .and_then(|i| i.as_str())
+                    .unwrap_or("chatcmpl-proxy");
+                out.push_str(&format!(
+                    "data: {}\n\n",
+                    json!({"id": id, "object": "chat.completion.chunk", "model": model,
+                        "choices": [{"index": 0, "delta": {"role": "assistant", "content": ""}, "finish_reason": null}]
+                    }),
+                ));
+            }
+            "content_block_delta" => {
+                let delta_type = data
+                    .pointer("/delta/type")
+                    .and_then(|t| t.as_str())
+                    .unwrap_or("");
+                match delta_type {
+                    "text_delta" => {
+                        let text = data
+                            .pointer("/delta/text")
+                            .and_then(|t| t.as_str())
+                            .unwrap_or("");
+                        if !text.is_empty() {
+                            out.push_str(&format!("data: {}\n\n", json!({
+                                "choices": [{"index": 0, "delta": {"content": text}, "finish_reason": null}]
+                            })));
+                        }
+                    }
+                    "thinking_delta" => {
+                        let thinking = data
+                            .pointer("/delta/thinking")
+                            .and_then(|t| t.as_str())
+                            .unwrap_or("");
+                        if !thinking.is_empty() {
+                            out.push_str(&format!("data: {}\n\n", json!({
+                                "choices": [{"index": 0, "delta": {"reasoning_content": thinking}, "finish_reason": null}]
+                            })));
+                        }
+                    }
+                    "input_json_delta" => {
+                        let partial = data
+                            .pointer("/delta/partial_json")
+                            .and_then(|p| p.as_str())
+                            .unwrap_or("");
+                        if !partial.is_empty() {
+                            let idx = self.tool_call_index;
+                            out.push_str(&format!("data: {}\n\n", json!({
+                                "choices": [{"index": 0, "delta": {"tool_calls": [{"index": idx, "function": {"arguments": partial}}]}, "finish_reason": null}]
+                            })));
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            "content_block_start" => {
+                if data.pointer("/content_block/type").and_then(|t| t.as_str()) == Some("tool_use")
+                {
+                    let id = data
+                        .pointer("/content_block/id")
+                        .and_then(|i| i.as_str())
+                        .unwrap_or("call_0");
+                    let name = data
+                        .pointer("/content_block/name")
+                        .and_then(|n| n.as_str())
+                        .unwrap_or("");
+                    let idx = self.tool_call_index;
+                    out.push_str(&format!("data: {}\n\n", json!({
+                        "choices": [{"index": 0, "delta": {"tool_calls": [{"index": idx, "id": id, "type": "function", "function": {"name": name, "arguments": ""}}]}, "finish_reason": null}]
+                    })));
+                }
+            }
+            "content_block_stop" => {
+                // tool_use block 结束 → 增加下一个 tool_call index
+                // (Anthropic 每个 tool_use 是独立 block, OpenAI 用 index 区分)
+            }
+            "message_delta" => {
+                let stop_reason = data.pointer("/delta/stop_reason").and_then(|s| s.as_str());
+                let finish_reason = match stop_reason {
+                    Some("end_turn") | Some("stop_sequence") => "stop",
+                    Some("max_tokens") => "length",
+                    Some("tool_use") => "tool_calls",
+                    _ => "stop",
+                };
+                let usage = data.get("usage").cloned().unwrap_or(json!({}));
+                let output_tokens = usage
+                    .get("output_tokens")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0);
+                out.push_str(&format!("data: {}\n\n", json!({
+                    "choices": [{"index": 0, "delta": {}, "finish_reason": finish_reason}],
+                    "usage": {"prompt_tokens": 0, "completion_tokens": output_tokens, "total_tokens": output_tokens}
+                })));
+            }
+            "message_stop" if !self.finished => {
+                out.push_str("data: [DONE]\n\n");
+                self.finished = true;
+            }
+            _ => {}
+        }
+    }
+}
+
 /// OpenAI SSE → Anthropic SSE 流式转换器。
 ///
 /// 逐 chunk feed 上游 SSE 字节,输出 Anthropic 格式 SSE 字节。
-/// 维护内部缓冲区处理跨 chunk 的不完整 SSE 事件。
+/// 维护内部缓冲区处理跨 chunk 的不完整 SSE 事件,并管理多个 content block
+/// (thinking → text → tool_use) 的生命周期。
 pub struct SseConverter {
     buf: String,
     started: bool,
     finished: bool,
+    block_index: usize,
+    current_block_type: Option<&'static str>, // "thinking" | "text" | "tool_use"
+    tool_call_indices: Vec<usize>,            // OpenAI tool_calls[].index → 已分配的 block_index
 }
 
 impl SseConverter {
@@ -506,15 +884,19 @@ impl SseConverter {
             buf: String::new(),
             started: false,
             finished: false,
+            block_index: 0,
+            current_block_type: None,
+            tool_call_indices: Vec::new(),
         }
     }
 
     /// 输入上游 SSE 字节,返回转换后的 Anthropic SSE 字节。
     pub fn feed(&mut self, data: &[u8]) -> Vec<u8> {
-        self.buf.push_str(&String::from_utf8_lossy(data));
+        let text = String::from_utf8_lossy(data);
+        // CRLF 规范化 (P0-2): 某些反代/CDN 用 \r\n 行尾
+        self.buf.push_str(&text.replace("\r\n", "\n"));
         let mut out = String::new();
 
-        // 按 \n\n 分割完整 SSE 事件
         while let Some(pos) = self.buf.find("\n\n") {
             let raw_event = self.buf[..pos].to_string();
             self.buf = self.buf[pos + 2..].to_string();
@@ -524,7 +906,7 @@ impl SseConverter {
         out.into_bytes()
     }
 
-    /// 流结束时 flush 剩余缓冲
+    /// 流结束时 flush 剩余缓冲 + 兜底 emit_stop
     pub fn flush(&mut self) -> Vec<u8> {
         let mut out = String::new();
         if !self.buf.is_empty() {
@@ -532,13 +914,13 @@ impl SseConverter {
             self.buf.clear();
         }
         if !self.finished {
+            self.close_current_block(&mut out);
             self.emit_stop(&mut out, "end_turn", 0);
         }
         out.into_bytes()
     }
 
     fn process_event(&mut self, raw: &str, out: &mut String) {
-        // 提取 data: 行
         for line in raw.lines() {
             let line = line.trim();
             if !line.starts_with("data:") {
@@ -547,6 +929,7 @@ impl SseConverter {
             let data = line[5..].trim();
             if data == "[DONE]" {
                 if !self.finished {
+                    self.close_current_block(out);
                     self.emit_stop(out, "end_turn", 0);
                 }
                 continue;
@@ -559,21 +942,22 @@ impl SseConverter {
     }
 
     fn convert_openai_chunk(&mut self, chunk: &Value, out: &mut String) {
-        // 首次: 发 message_start + content_block_start
+        // 首次: 发 message_start (P1-3: msg_ 前缀)
         if !self.started {
             self.started = true;
-            let msg_id = chunk
-                .get("id")
-                .and_then(|v| v.as_str())
-                .unwrap_or("msg_proxy")
-                .to_string();
+            let raw_id = chunk.get("id").and_then(|v| v.as_str()).unwrap_or("proxy");
+            let msg_id = if raw_id.starts_with("msg_") {
+                raw_id.to_string()
+            } else {
+                format!("msg_{}", &uuid::Uuid::new_v4().to_string()[..24])
+            };
             let model = chunk
                 .get("model")
                 .and_then(|v| v.as_str())
                 .unwrap_or("")
                 .to_string();
             out.push_str(&format!(
-                "event: message_start\ndata: {}\n\nevent: content_block_start\ndata: {}\n\n",
+                "event: message_start\ndata: {}\n\n",
                 json!({
                     "type": "message_start",
                     "message": {
@@ -583,15 +967,9 @@ impl SseConverter {
                         "usage": {"input_tokens": 0, "output_tokens": 0}
                     }
                 }),
-                json!({
-                    "type": "content_block_start",
-                    "index": 0,
-                    "content_block": {"type": "text", "text": ""}
-                }),
             ));
         }
 
-        // 提取 delta content
         let choices = match chunk.get("choices").and_then(|v| v.as_array()) {
             Some(c) => c,
             None => return,
@@ -600,29 +978,63 @@ impl SseConverter {
             Some(c) => c,
             None => return,
         };
+        let delta = choice.get("delta");
 
-        // 文本 delta
-        if let Some(content) = choice
-            .get("delta")
-            .and_then(|d| d.get("content"))
-            .and_then(|c| c.as_str())
+        // 1. thinking / reasoning_content (P1-1)
+        if let Some(reasoning) = delta
+            .and_then(|d| d.get("reasoning_content"))
+            .and_then(|r| r.as_str())
         {
-            if !content.is_empty() {
+            if !reasoning.is_empty() {
+                self.ensure_block(
+                    "thinking",
+                    out,
+                    |_| json!({"type": "thinking", "thinking": ""}),
+                );
                 out.push_str(&format!(
                     "event: content_block_delta\ndata: {}\n\n",
                     json!({
                         "type": "content_block_delta",
-                        "index": 0,
+                        "index": self.block_index,
+                        "delta": {"type": "thinking_delta", "thinking": reasoning}
+                    }),
+                ));
+            }
+        }
+
+        // 2. text content
+        if let Some(content) = delta
+            .and_then(|d| d.get("content"))
+            .and_then(|c| c.as_str())
+        {
+            if !content.is_empty() {
+                self.ensure_block("text", out, |_| json!({"type": "text", "text": ""}));
+                out.push_str(&format!(
+                    "event: content_block_delta\ndata: {}\n\n",
+                    json!({
+                        "type": "content_block_delta",
+                        "index": self.block_index,
                         "delta": {"type": "text_delta", "text": content}
                     }),
                 ));
             }
         }
 
-        // finish_reason
+        // 3. tool_calls (P0-1)
+        if let Some(tool_calls) = delta
+            .and_then(|d| d.get("tool_calls"))
+            .and_then(|t| t.as_array())
+        {
+            for tc in tool_calls {
+                self.handle_tool_call_delta(tc, out);
+            }
+        }
+
+        // 4. finish_reason
         let finish_reason = choice.get("finish_reason").and_then(|v| v.as_str());
         if let Some(reason) = finish_reason {
             if !self.finished {
+                self.close_current_block(out);
                 let stop_reason = match reason {
                     "stop" => "end_turn",
                     "length" => "max_tokens",
@@ -639,11 +1051,107 @@ impl SseConverter {
         }
     }
 
+    /// 确保当前 block 类型匹配 desired; 不匹配则关闭旧 block + 开新 block
+    fn ensure_block(
+        &mut self,
+        desired: &'static str,
+        out: &mut String,
+        make_block: impl Fn(usize) -> Value,
+    ) {
+        if self.current_block_type == Some(desired) {
+            return;
+        }
+        // 关闭旧 block
+        self.close_current_block(out);
+        // 开新 block
+        self.current_block_type = Some(desired);
+        out.push_str(&format!(
+            "event: content_block_start\ndata: {}\n\n",
+            json!({
+                "type": "content_block_start",
+                "index": self.block_index,
+                "content_block": make_block(self.block_index)
+            }),
+        ));
+    }
+
+    /// 处理单个 tool_call delta
+    fn handle_tool_call_delta(&mut self, tc: &Value, out: &mut String) {
+        let oai_index = tc.get("index").and_then(|v| v.as_u64()).unwrap_or(0) as usize;
+
+        // 首次见到这个 tool_call index: 开新 tool_use block
+        if oai_index >= self.tool_call_indices.len() {
+            // 补齐
+            while self.tool_call_indices.len() <= oai_index {
+                self.close_current_block(out);
+                let block_idx = self.block_index;
+                self.tool_call_indices.push(block_idx);
+                self.current_block_type = Some("tool_use");
+
+                let call_id = tc
+                    .get("id")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("toolu_proxy")
+                    .to_string();
+                let fn_name = tc
+                    .get("function")
+                    .and_then(|f| f.get("name"))
+                    .and_then(|n| n.as_str())
+                    .unwrap_or("")
+                    .to_string();
+
+                out.push_str(&format!(
+                    "event: content_block_start\ndata: {}\n\n",
+                    json!({
+                        "type": "content_block_start",
+                        "index": block_idx,
+                        "content_block": {
+                            "type": "tool_use",
+                            "id": call_id,
+                            "name": fn_name,
+                            "input": {}
+                        }
+                    }),
+                ));
+            }
+        }
+
+        // arguments 增量
+        if let Some(args) = tc
+            .get("function")
+            .and_then(|f| f.get("arguments"))
+            .and_then(|a| a.as_str())
+        {
+            if !args.is_empty() {
+                let block_idx = self.tool_call_indices.get(oai_index).copied().unwrap_or(0);
+                out.push_str(&format!(
+                    "event: content_block_delta\ndata: {}\n\n",
+                    json!({
+                        "type": "content_block_delta",
+                        "index": block_idx,
+                        "delta": {"type": "input_json_delta", "partial_json": args}
+                    }),
+                ));
+            }
+        }
+    }
+
+    /// 关闭当前 content block (如果有)
+    fn close_current_block(&mut self, out: &mut String) {
+        if self.current_block_type.is_some() {
+            out.push_str(&format!(
+                "event: content_block_stop\ndata: {}\n\n",
+                json!({"type": "content_block_stop", "index": self.block_index}),
+            ));
+            self.block_index += 1;
+            self.current_block_type = None;
+        }
+    }
+
     fn emit_stop(&mut self, out: &mut String, stop_reason: &str, output_tokens: u64) {
         self.finished = true;
         out.push_str(&format!(
-            "event: content_block_stop\ndata: {}\n\nevent: message_delta\ndata: {}\n\nevent: message_stop\ndata: {}\n\n",
-            json!({"type": "content_block_stop", "index": 0}),
+            "event: message_delta\ndata: {}\n\nevent: message_stop\ndata: {}\n\n",
             json!({
                 "type": "message_delta",
                 "delta": {"stop_reason": stop_reason, "stop_sequence": null},
@@ -818,5 +1326,155 @@ mod tests {
         );
         assert_eq!(canonical_json_string(&json!("hi")), "\"hi\"");
         assert_eq!(canonical_json_string(&json!(null)), "null");
+    }
+
+    // ===== SseConverter 测试 =====
+
+    fn make_openai_chunk(content: &str, finish: Option<&str>) -> String {
+        let fr = match finish {
+            Some(r) => format!("\"finish_reason\":\"{r}\""),
+            None => "\"finish_reason\":null".to_string(),
+        };
+        if content.is_empty() && finish.is_some() {
+            format!(
+                "{{\"id\":\"chatcmpl-1\",\"model\":\"gpt-4o\",\"choices\":[{{\"index\":0,\"delta\":{{}},\"{fr}\":null}}]}}"
+            )
+        } else {
+            format!(
+                "{{\"id\":\"chatcmpl-1\",\"model\":\"gpt-4o\",\"choices\":[{{\"index\":0,\"delta\":{{\"content\":\"{content}\"}},{fr}}]}}"
+            )
+        }
+    }
+
+    #[test]
+    fn test_sse_basic_text() {
+        let mut conv = SseConverter::new();
+        let input = format!(
+            "data: {}\n\ndata: {}\n\n",
+            make_openai_chunk("Hello", None),
+            make_openai_chunk("", Some("stop")),
+        );
+        let out = String::from_utf8(conv.feed(input.as_bytes())).unwrap();
+        // 应包含 message_start, text_delta, content_block_stop, message_stop
+        assert!(out.contains("message_start"));
+        assert!(out.contains("text_delta"));
+        assert!(out.contains("\"text\":\"Hello\""));
+        assert!(out.contains("message_stop"));
+    }
+
+    #[test]
+    fn test_sse_crlf() {
+        let mut conv = SseConverter::new();
+        let input = format!("data: {}\r\n\r\n", make_openai_chunk("Hi", None),);
+        let out = String::from_utf8(conv.feed(input.as_bytes())).unwrap();
+        assert!(out.contains("text_delta"), "CRLF 分割应正常工作");
+    }
+
+    #[test]
+    fn test_sse_done_signal() {
+        let mut conv = SseConverter::new();
+        let input = format!(
+            "data: {}\n\ndata: [DONE]\n\n",
+            make_openai_chunk("Bye", None)
+        );
+        let out = String::from_utf8(conv.feed(input.as_bytes())).unwrap();
+        assert!(out.contains("message_stop"), "[DONE] 应触发 emit_stop");
+    }
+
+    #[test]
+    fn test_sse_tool_calls() {
+        let mut conv = SseConverter::new();
+        // 首帧: tool_call 定义
+        let chunk1 = r#"{"id":"chatcmpl-1","model":"gpt-4o","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"id":"call_abc","type":"function","function":{"name":"get_weather","arguments":""}}]},"finish_reason":null}]}"#;
+        // 次帧: tool_call 参数增量
+        let chunk2 = r#"{"id":"chatcmpl-1","model":"gpt-4o","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\"city\":\"NYC\"}"}}]},"finish_reason":null}]}"#;
+        // 终帧
+        let chunk3 = r#"{"id":"chatcmpl-1","model":"gpt-4o","choices":[{"index":0,"delta":{},"finish_reason":"tool_calls"}]}"#;
+
+        let input = format!("data: {chunk1}\n\ndata: {chunk2}\n\ndata: {chunk3}\n\n");
+        let out = String::from_utf8(conv.feed(input.as_bytes())).unwrap();
+        assert!(out.contains("tool_use"), "应包含 tool_use block");
+        assert!(out.contains("get_weather"), "应包含函数名");
+        assert!(out.contains("input_json_delta"), "应包含参数增量");
+        assert!(
+            out.contains("\"stop_reason\":\"tool_use\""),
+            "finish_reason=tool_calls → stop_reason=tool_use"
+        );
+    }
+
+    #[test]
+    fn test_sse_cross_chunk_boundary() {
+        let mut conv = SseConverter::new();
+        // 跨 chunk: 事件被切断
+        let part1 = format!("data: {}", make_openai_chunk("Hel", None));
+        let part2 = format!("\n\ndata: {}\n\n", make_openai_chunk("", Some("stop")));
+
+        let out1 = String::from_utf8(conv.feed(part1.as_bytes())).unwrap();
+        assert!(out1.is_empty(), "不完整事件不应输出");
+
+        let out2 = String::from_utf8(conv.feed(part2.as_bytes())).unwrap();
+        assert!(out2.contains("text_delta"), "补全后应输出");
+    }
+
+    #[test]
+    fn test_sse_msg_id_prefix() {
+        let mut conv = SseConverter::new();
+        let input = format!("data: {}\n\n", make_openai_chunk("test", None));
+        let out = String::from_utf8(conv.feed(input.as_bytes())).unwrap();
+        assert!(
+            out.contains("\"id\":\"msg_"),
+            "msg_id 应以 msg_ 开头, 不应用 chatcmpl-"
+        );
+    }
+
+    // ===== 反向转换测试 =====
+
+    #[test]
+    fn test_openai_to_anthropic_request_basic() {
+        let input = json!({
+            "model": "claude-sonnet-4",
+            "messages": [
+                {"role": "system", "content": "You are helpful."},
+                {"role": "user", "content": "Hello"}
+            ],
+            "max_tokens": 1024
+        });
+        let result = openai_to_anthropic_request(&input).unwrap();
+        assert_eq!(result["system"], "You are helpful.");
+        assert_eq!(result["messages"][0]["role"], "user");
+        assert_eq!(result["messages"][0]["content"], "Hello");
+        assert_eq!(result["max_tokens"], 1024);
+    }
+
+    #[test]
+    fn test_anthropic_to_openai_response_basic() {
+        let input = json!({
+            "id": "msg_test",
+            "model": "claude-sonnet-4",
+            "content": [{"type": "text", "text": "Hi there!"}],
+            "stop_reason": "end_turn",
+            "usage": {"input_tokens": 10, "output_tokens": 5}
+        });
+        let result = anthropic_to_openai_response(&input).unwrap();
+        assert_eq!(result["choices"][0]["message"]["content"], "Hi there!");
+        assert_eq!(result["choices"][0]["finish_reason"], "stop");
+        assert_eq!(result["usage"]["prompt_tokens"], 10);
+        assert_eq!(result["usage"]["total_tokens"], 15);
+    }
+
+    #[test]
+    fn test_anthropic_to_openai_response_tool_use() {
+        let input = json!({
+            "id": "msg_test",
+            "content": [{"type": "tool_use", "id": "toolu_1", "name": "get_weather", "input": {"city": "NYC"}}],
+            "stop_reason": "tool_use",
+            "usage": {"input_tokens": 10, "output_tokens": 5}
+        });
+        let result = anthropic_to_openai_response(&input).unwrap();
+        assert_eq!(result["choices"][0]["finish_reason"], "tool_calls");
+        assert_eq!(
+            result["choices"][0]["message"]["tool_calls"][0]["function"]["name"],
+            "get_weather"
+        );
     }
 }

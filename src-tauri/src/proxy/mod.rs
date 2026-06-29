@@ -342,9 +342,15 @@ impl ProxyService {
                     message: "没有备份记录, 无法恢复".into(),
                 },
             },
-            AppType::Codex => match (&codex_auth_bak, &codex_cfg_bak) {
-                (Some(auth), Some(cfg)) => takeover::restore_codex(auth, cfg),
-                _ => TakeoverResult {
+            // P0-3: config.toml 备份可能缺失 (首次接管时文件不存在), 只要有 auth 备份就恢复
+            AppType::Codex => match &codex_auth_bak {
+                Some(auth) => {
+                    let cfg = codex_cfg_bak
+                        .as_deref()
+                        .unwrap_or_else(|| std::path::Path::new(""));
+                    takeover::restore_codex(auth, cfg)
+                }
+                None => TakeoverResult {
                     success: false,
                     message: "没有备份记录, 无法恢复".into(),
                 },
@@ -352,6 +358,8 @@ impl ProxyService {
         };
 
         if result.success {
+            // P1-6: 清理 targets HashMap 里的残留 target
+            self.state.targets.write().await.remove(app.as_str());
             let mut tk = self.takeover.write().await;
             let mut status = self.state.status.write().await;
             match app {

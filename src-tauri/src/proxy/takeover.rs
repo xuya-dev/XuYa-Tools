@@ -46,12 +46,17 @@ pub fn takeover_claude(proxy_url: &str) -> TakeoverResult {
 pub fn takeover_codex(proxy_url: &str) -> TakeoverResult {
     let dir = codex::codex_config_dir();
     let _ = fs::create_dir_all(&dir);
-
-    // Codex 把 OPENAI_BASE_URL 当 origin, 请求时拼接 /chat/completions。
-    // 代理路由按 /v1/chat/completions 匹配, 所以 base_url 要带 /v1 后缀。
     let codex_base = format!("{}/v1", proxy_url.trim_end_matches('/'));
 
-    // 1. 写 auth.json: OPENAI_BASE_URL → 代理地址
+    // P1-4: 先写 config.toml (文本, 可安全失败不破坏 auth.json)
+    if let Err(e) = codex::update_config_base_url(&codex_base) {
+        return TakeoverResult {
+            success: false,
+            message: format!("写入 config.toml 失败: {e}"),
+        };
+    }
+
+    // 再写 auth.json
     let path = codex::codex_auth_path();
     let mut root = read_json_or_empty(&path);
     if !root.is_object() {
@@ -60,24 +65,8 @@ pub fn takeover_codex(proxy_url: &str) -> TakeoverResult {
     root.as_object_mut()
         .expect("已重置 root 为对象,此处必为对象")
         .insert("OPENAI_BASE_URL".into(), json!(codex_base));
-    let auth_result = write_or_fail(&path, &root, "Codex CLI 已接管");
-    if !auth_result.success {
-        return auth_result;
-    }
 
-    // 2. 写 config.toml: [model_providers.custom].base_url → 代理地址
-    // Codex CLI 优先使用 config.toml 的 base_url, 不改这里会导致流量绕过代理
-    if let Err(e) = codex::update_config_base_url(&codex_base) {
-        return TakeoverResult {
-            success: false,
-            message: format!("写入 config.toml 失败: {e}"),
-        };
-    }
-
-    TakeoverResult {
-        success: true,
-        message: "Codex CLI 已接管".to_string(),
-    }
+    write_or_fail(&path, &root, "Codex CLI 已接管")
 }
 
 /// 恢复 Claude: 用备份覆盖 live settings

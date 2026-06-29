@@ -240,14 +240,15 @@ async fn forward_handler(req: Request<Body>, state: ProxyState) -> Response<Body
     // 协议转换: 当目标供应商是 openai_chat 格式, 而请求来自 Claude Code (anthropic /v1/messages)
     // 时, 把请求体 anthropic→openai 转换, 并把端点路径 /v1/messages → /v1/chat/completions。
     let mut fwd_body_bytes: bytes::Bytes = body_bytes.clone();
-    let mut transformed_request = false;
+    let mut transformed_request = false; // 正向: anthropic→openai (请求) + openai→anthropic (响应)
+    let mut reverse_transformed = false; // 反向: openai→anthropic (请求) + anthropic→openai (响应)
+
     if target.api_format == "openai_chat" && is_anthropic_messages_path(&original_path) {
         if let Ok(req_json) = serde_json::from_slice::<serde_json::Value>(&body_bytes) {
             if let Ok(converted) = super::transform::anthropic_to_openai(&req_json) {
                 let vec = serde_json::to_vec(&converted).unwrap_or_else(|_| body_bytes.to_vec());
                 fwd_body_bytes = bytes::Bytes::from(vec);
                 transformed_request = true;
-                // 改写 URI 路径 (转换失败则保持原 URI, 后续 fallback 处理)
                 if let Some(rewritten) =
                     rewrite_to_chat_completions(&target.base_url, &original_path)
                 {
@@ -257,7 +258,23 @@ async fn forward_handler(req: Request<Body>, state: ProxyState) -> Response<Body
                 }
             }
         }
+    } else if target.api_format == "anthropic" && is_openai_chat_path(&original_path) {
+        // 反向: Codex (OpenAI 协议) → Anthropic 原生上游
+        if let Ok(req_json) = serde_json::from_slice::<serde_json::Value>(&body_bytes) {
+            if let Ok(converted) = super::transform::openai_to_anthropic_request(&req_json) {
+                let vec = serde_json::to_vec(&converted).unwrap_or_else(|_| body_bytes.to_vec());
+                fwd_body_bytes = bytes::Bytes::from(vec);
+                reverse_transformed = true;
+                if let Some(rewritten) = rewrite_to_messages(&target.base_url) {
+                    if let Ok(uri) = rewritten.parse::<http::Uri>() {
+                        parts.uri = uri;
+                    }
+                }
+            }
+        }
     }
+    // openai_responses / gemini_native 格式: 暂不做转换, 透传原样 (后续按需实现)
+    // 前端已标注这些格式为"需转换",用户选择后自行承担兼容性
 
     // 替换 URI 指向上游 (未转换时用原始拼接)
     if !transformed_request {
@@ -419,12 +436,18 @@ async fn forward_handler(req: Request<Body>, state: ProxyState) -> Response<Body
                 });
 
                 // 分流: 遍历上游 frame, 同时发给 collect 通道和客户端流。
-                // 若请求做了 anthropic→openai 转换, 流式响应也要 openai→anthropic 回转。
-                let needs_sse_conversion = transformed_request;
+                // 若请求做了转换, 流式响应也需转换:
+                //   正向 (transformed_request): OpenAI SSE → Anthropic SSE (SseConverter)
+                //   反向 (reverse_transformed): Anthropic SSE → OpenAI SSE (AnthropicSseConverter)
+                let needs_sse_conversion = transformed_request || reverse_transformed;
                 let client_stream = http_body_util::StreamBody::new(async_stream::stream! {
                     let mut rbody = rbody;
-                    let mut sse_converter = if needs_sse_conversion {
-                        Some(super::transform::SseConverter::new())
+                    let mut sse_converter: Option<Box<dyn super::transform::SseConvert>> = if needs_sse_conversion {
+                        if reverse_transformed {
+                            Some(Box::new(super::transform::AnthropicSseConverter::new()))
+                        } else {
+                            Some(Box::new(super::transform::SseConverter::new()))
+                        }
                     } else {
                         None
                     };
@@ -504,19 +527,40 @@ async fn forward_handler(req: Request<Body>, state: ProxyState) -> Response<Body
                 }
             };
 
-            // 协议转换响应回转: 若请求被转换 (anthropic→openai), 把 openai 响应转回 anthropic
-            let final_bytes: bytes::Bytes = if transformed_request && status.is_success() {
-                if let Ok(resp_json) = serde_json::from_slice::<serde_json::Value>(&rbody_bytes) {
-                    match super::transform::openai_to_anthropic(&resp_json) {
-                        Ok(converted) => {
-                            let vec = serde_json::to_vec(&converted)
-                                .unwrap_or_else(|_| rbody_bytes.to_vec());
-                            bytes::Bytes::from(vec)
+            // 协议转换响应回转:
+            //   正向 (transformed_request): OpenAI 响应 → Anthropic 响应
+            //   反向 (reverse_transformed): Anthropic 响应 → OpenAI 响应
+            let final_bytes: bytes::Bytes = if status.is_success() {
+                if transformed_request {
+                    if let Ok(resp_json) = serde_json::from_slice::<serde_json::Value>(&rbody_bytes)
+                    {
+                        match super::transform::openai_to_anthropic(&resp_json) {
+                            Ok(converted) => {
+                                let vec = serde_json::to_vec(&converted)
+                                    .unwrap_or_else(|_| rbody_bytes.to_vec());
+                                bytes::Bytes::from(vec)
+                            }
+                            Err(_) => rbody_bytes.clone(),
                         }
-                        Err(_) => rbody_bytes.clone(), // 转换失败则透传原始 (兼容错误页)
+                    } else {
+                        rbody_bytes.clone()
+                    }
+                } else if reverse_transformed {
+                    if let Ok(resp_json) = serde_json::from_slice::<serde_json::Value>(&rbody_bytes)
+                    {
+                        match super::transform::anthropic_to_openai_response(&resp_json) {
+                            Ok(converted) => {
+                                let vec = serde_json::to_vec(&converted)
+                                    .unwrap_or_else(|_| rbody_bytes.to_vec());
+                                bytes::Bytes::from(vec)
+                            }
+                            Err(_) => rbody_bytes.clone(),
+                        }
+                    } else {
+                        rbody_bytes.clone()
                     }
                 } else {
-                    rbody_bytes.clone()
+                    rbody_bytes
                 }
             } else {
                 rbody_bytes
@@ -810,6 +854,18 @@ fn model_price(model: &str) -> Option<(f64, f64)> {
 fn is_anthropic_messages_path(path: &str) -> bool {
     let p = path.split('?').next().unwrap_or(path);
     p.ends_with("/v1/messages")
+}
+
+/// 判断请求路径是否为 OpenAI Chat Completions 端点 (需反向转换)
+fn is_openai_chat_path(path: &str) -> bool {
+    let p = path.split('?').next().unwrap_or(path);
+    p.ends_with("/chat/completions") || p.ends_with("/v1/chat/completions")
+}
+
+/// 反向转换: 把上游 base_url 改写为 Anthropic Messages 端点
+fn rewrite_to_messages(base_url: &str) -> Option<String> {
+    let base = base_url.trim_end_matches('/');
+    Some(format!("{base}/v1/messages"))
 }
 
 /// 把 anthropic /v1/messages 端点改写为 openai /v1/chat/completions

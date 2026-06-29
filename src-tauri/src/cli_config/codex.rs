@@ -202,7 +202,9 @@ fn toml_replace_value(content: &str, section: Option<&str>, key: &str, value: &s
         let trimmed = line.trim();
 
         if trimmed.starts_with('[') && trimmed.ends_with(']') {
-            in_target_section = section.map_or(true, |s| trimmed == format!("[{s}]"));
+            // 归一化: 去掉括号内首尾空格, 支持 [ x ] 和 [x.y] 两种写法
+            let section_name = trimmed[1..trimmed.len() - 1].trim();
+            in_target_section = section.map_or(true, |s| section_name == s);
             out.push(line.to_string());
             continue;
         }
@@ -260,4 +262,101 @@ pub fn update_live_model(provider: &CliProvider) -> std::io::Result<()> {
     let tmp = path.with_extension("toml.tmp");
     fs::write(&tmp, updated)?;
     fs::rename(&tmp, &path)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::cli_config::types::{
+        ApiFormat, AuthField, CliProvider, ProviderCategory, ProviderKind, ProviderScope,
+    };
+
+    fn sample_provider(model: &str) -> CliProvider {
+        CliProvider {
+            id: String::new(),
+            name: "test".into(),
+            scope: ProviderScope::Codex,
+            kind: ProviderKind::Relay,
+            category: ProviderCategory::Custom,
+            base_url: "https://api.example.com".into(),
+            api_key: "sk-test".into(),
+            model: model.into(),
+            model_sonnet: String::new(),
+            model_haiku: String::new(),
+            model_opus: String::new(),
+            sonnet_name: String::new(),
+            opus_name: String::new(),
+            haiku_name: String::new(),
+            sonnet_1m: false,
+            opus_1m: false,
+            haiku_1m: false,
+            note: String::new(),
+            website_url: String::new(),
+            auth_field: AuthField::AnthropicAuthToken,
+            api_format: ApiFormat::OpenaiChat,
+            custom_user_agent: String::new(),
+            models_url: String::new(),
+            preset_id: String::new(),
+            icon: String::new(),
+            icon_color: String::new(),
+            codex_auth_json: String::new(),
+            codex_config_toml: String::new(),
+            updated_at: 0,
+        }
+    }
+
+    #[test]
+    fn test_toml_replace_top_level() {
+        let content = "model = \"gpt-4o\"\nfoo = \"bar\"\n";
+        let result = toml_replace_value(content, None, "model", "o3");
+        assert!(result.contains("model = \"o3\""));
+        assert!(result.contains("foo = \"bar\""));
+    }
+
+    #[test]
+    fn test_toml_replace_section_value() {
+        let content = "[model_providers.custom]\nname = \"test\"\nbase_url = \"https://old.com\"\n";
+        let result = toml_replace_value(
+            content,
+            Some("model_providers.custom"),
+            "base_url",
+            "https://new.com",
+        );
+        assert!(result.contains("https://new.com"));
+        assert!(!result.contains("https://old.com"));
+        assert!(result.contains("name = \"test\""));
+    }
+
+    #[test]
+    fn test_toml_replace_missing_key_adds() {
+        let content = "model = \"gpt-4o\"\n";
+        let result = toml_replace_value(content, None, "max_tokens", "4096");
+        assert!(result.contains("max_tokens = \"4096\""));
+    }
+
+    #[test]
+    fn test_toml_replace_missing_section_creates() {
+        let content = "model = \"gpt-4o\"\n";
+        let result = toml_replace_value(
+            content,
+            Some("model_providers.custom"),
+            "base_url",
+            "https://proxy.local",
+        );
+        assert!(result.contains("[model_providers.custom]"));
+        assert!(result.contains("https://proxy.local"));
+    }
+
+    #[test]
+    fn test_primary_codex_model() {
+        assert_eq!(primary_codex_model(&sample_provider("gpt-5")), "gpt-5");
+        assert_eq!(primary_codex_model(&sample_provider("")), "gpt-5.5");
+    }
+
+    #[test]
+    fn test_toml_quote_escapes() {
+        assert_eq!(toml_quote("hello"), "\"hello\"");
+        assert_eq!(toml_quote("say \"hi\""), "\"say \\\"hi\\\"\"");
+        assert_eq!(toml_quote(r"C:\path"), "\"C:\\path\"");
+    }
 }
