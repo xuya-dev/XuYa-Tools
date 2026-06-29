@@ -62,7 +62,7 @@ impl ProviderScope {
 }
 
 /// provider 分类 (对齐 cc-switch 的 ProviderCategory)
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "snake_case")]
 pub enum ProviderCategory {
     /// 官方
@@ -76,34 +76,25 @@ pub enum ProviderCategory {
     /// 第三方
     ThirdParty,
     /// 自定义
+    #[default]
     Custom,
 }
 
-impl Default for ProviderCategory {
-    fn default() -> Self {
-        Self::Custom
-    }
-}
-
 /// Claude API 认证字段
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "UPPERCASE")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum AuthField {
+    #[default]
     AnthropicAuthToken,
     AnthropicApiKey,
 }
 
-impl Default for AuthField {
-    fn default() -> Self {
-        Self::AnthropicAuthToken
-    }
-}
-
 /// API 格式
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "snake_case")]
 pub enum ApiFormat {
     /// Anthropic Messages 原生
+    #[default]
     Anthropic,
     /// OpenAI Chat Completions (需转换)
     OpenaiChat,
@@ -111,12 +102,6 @@ pub enum ApiFormat {
     OpenaiResponses,
     /// Gemini Native (需转换)
     GeminiNative,
-}
-
-impl Default for ApiFormat {
-    fn default() -> Self {
-        Self::Anthropic
-    }
 }
 
 /// provider 配置 (应用内 SSOT)
@@ -213,25 +198,20 @@ impl CliProvider {
 }
 
 /// provider 来源类型 (保留兼容)
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum ProviderKind {
     /// 官方登录 (走 CLI 原生 OAuth)
     Official,
     /// 第三方中转
+    #[default]
     Relay,
     /// 自定义
     Custom,
 }
 
-impl Default for ProviderKind {
-    fn default() -> Self {
-        Self::Relay
-    }
-}
-
 /// 某 CLI 当前的 live config 状态快照 (只读探测结果)
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct CliLiveStatus {
     /// 配置文件是否存在
     pub installed: bool,
@@ -257,23 +237,6 @@ pub struct CliLiveStatus {
     pub matched_provider_name: Option<String>,
 }
 
-impl Default for CliLiveStatus {
-    fn default() -> Self {
-        Self {
-            installed: false,
-            config_path: String::new(),
-            base_url: String::new(),
-            model: String::new(),
-            model_sonnet: String::new(),
-            model_opus: String::new(),
-            model_haiku: String::new(),
-            taken_over: false,
-            matched_provider_id: None,
-            matched_provider_name: None,
-        }
-    }
-}
-
 /// get_cli_status 返回的聚合状态
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CliStatus {
@@ -288,4 +251,65 @@ pub struct SwitchResult {
     pub message: String,
     /// 备份文件路径 (失败时为空)
     pub backup_path: String,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// 回归测试:AuthField 必须以 SCREAMING_SNAKE_CASE 序列化,
+    /// 与前端 useCliConfig.ts / providerPresets.ts 中 'ANTHROPIC_AUTH_TOKEN' / 'ANTHROPIC_API_KEY' 对齐。
+    /// 此前用 UPPERCASE 导致 save_cli_provider 反序列化失败 (unknown variant)。
+    #[test]
+    fn auth_field_serializes_as_screaming_snake_case() {
+        assert_eq!(
+            serde_json::to_string(&AuthField::AnthropicAuthToken).unwrap(),
+            "\"ANTHROPIC_AUTH_TOKEN\""
+        );
+        assert_eq!(
+            serde_json::to_string(&AuthField::AnthropicApiKey).unwrap(),
+            "\"ANTHROPIC_API_KEY\""
+        );
+        // 反序列化也必须接受前端发来的字面量
+        let v: AuthField = serde_json::from_str("\"ANTHROPIC_AUTH_TOKEN\"").unwrap();
+        assert_eq!(v, AuthField::AnthropicAuthToken);
+        let v: AuthField = serde_json::from_str("\"ANTHROPIC_API_KEY\"").unwrap();
+        assert_eq!(v, AuthField::AnthropicApiKey);
+    }
+
+    #[test]
+    fn api_format_serializes_as_snake_case() {
+        assert_eq!(
+            serde_json::to_string(&ApiFormat::Anthropic).unwrap(),
+            "\"anthropic\""
+        );
+        assert_eq!(
+            serde_json::to_string(&ApiFormat::OpenaiChat).unwrap(),
+            "\"openai_chat\""
+        );
+        assert_eq!(
+            serde_json::to_string(&ApiFormat::OpenaiResponses).unwrap(),
+            "\"openai_responses\""
+        );
+        assert_eq!(
+            serde_json::to_string(&ApiFormat::GeminiNative).unwrap(),
+            "\"gemini_native\""
+        );
+    }
+
+    #[test]
+    fn provider_scope_serializes_as_lowercase() {
+        assert_eq!(
+            serde_json::to_string(&ProviderScope::Claude).unwrap(),
+            "\"claude\""
+        );
+        assert_eq!(
+            serde_json::to_string(&ProviderScope::Codex).unwrap(),
+            "\"codex\""
+        );
+        assert_eq!(
+            serde_json::to_string(&ProviderScope::Both).unwrap(),
+            "\"both\""
+        );
+    }
 }

@@ -43,8 +43,10 @@ impl ProxyService {
         // 尝试打开数据库, 失败则降级为无日志模式
         let db_path = data_dir.join("xuya_proxy_logs.db");
         let db = Database::open(db_path).ok();
-        let mut state = ProxyState::default();
-        state.db = db.clone();
+        let state = ProxyState {
+            db: db.clone(),
+            ..Default::default()
+        };
         Self {
             server: Arc::new(RwLock::new(None)),
             state,

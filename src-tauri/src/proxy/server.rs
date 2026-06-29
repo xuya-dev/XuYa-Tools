@@ -123,7 +123,7 @@ impl ProxyServer {
         }
 
         let handle = tokio::spawn(async move {
-            let _ = shutdown_rx; // 持有以支持 graceful shutdown
+            drop(shutdown_rx); // 持有以支持 graceful shutdown
             let make_svc = app.into_make_service();
             axum::serve(listener, make_svc)
                 .with_graceful_shutdown(async {

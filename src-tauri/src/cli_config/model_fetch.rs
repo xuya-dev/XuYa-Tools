@@ -192,8 +192,8 @@ fn ends_with_version_segment(url: &str) -> bool {
 /// 若 url 以已知兼容子路径结尾，返回剥离后的根
 fn strip_compat_suffix(url: &str) -> Option<&str> {
     for suffix in KNOWN_COMPAT_SUFFIXES {
-        if url.ends_with(suffix) {
-            return Some(&url[..url.len() - suffix.len()]);
+        if let Some(stripped) = url.strip_suffix(suffix) {
+            return Some(stripped);
         }
     }
     None
