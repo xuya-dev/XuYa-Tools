@@ -104,6 +104,17 @@ pub enum ApiFormat {
     GeminiNative,
 }
 
+impl ApiFormat {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Anthropic => "anthropic",
+            Self::OpenaiChat => "openai_chat",
+            Self::OpenaiResponses => "openai_responses",
+            Self::GeminiNative => "gemini_native",
+        }
+    }
+}
+
 /// provider 配置 (应用内 SSOT)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CliProvider {

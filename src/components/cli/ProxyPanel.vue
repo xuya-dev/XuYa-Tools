@@ -57,30 +57,14 @@
         </div>
 
         <div v-if="!proxyStatus?.running" class="proxy-hint">
-            启动本地代理后,可接管 Claude Code / Codex CLI,将它们的请求导向你配置的供应商上游,并记录请求日志用于统计。
-        </div>
-
-        <div v-if="proxyStatus?.running && providers.length" class="proxy-quick-target">
-            <div class="proxy-quick-title">快速设为上游</div>
-            <div class="proxy-quick-list">
-                <button
-                    v-for="p in targetableProviders"
-                    :key="p.id"
-                    class="proxy-quick-item"
-                    :class="{ active: proxyStatus?.active_provider_id === p.id }"
-                    @click="onSetTarget(p)"
-                >
-                    {{ p.name }}
-                    <span v-if="p.base_url" class="proxy-quick-url mono">{{ p.base_url }}</span>
-                </button>
-            </div>
+            启动本地代理后,自动接管 Claude Code / Codex CLI 的请求,上游跟随当前 Provider,无需手动设置。
         </div>
     </div>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, reactive } from 'vue';
-import { useCliConfig, type AppType, type CliProvider } from '@/composables/useCliConfig';
+import { useCliConfig, type AppType } from '@/composables/useCliConfig';
 import { copyToClipboard } from '@/composables/useClipboard';
 
 const {
@@ -90,8 +74,6 @@ const {
     startProxy,
     stopProxy,
     setTakeover,
-    switchProxyTarget,
-    providers,
 } = useCliConfig();
 
 // 局部 toast (本面板独立提示)
@@ -117,8 +99,6 @@ const startedAtText = computed(() => {
     return new Date(proxyStatus.value.started_at * 1000).toLocaleTimeString('zh-CN', { hour12: false });
 });
 
-const targetableProviders = computed(() => providers.value.filter((p) => p.base_url));
-
 async function onToggleProxy() {
     try {
         if (proxyStatus.value?.running) {
@@ -142,15 +122,6 @@ async function onToggleTakeover(app: AppType, enabled: boolean) {
         }
     } catch (e) {
         showToast('接管操作失败: ' + e, 'error');
-    }
-}
-
-async function onSetTarget(p: CliProvider) {
-    try {
-        await switchProxyTarget(p);
-        showToast(`上游已设为 ${p.name}`, 'success');
-    } catch (e) {
-        showToast('设置上游失败: ' + e, 'error');
     }
 }
 
@@ -199,14 +170,6 @@ onUnmounted(() => { if (toastTimer) window.clearTimeout(toastTimer); });
 .switch input:checked + .slider::before { transform: translateX(18px); }
 
 .proxy-hint { margin-top: 14px; padding: 12px 14px; font-size: 12.5px; line-height: 1.6; color: var(--xuya-text-2, #888); background: var(--xuya-input-bg, rgba(127,127,127,.06)); border-radius: 8px; }
-
-.proxy-quick-target { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--xuya-border, rgba(127,127,127,.12)); }
-.proxy-quick-title { font-size: 12px; color: var(--xuya-text-3, #888); margin-bottom: 10px; }
-.proxy-quick-list { display: flex; flex-direction: column; gap: 6px; }
-.proxy-quick-item { display: flex; flex-direction: column; gap: 2px; text-align: left; padding: 8px 12px; font-size: 13px; color: var(--xuya-text, inherit); background: var(--xuya-input-bg, rgba(127,127,127,.06)); border: 1px solid var(--xuya-border, rgba(127,127,127,.12)); border-radius: 8px; transition: .1s; }
-.proxy-quick-item:hover { border-color: var(--xuya-accent, #3b82f6); }
-.proxy-quick-item.active { border-color: var(--xuya-accent, #3b82f6); background: rgba(59,130,246,.1); }
-.proxy-quick-url { font-size: 10.5px; color: var(--xuya-text-3, #888); word-break: break-all; }
 
 .mono { font-family: var(--xuya-font-mono, 'Consolas', monospace); }
 .cli-mini-btn { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; font-size: 11px; color: var(--xuya-text-2, #888); background: var(--xuya-bg-elevated, rgba(127,127,127,.1)); border: 1px solid var(--xuya-border, rgba(127,127,127,.2)); border-radius: 6px; transition: .1s; }

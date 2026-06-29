@@ -96,20 +96,37 @@
             </div>
         </div>
 
-        <!-- provider 列表 (卡片式) -->
+        <!-- provider 列表 (按 CLI 分组) -->
         <div class="cli-providers">
             <div class="cli-providers-head">
-                <span>已保存的 Provider</span>
+                <div class="provider-tabs">
+                    <button
+                        class="provider-tab"
+                        :class="{ active: providerTab === 'claude' }"
+                        @click="providerTab = 'claude'"
+                    >
+                        <span v-if="iconSvg('claude')" class="tab-icon" v-html="iconSvg('claude')!"></span>
+                        Claude
+                    </button>
+                    <button
+                        class="provider-tab"
+                        :class="{ active: providerTab === 'codex' }"
+                        @click="providerTab = 'codex'"
+                    >
+                        <span v-if="iconSvg('openai')" class="tab-icon" v-html="iconSvg('openai')!"></span>
+                        Codex
+                    </button>
+                </div>
                 <button class="cli-add-btn" @click="openAdd">+ 新增</button>
             </div>
 
-            <div v-if="providers.length === 0" class="cli-empty">
-                暂无保存的 Provider，点击「新增」创建第一个
+            <div v-if="filteredProviders.length === 0" class="cli-empty">
+                暂无 {{ providerTab === 'claude' ? 'Claude Code' : 'Codex CLI' }} 的 Provider,点击「新增」创建
             </div>
 
             <div v-else class="provider-card-grid">
-                <div v-for="p in providers" :key="p.id" class="provider-card" :class="{ active: isActiveProvider(p) }">
-                    <span v-if="isActiveProvider(p)" class="provider-current-badge">当前</span>
+                <div v-for="p in filteredProviders" :key="p.id" class="provider-card" :class="{ active: isCurrentForTab(p) }">
+                    <span v-if="isCurrentForTab(p)" class="provider-current-badge">当前</span>
                     <div class="provider-card-head">
                         <div class="provider-icon" :style="{ color: p.icon_color || brandColor(p.icon) }">
                             <span v-if="hasIconImage(p.icon)" class="provider-icon-svg" v-html="iconSvg(p.icon)!"></span>
@@ -117,7 +134,7 @@
                         </div>
                         <div class="provider-card-info">
                             <span class="provider-card-name">{{ p.name }}</span>
-                            <span class="provider-card-cat" :class="p.category">{{ CATEGORY_LABELS[p.category] }} · {{ scopeLabel(p.scope) }}</span>
+                            <span class="provider-card-cat" :class="p.category">{{ CATEGORY_LABELS[p.category] }}<span v-if="p.scope === 'both'" class="scope-badge">通用</span></span>
                         </div>
                     </div>
                     <div v-if="p.base_url" class="provider-card-url mono">{{ p.base_url }}</div>
@@ -133,23 +150,11 @@
                     </div>
                     <div class="provider-card-actions">
                         <button
-                            v-if="appliesClaude(p)"
                             class="cli-mini-btn"
-                            :class="{ current: status?.claude.matched_provider_id === p.id }"
-                            @click="onSwitch('claude', p.id)"
-                        >切换到 Claude</button>
-                        <button
-                            v-if="appliesCodex(p)"
-                            class="cli-mini-btn"
-                            :class="{ current: status?.codex.matched_provider_id === p.id }"
-                            @click="onSwitch('codex', p.id)"
-                        >切换到 Codex</button>
-                        <button
-                            v-if="p.base_url"
-                            class="cli-mini-btn ghost"
-                            :disabled="!proxyStatus?.running"
-                            @click="onSetTarget(p)"
-                        >设为上游</button>
+                            :class="{ current: isCurrentForTab(p) }"
+                            :disabled="isCurrentForTab(p)"
+                            @click="onSwitch(providerTab, p.id)"
+                        >{{ isCurrentForTab(p) ? '当前' : '切换' }}</button>
                         <button class="cli-mini-btn ghost" @click="onEdit(p)">编辑</button>
                         <button class="cli-mini-btn danger" @click="onDelete(p)">删除</button>
                     </div>
@@ -444,7 +449,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
-import { useCliConfig, type CliProvider, type AppType, type ProviderScope, type FetchedModel } from '../../composables/useCliConfig';
+import { useCliConfig, type CliProvider, type AppType, type FetchedModel } from '../../composables/useCliConfig';
 import {
     CLAUDE_PRESETS,
     CODEX_PRESETS,
@@ -464,8 +469,6 @@ const {
     deleteProvider,
     switchProvider,
     newProviderTemplate,
-    proxyStatus,
-    switchProxyTarget,
     fetchModels,
     getLiveConfig,
     openConfigFile,
@@ -532,17 +535,25 @@ const codexBadgeText = computed(() => {
     return s.matched_provider_id ? '已匹配' : '未匹配';
 });
 
-// ---------- 适用范围判定 ----------
-const appliesClaude = (p: CliProvider) => p.scope === 'claude' || p.scope === 'both';
-const appliesCodex = (p: CliProvider) => p.scope === 'codex' || p.scope === 'both';
+// ---------- Provider Tab (Claude / Codex) ----------
+const providerTab = ref<'claude' | 'codex'>('claude');
 
-/** 该 provider 是否为某 app 的当前活动 provider (用于卡片高亮) */
-const isActiveProvider = (p: CliProvider) => {
-    return status.value?.claude.matched_provider_id === p.id
-        || status.value?.codex.matched_provider_id === p.id;
+/** 按 Tab 过滤 provider (scope='both' 在两个 Tab 都显示) */
+const filteredProviders = computed(() =>
+    providers.value.filter((p) =>
+        providerTab.value === 'claude'
+            ? p.scope === 'claude' || p.scope === 'both'
+            : p.scope === 'codex' || p.scope === 'both',
+    ),
+);
+
+/** 该 provider 是否为当前 Tab 对应 CLI 的活动 provider */
+const isCurrentForTab = (p: CliProvider) => {
+    if (providerTab.value === 'claude') {
+        return status.value?.claude.matched_provider_id === p.id;
+    }
+    return status.value?.codex.matched_provider_id === p.id;
 };
-
-const scopeLabel = (s: ProviderScope) => ({ claude: 'Claude', codex: 'Codex', both: '通用' }[s]);
 
 // ---------- 编辑器 (两步式: 预设首屏 -> 表单) ----------
 const emptyForm = (): CliProvider => ({
@@ -743,16 +754,6 @@ const onSwitch = async (app: AppType, id: string) => {
         showToast(result.message, result.success ? 'success' : 'error');
     } catch (e) {
         showToast('切换失败: ' + e, 'error');
-    }
-};
-
-// ---------- 代理 (设为上游, 由 provider 卡片调用) ----------
-const onSetTarget = async (p: CliProvider) => {
-    try {
-        await switchProxyTarget(p);
-        showToast(`上游已设为 ${p.name}`, 'success');
-    } catch (e) {
-        showToast('设置上游失败: ' + e, 'error');
     }
 };
 
@@ -1065,9 +1066,53 @@ onUnmounted(() => {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 12px;
+}
+
+.provider-tabs {
+    display: inline-flex;
+    gap: 2px;
+    padding: 3px;
+    background: var(--xuya-input-bg);
+    border-radius: var(--xuya-radius);
+    border: 1px solid var(--xuya-border-light);
+}
+
+.provider-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 16px;
     font-size: 13px;
-    font-weight: 600;
+    font-weight: 500;
+    border-radius: var(--xuya-radius-sm);
+    cursor: pointer;
+    background: transparent;
+    color: var(--xuya-text-secondary);
+    border: none;
+    transition: all var(--xuya-duration-fast) var(--xuya-ease);
+}
+
+.provider-tab:not(.active):hover {
     color: var(--xuya-text);
+}
+
+.provider-tab.active {
+    background: var(--xuya-bg-elevated);
+    color: var(--xuya-accent);
+    font-weight: 600;
+    box-shadow: var(--xuya-shadow-sm);
+}
+
+.scope-badge {
+    display: inline-block;
+    margin-left: 4px;
+    padding: 0 5px;
+    border-radius: 3px;
+    background: var(--xuya-accent-soft);
+    color: var(--xuya-accent);
+    font-size: 9px;
+    font-weight: 600;
 }
 
 .cli-add-btn {

@@ -65,7 +65,6 @@ pub fn run() {
             stop_cli_proxy,
             get_cli_proxy_status,
             set_cli_takeover,
-            switch_proxy_target,
             // ---- 请求统计 ----
             get_usage_summary,
             get_request_logs,
@@ -198,14 +197,41 @@ fn delete_cli_provider(svc: State<'_, CliConfigService>, id: String) -> Result<b
     Ok(svc.delete_provider(&id))
 }
 
+/// 从当前 Claude provider 同步代理上游 (切换 / 启动代理时自动调用)
+async fn sync_proxy_from_current_claude(
+    cli: &CliConfigService,
+    proxy: &ProxyService,
+) {
+    if let Some(p) = cli.current_provider(AppType::Claude) {
+        if !p.base_url.is_empty() {
+            let _ = proxy
+                .set_target(
+                    p.id,
+                    p.name,
+                    p.base_url,
+                    p.api_key,
+                    p.api_format.as_str().to_string(),
+                )
+                .await;
+        }
+    }
+}
+
 #[tauri::command]
-fn switch_cli_provider(
-    svc: State<'_, CliConfigService>,
+async fn switch_cli_provider(
+    cli: State<'_, CliConfigService>,
+    proxy: State<'_, ProxyService>,
     app_type: String,
     provider_id: String,
 ) -> Result<cli_config::types::SwitchResult, String> {
-    let app = AppType::from_str(&app_type).ok_or_else(|| format!("未知 app 类型: {app_type}"))?;
-    Ok(svc.switch(app, &provider_id))
+    let app = AppType::from_str(&app_type)
+        .ok_or_else(|| format!("未知 app 类型: {app_type}"))?;
+    let result = cli.switch(app, &provider_id);
+    // 切换 Claude 后自动同步代理上游 (上游 = 当前 provider)
+    if result.success && app == AppType::Claude {
+        sync_proxy_from_current_claude(&cli, &proxy).await;
+    }
+    Ok(result)
 }
 
 /// 仪表盘快照: 一次性返回 CLI 当前状态摘要
@@ -303,9 +329,13 @@ async fn fetch_cli_models(
 
 #[tauri::command]
 async fn start_cli_proxy(
-    svc: State<'_, ProxyService>,
+    cli: State<'_, CliConfigService>,
+    proxy: State<'_, ProxyService>,
 ) -> Result<proxy::types::ProxyServerInfo, String> {
-    svc.start().await
+    let info = proxy.start().await?;
+    // 启动后自动把当前 Claude provider 设为上游
+    sync_proxy_from_current_claude(&cli, &proxy).await;
+    Ok(info)
 }
 
 #[tauri::command]
@@ -330,24 +360,6 @@ async fn set_cli_takeover(
     Ok(svc.set_takeover(app, enabled).await)
 }
 
-#[tauri::command]
-async fn switch_proxy_target(
-    svc: State<'_, ProxyService>,
-    provider_id: String,
-    provider_name: String,
-    base_url: String,
-    api_key: String,
-    api_format: Option<String>,
-) -> Result<(), String> {
-    svc.set_target(
-        provider_id,
-        provider_name,
-        base_url,
-        api_key,
-        api_format.unwrap_or_else(|| "anthropic".to_string()),
-    )
-    .await
-}
 
 // ==================== 请求统计命令 ====================
 

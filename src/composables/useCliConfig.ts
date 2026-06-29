@@ -279,17 +279,6 @@ async function setTakeover(appType: AppType, enabled: boolean): Promise<Takeover
     return result;
 }
 
-async function switchProxyTarget(p: CliProvider): Promise<void> {
-    await invoke('switch_proxy_target', {
-        providerId: p.id,
-        providerName: p.name,
-        baseUrl: p.base_url,
-        apiKey: p.api_key,
-        apiFormat: p.api_format || 'anthropic',
-    });
-    await refreshProxyStatus();
-}
-
 // ==================== 请求统计状态 ====================
 const usageSummary = ref<UsageSummary | null>(null);
 const requestLogs = ref<RequestLogDetail[]>([]);
@@ -350,7 +339,6 @@ export function useCliConfig() {
         startProxy,
         stopProxy,
         setTakeover,
-        switchProxyTarget,
         // 统计相关
         usageSummary,
         requestLogs,
