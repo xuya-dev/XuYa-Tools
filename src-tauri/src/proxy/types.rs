@@ -13,9 +13,12 @@ pub struct ProxyStatus {
     pub port: u16,
     /// 启动时间 (Unix 秒, 0 表示未启动)
     pub started_at: i64,
-    /// 当前生效的 provider id
-    pub active_provider_id: Option<String>,
-    pub active_provider_name: Option<String>,
+    /// Claude 当前上游 provider
+    pub claude_provider_id: Option<String>,
+    pub claude_provider_name: Option<String>,
+    /// Codex 当前上游 provider
+    pub codex_provider_id: Option<String>,
+    pub codex_provider_name: Option<String>,
     /// 各 app 是否处于接管模式
     pub claude_taken_over: bool,
     pub codex_taken_over: bool,
@@ -28,8 +31,10 @@ impl Default for ProxyStatus {
             address: "127.0.0.1".to_string(),
             port: 0,
             started_at: 0,
-            active_provider_id: None,
-            active_provider_name: None,
+            claude_provider_id: None,
+            claude_provider_name: None,
+            codex_provider_id: None,
+            codex_provider_name: None,
             claude_taken_over: false,
             codex_taken_over: false,
         }

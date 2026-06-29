@@ -571,16 +571,16 @@ const codexProxyOn = computed(
 );
 
 /** Claude 当前 Provider 名称 (接管时用代理上游名, 否则用 live 匹配名) */
-const claudeActiveProvider = computed(
-    () => claudeProxyOn.value
-        ? (proxyStatus.value?.active_provider_name || '')
+const claudeActiveProvider = computed(() =>
+    claudeProxyOn.value
+        ? (proxyStatus.value?.claude_provider_name || '')
         : (status.value?.claude.matched_provider_name || ''),
 );
 
 /** Codex 当前 Provider 名称 (接管时用代理上游名, 否则用 live 匹配名) */
 const codexActiveProvider = computed(() =>
     codexProxyOn.value
-        ? (proxyStatus.value?.active_provider_name || '')
+        ? (proxyStatus.value?.codex_provider_name || '')
         : (status.value?.codex.matched_provider_name || ''),
 );
 
@@ -597,7 +597,7 @@ const codexDisplayUrl = computed(() =>
 /** Codex 当前模型 — 接管时从 provider 数据取, 否则从 live config 取 */
 const codexModels = computed(() => {
     if (codexProxyOn.value) {
-        const pid = proxyStatus.value?.active_provider_id;
+        const pid = proxyStatus.value?.codex_provider_id;
         const p = providers.value.find((item) => item.id === pid);
         return p?.model || '';
     }
@@ -610,7 +610,7 @@ const codexModels = computed(() => {
  */
 const claudeModels = computed(() => {
     if (claudeProxyOn.value) {
-        const pid = proxyStatus.value?.active_provider_id;
+        const pid = proxyStatus.value?.claude_provider_id;
         const p = providers.value.find((item) => item.id === pid);
         if (p) {
             return {

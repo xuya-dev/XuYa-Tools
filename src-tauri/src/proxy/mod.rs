@@ -91,8 +91,14 @@ impl ProxyService {
     async fn save_autostart(&self) {
         let tk = self.takeover.read().await;
         let config = AutoStartConfig {
-            claude_backup: tk.claude_backup.as_ref().map(|p| p.to_string_lossy().to_string()),
-            codex_backup: tk.codex_backup.as_ref().map(|p| p.to_string_lossy().to_string()),
+            claude_backup: tk
+                .claude_backup
+                .as_ref()
+                .map(|p| p.to_string_lossy().to_string()),
+            codex_backup: tk
+                .codex_backup
+                .as_ref()
+                .map(|p| p.to_string_lossy().to_string()),
         };
         drop(tk);
         let path = self.autostart_path();
@@ -148,12 +154,21 @@ impl ProxyService {
             }
         }
 
-        // 3. 同步代理上游 = 当前 Claude provider
-        if let Some(p) = cli.current_provider(AppType::Claude) {
-            if !p.base_url.is_empty() {
-                let _ = self
-                    .set_target(p.id, p.name, p.base_url, p.api_key, p.api_format.as_str().to_string())
-                    .await;
+        // 3. 同步两个 app 的代理上游 = 各自当前 provider
+        for app in [AppType::Claude, AppType::Codex] {
+            if let Some(p) = cli.current_provider(app) {
+                if !p.base_url.is_empty() {
+                    let _ = self
+                        .set_target(
+                            app,
+                            p.id,
+                            p.name,
+                            p.base_url,
+                            p.api_key,
+                            p.api_format.as_str().to_string(),
+                        )
+                        .await;
+                }
             }
         }
 
@@ -183,9 +198,10 @@ impl ProxyService {
         Ok(())
     }
 
-    /// 设置/切换代理的上游 provider (前端显式传入)
+    /// 设置/切换某 app 的代理上游 provider
     pub async fn set_target(
         &self,
+        app: AppType,
         provider_id: String,
         provider_name: String,
         base_url: String,
@@ -202,10 +218,22 @@ impl ProxyService {
             api_key,
             api_format,
         };
-        *self.state.target.write().await = Some(target);
+        self.state
+            .targets
+            .write()
+            .await
+            .insert(app.as_str().to_string(), target);
         let mut status = self.state.status.write().await;
-        status.active_provider_id = Some(provider_id);
-        status.active_provider_name = Some(provider_name);
+        match app {
+            AppType::Claude => {
+                status.claude_provider_id = Some(provider_id);
+                status.claude_provider_name = Some(provider_name);
+            }
+            AppType::Codex => {
+                status.codex_provider_id = Some(provider_id);
+                status.codex_provider_name = Some(provider_name);
+            }
+        }
         Ok(())
     }
 

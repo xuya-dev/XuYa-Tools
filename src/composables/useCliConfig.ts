@@ -97,8 +97,10 @@ export interface ProxyStatus {
     address: string;
     port: number;
     started_at: number;
-    active_provider_id: string | null;
-    active_provider_name: string | null;
+    claude_provider_id: string | null;
+    claude_provider_name: string | null;
+    codex_provider_id: string | null;
+    codex_provider_name: string | null;
     claude_taken_over: boolean;
     codex_taken_over: boolean;
 }

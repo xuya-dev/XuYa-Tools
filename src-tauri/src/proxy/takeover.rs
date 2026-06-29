@@ -48,13 +48,17 @@ pub fn takeover_codex(proxy_url: &str) -> TakeoverResult {
     let _ = fs::create_dir_all(&dir);
     let path = codex::codex_auth_path();
 
+    // Codex 把 OPENAI_BASE_URL 当 origin, 请求时拼接 /chat/completions。
+    // 代理路由按 /v1/chat/completions 匹配, 所以 base_url 要带 /v1 后缀。
+    let codex_base = format!("{}/v1", proxy_url.trim_end_matches('/'));
+
     let mut root = read_json_or_empty(&path);
     if !root.is_object() {
         root = json!({});
     }
     root.as_object_mut()
         .expect("已重置 root 为对象,此处必为对象")
-        .insert("OPENAI_BASE_URL".into(), json!(proxy_url));
+        .insert("OPENAI_BASE_URL".into(), json!(codex_base));
 
     write_or_fail(&path, &root, "Codex CLI 已接管")
 }

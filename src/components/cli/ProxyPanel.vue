@@ -20,9 +20,13 @@
                 <span class="proxy-detail-val mono">{{ proxyUrl }}</span>
                 <button class="cli-mini-btn ghost" @click="copy(proxyUrl)">复制</button>
             </div>
-            <div v-if="proxyStatus.active_provider_name" class="proxy-detail-row">
-                <span class="proxy-detail-label">上游</span>
-                <span class="proxy-detail-val">{{ proxyStatus.active_provider_name }}</span>
+            <div v-if="proxyStatus.claude_provider_name" class="proxy-detail-row">
+                <span class="proxy-detail-label">Claude</span>
+                <span class="proxy-detail-val">{{ proxyStatus.claude_provider_name }}</span>
+            </div>
+            <div v-if="proxyStatus.codex_provider_name" class="proxy-detail-row">
+                <span class="proxy-detail-label">Codex</span>
+                <span class="proxy-detail-val">{{ proxyStatus.codex_provider_name }}</span>
             </div>
             <div v-if="proxyStatus.started_at" class="proxy-detail-row">
                 <span class="proxy-detail-label">启动于</span>

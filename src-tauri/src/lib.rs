@@ -207,22 +207,22 @@ fn delete_cli_provider(svc: State<'_, CliConfigService>, id: String) -> Result<b
     Ok(svc.delete_provider(&id))
 }
 
-/// 从当前 Claude provider 同步代理上游 (切换 / 启动代理时自动调用)
-async fn sync_proxy_from_current_claude(
-    cli: &CliConfigService,
-    proxy: &ProxyService,
-) {
-    if let Some(p) = cli.current_provider(AppType::Claude) {
-        if !p.base_url.is_empty() {
-            let _ = proxy
-                .set_target(
-                    p.id,
-                    p.name,
-                    p.base_url,
-                    p.api_key,
-                    p.api_format.as_str().to_string(),
-                )
-                .await;
+/// 从当前 provider 同步代理上游 (Claude + Codex 分别同步各自的 provider)
+async fn sync_proxy_from_current(cli: &CliConfigService, proxy: &ProxyService) {
+    for app in [AppType::Claude, AppType::Codex] {
+        if let Some(p) = cli.current_provider(app) {
+            if !p.base_url.is_empty() {
+                let _ = proxy
+                    .set_target(
+                        app,
+                        p.id,
+                        p.name,
+                        p.base_url,
+                        p.api_key,
+                        p.api_format.as_str().to_string(),
+                    )
+                    .await;
+            }
         }
     }
 }
@@ -234,10 +234,11 @@ async fn switch_cli_provider(
     app_type: String,
     provider_id: String,
 ) -> Result<cli_config::types::SwitchResult, String> {
-    let app = AppType::from_str(&app_type)
-        .ok_or_else(|| format!("未知 app 类型: {app_type}"))?;
+    let app = AppType::from_str(&app_type).ok_or_else(|| format!("未知 app 类型: {app_type}"))?;
 
-    let provider = cli.get(&provider_id).ok_or_else(|| "未找到 provider".to_string())?;
+    let provider = cli
+        .get(&provider_id)
+        .ok_or_else(|| "未找到 provider".to_string())?;
     if !provider.applies_to(app) {
         return Ok(cli_config::types::SwitchResult {
             success: false,
@@ -259,19 +260,47 @@ async fn switch_cli_provider(
         cli.set_current_only(app, &provider_id);
         if app == AppType::Claude {
             let _ = cli_config::claude::update_live_models(&provider);
-            sync_proxy_from_current_claude(&cli, &proxy).await;
+        }
+        // 同步该 app 的代理上游 (per-app target)
+        if !provider.base_url.is_empty() {
+            let _ = proxy
+                .set_target(
+                    app,
+                    provider.id.clone(),
+                    provider.name.clone(),
+                    provider.base_url.clone(),
+                    provider.api_key.clone(),
+                    provider.api_format.as_str().to_string(),
+                )
+                .await;
         }
         return Ok(cli_config::types::SwitchResult {
             success: true,
-            message: format!("已切换 {} 上游为 {} (接管模式)", app.as_str(), provider.name),
+            message: format!(
+                "已切换 {} 上游为 {} (接管模式)",
+                app.as_str(),
+                provider.name
+            ),
             backup_path: String::new(),
         });
     }
 
     // 正常模式: 写 live config
     let result = cli.switch(app, &provider_id);
-    if result.success && app == AppType::Claude {
-        sync_proxy_from_current_claude(&cli, &proxy).await;
+    if result.success {
+        // 同步该 app 的代理上游
+        if !provider.base_url.is_empty() {
+            let _ = proxy
+                .set_target(
+                    app,
+                    provider.id.clone(),
+                    provider.name.clone(),
+                    provider.base_url.clone(),
+                    provider.api_key.clone(),
+                    provider.api_format.as_str().to_string(),
+                )
+                .await;
+        }
     }
     Ok(result)
 }
@@ -375,8 +404,8 @@ async fn start_cli_proxy(
     proxy: State<'_, ProxyService>,
 ) -> Result<proxy::types::ProxyServerInfo, String> {
     let info = proxy.start().await?;
-    // 启动后自动把当前 Claude provider 设为上游
-    sync_proxy_from_current_claude(&cli, &proxy).await;
+    // 启动后自动把两个 CLI 的当前 provider 设为各自上游
+    sync_proxy_from_current(&cli, &proxy).await;
     Ok(info)
 }
 
@@ -401,7 +430,6 @@ async fn set_cli_takeover(
     let app = AppType::from_str(&app_type).ok_or_else(|| format!("未知 app 类型: {app_type}"))?;
     Ok(svc.set_takeover(app, enabled).await)
 }
-
 
 // ==================== 请求统计命令 ====================
 

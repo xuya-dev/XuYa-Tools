@@ -41,8 +41,8 @@ pub struct UpstreamTarget {
 /// 代理服务器共享状态
 #[derive(Clone)]
 pub struct ProxyState {
-    /// 当前上游目标
-    pub target: Arc<RwLock<Option<UpstreamTarget>>>,
+    /// per-app 上游目标 (key = "claude" / "codex")
+    pub targets: Arc<RwLock<std::collections::HashMap<String, UpstreamTarget>>>,
     /// 运行状态
     pub status: Arc<RwLock<ProxyStatus>>,
     /// 累计请求数
@@ -57,7 +57,7 @@ pub struct ProxyState {
 impl Default for ProxyState {
     fn default() -> Self {
         Self {
-            target: Arc::new(RwLock::new(None)),
+            targets: Arc::new(RwLock::new(std::collections::HashMap::new())),
             status: Arc::new(RwLock::new(ProxyStatus::default())),
             request_count: Arc::new(std::sync::atomic::AtomicU64::new(0)),
             error_count: Arc::new(std::sync::atomic::AtomicU64::new(0)),
@@ -182,19 +182,34 @@ async fn root_handler() -> &'static str {
     "XuYa CLI Proxy running"
 }
 
-/// 核心转发处理: 把请求转发到上游 provider
+/// 核心转发处理: 把请求转发到上游 provider (按请求路径区分 Claude / Codex)
 async fn forward_handler(req: Request<Body>, state: ProxyState) -> Response<Body> {
     let started = Instant::now();
     state
         .request_count
         .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
 
-    let target = state.target.read().await.clone();
+    // 先捕获路径, 用于推断 app 类型 + 日志
+    let original_path = req
+        .uri()
+        .path_and_query()
+        .map(|p| p.as_str().to_string())
+        .unwrap_or_default();
+    let app_type = infer_app_type("", &original_path);
+
+    // 按 app_type 选 target; 未匹配时 fallback 到任意已配置的 target
+    let target = {
+        let targets = state.targets.read().await;
+        targets
+            .get(&app_type)
+            .cloned()
+            .or_else(|| targets.values().next().cloned())
+    };
     let Some(target) = target else {
         state
             .error_count
             .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-        return error_response(503, "代理未配置上游 Provider");
+        return error_response(503, &format!("{app_type} 未配置上游 Provider"));
     };
 
     let upstream = match build_upstream_url(&target.base_url, req.uri()) {
@@ -206,13 +221,6 @@ async fn forward_handler(req: Request<Body>, state: ProxyState) -> Response<Body
             return error_response(500, &format!("上游地址无效: {e}"));
         }
     };
-
-    // 保存原始路径用于日志 (在 req 被消耗前)
-    let original_path = req
-        .uri()
-        .path_and_query()
-        .map(|p| p.as_str().to_string())
-        .unwrap_or_default();
 
     // 构造转发请求
     let (mut parts, body) = req.into_parts();
@@ -291,7 +299,6 @@ async fn forward_handler(req: Request<Body>, state: ProxyState) -> Response<Body
 
     // 转发
     let client = build_http_client();
-    let app_type = infer_app_type(&target.base_url, &original_path);
     let request_id = uuid::Uuid::new_v4().to_string();
 
     let result = client.request(fwd_req).await;
