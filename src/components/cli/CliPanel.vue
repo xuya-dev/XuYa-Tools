@@ -21,20 +21,20 @@
                     <span class="cli-status-label">{{ claudeProxyOn ? '代理地址' : 'Base URL' }}</span>
                     <span class="cli-status-val mono">{{ claudeDisplayUrl || '官方默认' }}</span>
                 </div>
-                <div v-if="status?.claude.model_sonnet || status?.claude.model_opus || status?.claude.model_haiku || status?.claude.model" class="cli-status-row">
+                <div v-if="claudeModels.model_sonnet || claudeModels.model_opus || claudeModels.model_haiku || claudeModels.model" class="cli-status-row">
                     <span class="cli-status-label">当前模型</span>
                     <span class="cli-status-val model-pills">
-                        <span v-if="status?.claude.model_sonnet" class="live-model-pill">
-                            Sonnet {{ strip1M(status.claude.model_sonnet) }}<span v-if="has1M(status.claude.model_sonnet)" class="onem-badge">1M</span>
+                        <span v-if="claudeModels.model_sonnet" class="live-model-pill">
+                            Sonnet {{ strip1M(claudeModels.model_sonnet) }}<span v-if="has1M(claudeModels.model_sonnet)" class="onem-badge">1M</span>
                         </span>
-                        <span v-if="status?.claude.model_opus" class="live-model-pill">
-                            Opus {{ strip1M(status.claude.model_opus) }}<span v-if="has1M(status.claude.model_opus)" class="onem-badge">1M</span>
+                        <span v-if="claudeModels.model_opus" class="live-model-pill">
+                            Opus {{ strip1M(claudeModels.model_opus) }}<span v-if="has1M(claudeModels.model_opus)" class="onem-badge">1M</span>
                         </span>
-                        <span v-if="status?.claude.model_haiku" class="live-model-pill">
-                            Haiku {{ strip1M(status.claude.model_haiku) }}
+                        <span v-if="claudeModels.model_haiku" class="live-model-pill">
+                            Haiku {{ strip1M(claudeModels.model_haiku) }}
                         </span>
-                        <span v-if="!status?.claude.model_sonnet && !status?.claude.model_opus && !status?.claude.model_haiku && status?.claude.model" class="live-model-pill">
-                            {{ strip1M(status.claude.model) }}<span v-if="has1M(status.claude.model)" class="onem-badge">1M</span>
+                        <span v-if="!claudeModels.model_sonnet && !claudeModels.model_opus && !claudeModels.model_haiku && claudeModels.model" class="live-model-pill">
+                            {{ strip1M(claudeModels.model) }}<span v-if="has1M(claudeModels.model)" class="onem-badge">1M</span>
                         </span>
                     </span>
                 </div>
@@ -576,6 +576,32 @@ const claudeDisplayUrl = computed(() =>
 
 /** Codex 展示的 URL */
 const codexDisplayUrl = computed(() => status.value?.codex.base_url || '');
+
+/**
+ * Claude 当前模型 — 接管时从 provider 数据取 (live config 没变), 否则从 live config 取。
+ * provider 的 sonnet_1m 等布尔值还原成 [1M] 后缀, 与 live config 格式一致。
+ */
+const claudeModels = computed(() => {
+    if (claudeProxyOn.value) {
+        const pid = proxyStatus.value?.active_provider_id;
+        const p = providers.value.find((item) => item.id === pid);
+        if (p) {
+            return {
+                model_sonnet: p.sonnet_1m && p.model_sonnet ? `${p.model_sonnet}[1M]` : p.model_sonnet,
+                model_opus: p.opus_1m && p.model_opus ? `${p.model_opus}[1M]` : p.model_opus,
+                model_haiku: p.model_haiku,
+                model: p.model,
+            };
+        }
+        return { model_sonnet: '', model_opus: '', model_haiku: '', model: '' };
+    }
+    return {
+        model_sonnet: status.value?.claude.model_sonnet || '',
+        model_opus: status.value?.claude.model_opus || '',
+        model_haiku: status.value?.claude.model_haiku || '',
+        model: status.value?.claude.model || '',
+    };
+});
 
 // ---------- Provider Tab (Claude / Codex) ----------
 const providerTab = ref<'claude' | 'codex'>('claude');
