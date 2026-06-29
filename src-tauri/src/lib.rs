@@ -226,8 +226,39 @@ async fn switch_cli_provider(
 ) -> Result<cli_config::types::SwitchResult, String> {
     let app = AppType::from_str(&app_type)
         .ok_or_else(|| format!("未知 app 类型: {app_type}"))?;
+
+    let provider = cli.get(&provider_id).ok_or_else(|| "未找到 provider".to_string())?;
+    if !provider.applies_to(app) {
+        return Ok(cli_config::types::SwitchResult {
+            success: false,
+            message: format!("该 provider 不适用于 {}", app.as_str()),
+            backup_path: String::new(),
+        });
+    }
+
+    // 检查代理接管状态: 接管模式下 live config 始终指向代理, 切换只改代理上游
+    let proxy_status = proxy.status().await;
+    let is_taken_over = proxy_status.running
+        && match app {
+            AppType::Claude => proxy_status.claude_taken_over,
+            AppType::Codex => proxy_status.codex_taken_over,
+        };
+
+    if is_taken_over {
+        // 接管模式: 不重写 live config, 只更新 current 指针 + 同步代理上游
+        cli.set_current_only(app, &provider_id);
+        if app == AppType::Claude {
+            sync_proxy_from_current_claude(&cli, &proxy).await;
+        }
+        return Ok(cli_config::types::SwitchResult {
+            success: true,
+            message: format!("已切换 {} 上游为 {} (接管模式)", app.as_str(), provider.name),
+            backup_path: String::new(),
+        });
+    }
+
+    // 正常模式: 写 live config
     let result = cli.switch(app, &provider_id);
-    // 切换 Claude 后自动同步代理上游 (上游 = 当前 provider)
     if result.success && app == AppType::Claude {
         sync_proxy_from_current_claude(&cli, &proxy).await;
     }

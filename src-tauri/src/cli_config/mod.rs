@@ -171,6 +171,12 @@ impl CliConfigService {
         }
     }
 
+    /// 仅更新 current provider 记录, 不写 live config。
+    /// 接管模式下使用: live config 始终指向代理地址, 只改代理内部的上游指向。
+    pub fn set_current_only(&self, app: AppType, provider_id: &str) {
+        self.store.set_current(app, Some(provider_id.to_string()));
+    }
+
     #[allow(dead_code)]
     pub fn current_provider(&self, app: AppType) -> Option<CliProvider> {
         let id = self.store.current_id(app)?;

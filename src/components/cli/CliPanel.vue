@@ -2,21 +2,24 @@
     <div class="cli-panel">
         <!-- 当前 live 状态卡 -->
         <div class="cli-status-grid">
-            <div class="cli-status-card" :class="{ active: status?.claude.matched_provider_id }">
+            <div class="cli-status-card" :class="{ active: claudeActiveProvider, 'proxy-on': claudeProxyOn }">
                 <div class="cli-status-head">
                     <div class="cli-app-name-wrap">
                         <span v-if="iconSvg('claude')" class="cli-app-icon" v-html="iconSvg('claude')!"></span>
                         <span class="cli-app-name">Claude Code</span>
                     </div>
-                    <span class="cli-badge" :class="claudeBadgeClass">{{ claudeBadgeText }}</span>
+                    <div class="cli-status-badges">
+                        <span v-if="claudeProxyOn" class="cli-badge proxy">代理中</span>
+                        <span class="cli-badge" :class="claudeBadgeClass">{{ claudeBadgeText }}</span>
+                    </div>
                 </div>
                 <div class="cli-status-row">
                     <span class="cli-status-label">当前 Provider</span>
-                    <span class="cli-status-val">{{ status?.claude.matched_provider_name || '未匹配' }}</span>
+                    <span class="cli-status-val">{{ claudeActiveProvider || '未匹配' }}</span>
                 </div>
                 <div class="cli-status-row">
-                    <span class="cli-status-label">Base URL</span>
-                    <span class="cli-status-val mono">{{ status?.claude.base_url || '官方默认' }}</span>
+                    <span class="cli-status-label">{{ claudeProxyOn ? '代理地址' : 'Base URL' }}</span>
+                    <span class="cli-status-val mono">{{ claudeDisplayUrl || '官方默认' }}</span>
                 </div>
                 <div v-if="status?.claude.model_sonnet || status?.claude.model_opus || status?.claude.model_haiku || status?.claude.model" class="cli-status-row">
                     <span class="cli-status-label">当前模型</span>
@@ -41,21 +44,24 @@
                 </div>
             </div>
 
-            <div class="cli-status-card" :class="{ active: status?.codex.matched_provider_id }">
+            <div class="cli-status-card" :class="{ active: codexActiveProvider, 'proxy-on': codexProxyOn }">
                 <div class="cli-status-head">
                     <div class="cli-app-name-wrap">
                         <span v-if="iconSvg('openai')" class="cli-app-icon" v-html="iconSvg('openai')!"></span>
                         <span class="cli-app-name">Codex CLI</span>
                     </div>
-                    <span class="cli-badge" :class="codexBadgeClass">{{ codexBadgeText }}</span>
+                    <div class="cli-status-badges">
+                        <span v-if="codexProxyOn" class="cli-badge proxy">代理中</span>
+                        <span class="cli-badge" :class="codexBadgeClass">{{ codexBadgeText }}</span>
+                    </div>
                 </div>
                 <div class="cli-status-row">
                     <span class="cli-status-label">当前 Provider</span>
-                    <span class="cli-status-val">{{ status?.codex.matched_provider_name || '未匹配' }}</span>
+                    <span class="cli-status-val">{{ codexActiveProvider || '未匹配' }}</span>
                 </div>
                 <div class="cli-status-row">
-                    <span class="cli-status-label">Base URL</span>
-                    <span class="cli-status-val mono">{{ status?.codex.base_url || '官方默认' }}</span>
+                    <span class="cli-status-label">{{ codexProxyOn ? '代理地址' : 'Base URL' }}</span>
+                    <span class="cli-status-val mono">{{ codexDisplayUrl || '官方默认' }}</span>
                 </div>
                 <div class="cli-status-row">
                     <span class="cli-status-label">配置路径</span>
@@ -469,6 +475,8 @@ const {
     deleteProvider,
     switchProvider,
     newProviderTemplate,
+    proxyStatus,
+    refreshProxyStatus,
     fetchModels,
     getLiveConfig,
     openConfigFile,
@@ -518,12 +526,12 @@ async function onOpenConfig(app: 'claude' | 'codex') {
 // ---------- 徽标文案 ----------
 const claudeBadgeClass = computed(() => {
     if (!status.value?.claude.installed) return 'off';
-    return status.value?.claude.matched_provider_id ? 'on' : 'warn';
+    return status.value?.claude.matched_provider_id || claudeActiveProvider.value ? 'on' : 'warn';
 });
 const claudeBadgeText = computed(() => {
     const s = status.value?.claude;
     if (!s?.installed) return '未安装';
-    return s.matched_provider_id ? '已匹配' : '未匹配';
+    return s.matched_provider_id || claudeActiveProvider.value ? '已匹配' : '未匹配';
 });
 const codexBadgeClass = computed(() => {
     if (!status.value?.codex.installed) return 'off';
@@ -534,6 +542,40 @@ const codexBadgeText = computed(() => {
     if (!s?.installed) return '未安装';
     return s.matched_provider_id ? '已匹配' : '未匹配';
 });
+
+// ---------- 代理回显 ----------
+const proxyUrl = computed(() => {
+    const p = proxyStatus.value;
+    if (!p?.running || !p.port) return '';
+    return `http://${p.address}:${p.port}`;
+});
+
+/** Claude 是否处于代理接管模式 */
+const claudeProxyOn = computed(
+    () => !!proxyStatus.value?.running && !!proxyStatus.value?.claude_taken_over,
+);
+/** Codex 是否处于代理接管模式 */
+const codexProxyOn = computed(
+    () => !!proxyStatus.value?.running && !!proxyStatus.value?.codex_taken_over,
+);
+
+/** Claude 当前 Provider 名称 (接管时用代理上游名, 否则用 live 匹配名) */
+const claudeActiveProvider = computed(
+    () => claudeProxyOn.value
+        ? (proxyStatus.value?.active_provider_name || '')
+        : (status.value?.claude.matched_provider_name || ''),
+);
+
+/** Codex 当前 Provider 名称 */
+const codexActiveProvider = computed(() => status.value?.codex.matched_provider_name || '');
+
+/** Claude 展示的 URL (接管时显示代理地址, 否则显示 live base_url) */
+const claudeDisplayUrl = computed(() =>
+    claudeProxyOn.value ? proxyUrl.value : (status.value?.claude.base_url || ''),
+);
+
+/** Codex 展示的 URL */
+const codexDisplayUrl = computed(() => status.value?.codex.base_url || '');
 
 // ---------- Provider Tab (Claude / Codex) ----------
 const providerTab = ref<'claude' | 'codex'>('claude');
@@ -770,6 +812,7 @@ const showToast = (message: string, type: 'success' | 'error' = 'success') => {
 
 onMounted(() => {
     refreshAll();
+    refreshProxyStatus();
 });
 
 onUnmounted(() => {
@@ -812,6 +855,23 @@ onUnmounted(() => {
 .cli-status-card.active {
     border-color: var(--xuya-success);
     box-shadow: 0 0 0 1px var(--xuya-success-soft), var(--xuya-shadow);
+}
+
+.cli-status-card.proxy-on {
+    border-color: var(--xuya-accent);
+    box-shadow: 0 0 0 1px var(--xuya-accent-soft), var(--xuya-shadow);
+}
+
+.cli-status-badges {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.cli-badge.proxy {
+    background: var(--xuya-accent-gradient);
+    color: #fff;
+    font-weight: 600;
 }
 
 .cli-status-head {
