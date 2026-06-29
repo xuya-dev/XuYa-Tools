@@ -28,21 +28,23 @@
                 <div class="stat-lbl">平均延迟</div>
                 <div v-if="usageSummary.avgFirstTokenMs > 0" class="stat-sub">首 Token {{ usageSummary.avgFirstTokenMs }}ms</div>
             </div>
-            <div class="stat-card">
-                <div class="stat-val">{{ fmtTokens(usageSummary.totalInputTokens + usageSummary.totalOutputTokens) }}</div>
-                <div class="stat-lbl">总 Tokens</div>
-                <div class="stat-sub">
-                    入 {{ fmtTokens(usageSummary.totalInputTokens) }} · 出 {{ fmtTokens(usageSummary.totalOutputTokens) }}
-                </div>
+            <div class="stat-card input">
+                <div class="stat-val">{{ fmtTokens(usageSummary.totalInputTokens) }}</div>
+                <div class="stat-lbl">输入 Tokens</div>
             </div>
-            <div class="stat-card">
-                <div class="stat-val">{{ fmtTokens(usageSummary.totalCacheReadTokens + usageSummary.totalCacheCreationTokens) }}</div>
-                <div class="stat-lbl">缓存 Tokens</div>
-                <div class="stat-sub">
-                    读 {{ fmtTokens(usageSummary.totalCacheReadTokens) }} · 写 {{ fmtTokens(usageSummary.totalCacheCreationTokens) }}
-                </div>
+            <div class="stat-card output">
+                <div class="stat-val">{{ fmtTokens(usageSummary.totalOutputTokens) }}</div>
+                <div class="stat-lbl">输出 Tokens</div>
             </div>
-            <div class="stat-card">
+            <div class="stat-card cache-read">
+                <div class="stat-val">{{ fmtTokens(usageSummary.totalCacheReadTokens) }}</div>
+                <div class="stat-lbl">缓存读</div>
+            </div>
+            <div class="stat-card cache-write">
+                <div class="stat-val">{{ fmtTokens(usageSummary.totalCacheCreationTokens) }}</div>
+                <div class="stat-lbl">缓存写</div>
+            </div>
+            <div class="stat-card cost">
                 <div class="stat-val">${{ usageSummary.totalCostUsd.toFixed(4) }}</div>
                 <div class="stat-lbl">预估费用</div>
             </div>
@@ -125,8 +127,10 @@
                 <span>模型</span>
                 <span>状态</span>
                 <span>延迟</span>
-                <span>Tokens</span>
-                <span>缓存</span>
+                <span>输入</span>
+                <span>输出</span>
+                <span>缓存读</span>
+                <span>缓存写</span>
                 <span>费用</span>
             </div>
             <div v-for="log in requestLogs" :key="log.id" class="logs-row">
@@ -136,8 +140,10 @@
                 <span class="small">{{ log.model || '-' }}</span>
                 <span class="mono" :class="statusClass(log.statusCode)">{{ log.statusCode || 'ERR' }}</span>
                 <span class="mono small">{{ log.latencyMs }}ms</span>
-                <span class="mono small">{{ log.inputTokens + log.outputTokens }}</span>
-                <span class="mono small">{{ (log.cacheReadTokens + log.cacheCreationTokens) || '-' }}</span>
+                <span class="mono small">{{ log.inputTokens || '-' }}</span>
+                <span class="mono small">{{ log.outputTokens || '-' }}</span>
+                <span class="mono small">{{ log.cacheReadTokens || '-' }}</span>
+                <span class="mono small">{{ log.cacheCreationTokens || '-' }}</span>
                 <span class="mono small">${{ log.totalCostUsd.toFixed(4) }}</span>
             </div>
         </div>
@@ -281,12 +287,17 @@ onUnmounted(() => {
 .range-tabs button.active { background: var(--xuya-bg-elevated); color: var(--xuya-accent); font-weight: 600; box-shadow: var(--xuya-shadow-sm); }
 
 /* 统计卡片 */
-.stat-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; margin-bottom: 20px; }
-.stat-card { display: flex; flex-direction: column; gap: 3px; padding: 14px 12px; background: var(--xuya-input-bg); border-radius: var(--xuya-radius); border: 1px solid var(--xuya-border-light); }
-.stat-val { font-size: 20px; font-weight: 700; color: var(--xuya-text); }
-.stat-val .unit { font-size: 13px; font-weight: 500; opacity: 0.6; margin-left: 1px; }
-.stat-lbl { font-size: 11px; color: var(--xuya-text-tertiary); }
-.stat-sub { font-size: 10.5px; color: var(--xuya-text-tertiary); margin-top: 2px; }
+.stat-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; margin-bottom: 20px; }
+.stat-card { display: flex; flex-direction: column; gap: 3px; padding: 12px 10px; background: var(--xuya-input-bg); border-radius: var(--xuya-radius); border: 1px solid var(--xuya-border-light); }
+.stat-card.input .stat-val { color: #3b82f6; }
+.stat-card.output .stat-val { color: #10b981; }
+.stat-card.cache-read .stat-val { color: #8b5cf6; }
+.stat-card.cache-write .stat-val { color: #f59e0b; }
+.stat-card.cost .stat-val { color: var(--xuya-text); }
+.stat-val { font-size: 18px; font-weight: 700; color: var(--xuya-text); }
+.stat-val .unit { font-size: 12px; font-weight: 500; opacity: 0.6; margin-left: 1px; }
+.stat-lbl { font-size: 10.5px; color: var(--xuya-text-tertiary); }
+.stat-sub { font-size: 10px; color: var(--xuya-text-tertiary); margin-top: 2px; }
 .stat-sub .ok { color: var(--xuya-success); font-weight: 600; }
 .stat-sub .err { color: var(--xuya-danger); font-weight: 600; }
 
@@ -316,7 +327,7 @@ onUnmounted(() => {
 .logs-count { font-size: 11px; font-weight: 400; color: var(--xuya-text-tertiary); }
 .logs-head-actions { display: flex; gap: 6px; }
 .logs-table { border: 1px solid var(--xuya-border); border-radius: var(--xuya-radius); overflow: hidden; }
-.logs-row { display: grid; grid-template-columns: 120px 60px 1fr 100px 50px 60px 60px 50px 70px; gap: 6px; padding: 7px 10px; font-size: 11.5px; align-items: center; border-bottom: 1px solid var(--xuya-border-light); }
+.logs-row { display: grid; grid-template-columns: 110px 55px 1fr 90px 45px 50px 50px 50px 50px 50px 60px; gap: 5px; padding: 7px 10px; font-size: 11px; align-items: center; border-bottom: 1px solid var(--xuya-border-light); }
 .logs-row:last-child { border-bottom: none; }
 .logs-row-head { background: var(--xuya-input-bg); font-size: 10.5px; font-weight: 600; color: var(--xuya-text-tertiary); text-transform: uppercase; letter-spacing: 0.3px; }
 .logs-row:not(.logs-row-head):hover { background: var(--xuya-input-bg); }
