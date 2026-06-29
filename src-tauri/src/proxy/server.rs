@@ -233,6 +233,11 @@ async fn forward_handler(req: Request<Body>, state: ProxyState) -> Response<Body
         }
     };
 
+    // P2-7: 从请求体 JSON 提取 model 字段 (用于日志)
+    let body_model: Option<String> = serde_json::from_slice::<serde_json::Value>(&body_bytes)
+        .ok()
+        .and_then(|v| v.get("model")?.as_str().map(|s| s.to_string()));
+
     // 协议转换: 当目标供应商是 openai_chat 格式, 而请求来自 Claude Code (anthropic /v1/messages)
     // 时, 把请求体 anthropic→openai 转换, 并把端点路径 /v1/messages → /v1/chat/completions。
     let mut fwd_body_bytes: bytes::Bytes = body_bytes.clone();
@@ -395,6 +400,7 @@ async fn forward_handler(req: Request<Body>, state: ProxyState) -> Response<Body
                 let collect_app_type = app_type.clone();
                 let collect_path = original_path.clone();
                 let collect_rid = request_id.clone();
+                let collect_model = body_model.clone();
                 tokio::spawn(async move {
                     let mut buf: Vec<u8> = Vec::new();
                     while let Some(chunk) = rx.recv().await {
@@ -428,6 +434,8 @@ async fn forward_handler(req: Request<Body>, state: ProxyState) -> Response<Body
                         } else {
                             None
                         },
+                        collect_model.as_deref(),
+                        true,
                     );
                 });
 
@@ -518,6 +526,8 @@ async fn forward_handler(req: Request<Body>, state: ProxyState) -> Response<Body
                         None,
                         0.0,
                         Some(format!("读取上游响应失败: {e}")),
+                        body_model.as_deref(),
+                        false,
                     );
                     return error_response(502, &format!("读取上游响应失败: {e}"));
                 }
@@ -582,6 +592,8 @@ async fn forward_handler(req: Request<Body>, state: ProxyState) -> Response<Body
                 } else {
                     None
                 },
+                body_model.as_deref(),
+                false,
             );
 
             let mut resp_builder = Response::builder().status(status);
@@ -616,6 +628,8 @@ async fn forward_handler(req: Request<Body>, state: ProxyState) -> Response<Body
                 None,
                 0.0,
                 Some(format!("转发到上游失败: {e}")),
+                body_model.as_deref(),
+                false,
             );
             error_response(502, &format!("转发到上游失败: {e}"))
         }
@@ -635,6 +649,8 @@ fn log_request(
     usage: Option<(u64, u64)>,
     cost_usd: f64,
     error_message: Option<String>,
+    body_model: Option<&str>,
+    is_stream: bool,
 ) {
     log_request_with_cost(
         state,
@@ -647,6 +663,8 @@ fn log_request(
         usage,
         cost_usd,
         error_message,
+        body_model,
+        is_stream,
     );
 }
 
@@ -663,6 +681,8 @@ fn log_request_with_cost(
     usage: Option<(u64, u64)>,
     cost_usd: f64,
     error_message: Option<String>,
+    body_model: Option<&str>,
+    is_stream: bool,
 ) {
     log_request_with_first_token(
         state,
@@ -676,6 +696,8 @@ fn log_request_with_cost(
         usage,
         cost_usd,
         error_message,
+        body_model,
+        is_stream,
     );
 }
 
@@ -693,6 +715,8 @@ fn log_request_with_first_token(
     usage: Option<(u64, u64)>,
     cost_usd: f64,
     error_message: Option<String>,
+    body_model: Option<&str>,
+    is_stream: bool,
 ) {
     if let Some(db) = &state.db {
         let (in_tok, out_tok) = usage.unwrap_or((0, 0));
@@ -701,8 +725,10 @@ fn log_request_with_first_token(
             app_type: app_type.to_string(),
             provider_id: Some(target.provider_id.clone()),
             provider_name: Some(target.provider_name.clone()),
-            model: extract_model_from_path(path),
-            request_model: None,
+            model: body_model
+                .map(String::from)
+                .or_else(|| extract_model_from_path(path)),
+            request_model: body_model.map(String::from),
             input_tokens: in_tok,
             output_tokens: out_tok,
             total_cost_usd: cost_usd,
@@ -710,7 +736,7 @@ fn log_request_with_first_token(
             first_token_ms,
             status_code,
             error_message: error_message.clone(),
-            is_streaming: path.contains("stream") || path.contains(" SSE"),
+            is_streaming: is_stream,
             created_at: now_secs(),
         };
         let _ = crate::usage::logger::log_request(db, &log);
