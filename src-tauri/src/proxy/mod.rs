@@ -14,13 +14,24 @@ pub mod types;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 
 use crate::cli_config::types::AppType;
+use crate::cli_config::CliConfigService;
 use crate::db::Database;
 
 use server::{ProxyServer, ProxyState, UpstreamTarget};
 use types::{ProxyServerInfo, ProxyStatus, TakeoverResult};
+
+/// 持久化的自启动配置 — 文件存在即代表代理上次在运行,重启后应自动恢复。
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+struct AutoStartConfig {
+    /// Claude 接管时的原始 live config 备份路径 (None = 未接管)
+    claude_backup: Option<String>,
+    /// Codex 接管时的原始 live config 备份路径
+    codex_backup: Option<String>,
+}
 
 /// 接管状态记录 (内存, Phase 2 MVP)
 #[derive(Default, Clone)]
@@ -70,11 +81,93 @@ impl ProxyService {
             .expect("app_handle 写锁被毒化,无法注入 handle") = Some(handle);
     }
 
+    // ==================== 自启动持久化 ====================
+
+    fn autostart_path(&self) -> PathBuf {
+        self.data_dir.join("proxy_autostart.json")
+    }
+
+    /// 把当前接管状态写入持久化文件 (代理运行中调用)
+    async fn save_autostart(&self) {
+        let tk = self.takeover.read().await;
+        let config = AutoStartConfig {
+            claude_backup: tk.claude_backup.as_ref().map(|p| p.to_string_lossy().to_string()),
+            codex_backup: tk.codex_backup.as_ref().map(|p| p.to_string_lossy().to_string()),
+        };
+        drop(tk);
+        let path = self.autostart_path();
+        if let Ok(json) = serde_json::to_string_pretty(&config) {
+            let _ = std::fs::write(&path, json);
+        }
+    }
+
+    /// 删除持久化文件 (代理停止时调用)
+    fn clear_autostart(&self) {
+        let _ = std::fs::remove_file(self.autostart_path());
+    }
+
+    /// 应用重启后自动恢复代理: 启动 + 恢复接管 + 同步上游
+    pub async fn restore_on_startup(&self, cli: &CliConfigService) {
+        let config_path = self.autostart_path();
+        let config: AutoStartConfig = match std::fs::read_to_string(&config_path)
+            .ok()
+            .and_then(|s| serde_json::from_str(&s).ok())
+        {
+            Some(c) => c,
+            None => return, // 不存在或解析失败 = 上次没开代理
+        };
+
+        // 1. 启动代理
+        if self.start().await.is_err() {
+            return;
+        }
+
+        let port = self.state.status.read().await.port;
+        let proxy_url = format!("http://127.0.0.1:{port}");
+
+        // 2. 恢复接管状态 (直接改 live URL 到新端口, 不重新备份)
+        {
+            let mut tk = self.takeover.write().await;
+            // Claude
+            if let Some(backup_str) = &config.claude_backup {
+                let backup_path = PathBuf::from(backup_str);
+                if backup_path.exists() {
+                    let _ = takeover::takeover_claude(&proxy_url);
+                    tk.claude_backup = Some(backup_path);
+                    self.state.status.write().await.claude_taken_over = true;
+                }
+            }
+            // Codex
+            if let Some(backup_str) = &config.codex_backup {
+                let backup_path = PathBuf::from(backup_str);
+                if backup_path.exists() {
+                    let _ = takeover::takeover_codex(&proxy_url);
+                    tk.codex_backup = Some(backup_path);
+                    self.state.status.write().await.codex_taken_over = true;
+                }
+            }
+        }
+
+        // 3. 同步代理上游 = 当前 Claude provider
+        if let Some(p) = cli.current_provider(AppType::Claude) {
+            if !p.base_url.is_empty() {
+                let _ = self
+                    .set_target(p.id, p.name, p.base_url, p.api_key, p.api_format.as_str().to_string())
+                    .await;
+            }
+        }
+
+        // 4. 持久化最新状态 (端口变了但备份路径不变)
+        self.save_autostart().await;
+    }
+
     /// 启动代理。若已设置上游则自动生效。
     pub async fn start(&self) -> Result<ProxyServerInfo, String> {
         let server = ProxyServer::new(self.state.clone());
         let info = server.start("127.0.0.1", 0).await?;
         *self.server.write().await = Some(server);
+        // 持久化: 文件存在 = 下次重启自动启动
+        self.save_autostart().await;
         Ok(info)
     }
 
@@ -85,6 +178,8 @@ impl ProxyService {
         if let Some(server) = self.server.write().await.take() {
             server.stop().await?;
         }
+        // 清除持久化文件
+        self.clear_autostart();
         Ok(())
     }
 
@@ -175,6 +270,8 @@ impl ProxyService {
                     self.state.status.write().await.codex_taken_over = true;
                 }
             }
+            drop(tk);
+            self.save_autostart().await;
         }
         result
     }
@@ -209,6 +306,8 @@ impl ProxyService {
                     self.state.status.write().await.codex_taken_over = false;
                 }
             }
+            drop(tk);
+            self.save_autostart().await;
         }
         result
     }

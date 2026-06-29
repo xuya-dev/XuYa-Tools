@@ -79,6 +79,16 @@ pub fn run() {
             // 注入 AppHandle 给代理服务, 用于 emit 告警事件
             app.state::<ProxyService>().set_app_handle(app.handle().clone());
 
+            // 应用重启后自动恢复代理 (如果上次退出时代理在运行)
+            {
+                let handle = app.handle().clone();
+                tauri::async_runtime::spawn(async move {
+                    let proxy = handle.state::<ProxyService>();
+                    let cli = handle.state::<CliConfigService>();
+                    proxy.inner().restore_on_startup(cli.inner()).await;
+                });
+            }
+
             // 构建系统托盘:仅一个"退出"菜单项
             let quit_item = MenuItem::with_id(app, "quit", "退出 XuYa Tools", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&quit_item])?;
