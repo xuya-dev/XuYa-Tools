@@ -195,14 +195,15 @@ async fn forward_handler(req: Request<Body>, state: ProxyState) -> Response<Body
         .path_and_query()
         .map(|p| p.as_str().to_string())
         .unwrap_or_default();
-    let app_type = infer_app_type("", &original_path);
+    let app_type = infer_app_type(&original_path);
 
-    // 按 app_type 选 target; 未匹配时 fallback 到任意已配置的 target
+    // 按 app_type 选 target; 未匹配时优先 Claude (避免 HashMap 随机)
     let target = {
         let targets = state.targets.read().await;
         targets
             .get(&app_type)
             .cloned()
+            .or_else(|| targets.get("claude").cloned())
             .or_else(|| targets.values().next().cloned())
     };
     let Some(target) = target else {
@@ -271,17 +272,39 @@ async fn forward_handler(req: Request<Body>, state: ProxyState) -> Response<Body
         };
     }
 
-    // 移除 host 头, 让 hyper 自动填充
-    parts.headers.remove("host");
+    // 移除 host 头 + 追踪/转发头, 让 hyper 自动填充, 避免内网信息泄漏到上游
+    for h in [
+        "host",
+        "x-forwarded-host",
+        "x-forwarded-proto",
+        "x-forwarded-port",
+        "x-forwarded-for",
+        "forwarded",
+        "x-real-ip",
+        "cf-connecting-ip",
+        "cf-ipcountry",
+        "cf-ray",
+        "cf-visitor",
+        "x-amzn-trace-id",
+        "x-azure-ref",
+        "traceparent",
+        "x-request-id",
+    ] {
+        parts.headers.remove(h);
+    }
+    // 剥离客户端自带的认证头, 防止旧凭据泄漏到新上游 (接管模式下 CLI 带的是旧 token)
+    parts.headers.remove("authorization");
+    parts.headers.remove("x-api-key");
+    parts.headers.remove("anthropic-auth-token");
     // 转换后修正 content-length (body 长度变了)
     if transformed_request {
         if let Ok(cl) = HeaderValue::from_str(&fwd_body_bytes.len().to_string()) {
             parts.headers.insert("content-length", cl);
         }
     }
-    // 注入 Authorization
+    // 注入认证: Anthropic 原生用 x-api-key, 其他用 Bearer
     if !target.api_key.is_empty() {
-        let hv = match HeaderValue::from_str(&format!("Bearer {}", target.api_key)) {
+        let hv = match HeaderValue::from_str(&target.api_key) {
             Ok(v) => v,
             Err(_) => {
                 state
@@ -290,9 +313,33 @@ async fn forward_handler(req: Request<Body>, state: ProxyState) -> Response<Body
                 return error_response(500, "API Key 含非法字符");
             }
         };
-        parts
-            .headers
-            .insert(HeaderName::from_static("authorization"), hv);
+        if target.api_format == "anthropic" {
+            // Anthropic 原生: x-api-key 头
+            parts
+                .headers
+                .insert(HeaderName::from_static("x-api-key"), hv);
+            // 确保 anthropic-version 存在 (上游必需)
+            if !parts.headers.contains_key("anthropic-version") {
+                parts.headers.insert(
+                    HeaderName::from_static("anthropic-version"),
+                    HeaderValue::from_static("2023-06-01"),
+                );
+            }
+        } else {
+            // OpenAI / 其他: Authorization: Bearer
+            let bearer = match HeaderValue::from_str(&format!("Bearer {}", target.api_key)) {
+                Ok(v) => v,
+                Err(_) => {
+                    state
+                        .error_count
+                        .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                    return error_response(500, "API Key 含非法字符");
+                }
+            };
+            parts
+                .headers
+                .insert(HeaderName::from_static("authorization"), bearer);
+        }
     }
 
     let fwd_req = Request::from_parts(parts, FullBody::from(fwd_body_bytes));
@@ -371,9 +418,16 @@ async fn forward_handler(req: Request<Body>, state: ProxyState) -> Response<Body
                     );
                 });
 
-                // 分流: 遍历上游 frame, 同时发给 collect 通道和客户端流
+                // 分流: 遍历上游 frame, 同时发给 collect 通道和客户端流。
+                // 若请求做了 anthropic→openai 转换, 流式响应也要 openai→anthropic 回转。
+                let needs_sse_conversion = transformed_request;
                 let client_stream = http_body_util::StreamBody::new(async_stream::stream! {
                     let mut rbody = rbody;
+                    let mut sse_converter = if needs_sse_conversion {
+                        Some(super::transform::SseConverter::new())
+                    } else {
+                        None
+                    };
                     while let Some(frame_res) = rbody.frame().await {
                         match frame_res {
                             Ok(frame) => {
@@ -386,11 +440,34 @@ async fn forward_handler(req: Request<Body>, state: ProxyState) -> Response<Body
                                             }
                                         }
                                     }
+                                    // 原始数据发给收集通道 (用于 usage 日志)
                                     let _ = tx.send(Ok(data.clone())).await;
+
+                                    // 若需转换, 把 openai SSE → anthropic SSE
+                                    if let Some(ref mut conv) = sse_converter {
+                                        let converted = conv.feed(data);
+                                        if !converted.is_empty() {
+                                            yield Ok::<_, std::convert::Infallible>(
+                                                http_body::Frame::data(bytes::Bytes::from(converted)),
+                                            );
+                                        }
+                                    } else {
+                                        yield Ok::<_, std::convert::Infallible>(frame);
+                                    }
+                                } else {
+                                    yield Ok::<_, std::convert::Infallible>(frame);
                                 }
-                                yield Ok::<_, std::convert::Infallible>(frame);
                             }
                             Err(_) => break,
+                        }
+                    }
+                    // flush 残留
+                    if let Some(ref mut conv) = sse_converter {
+                        let remaining = conv.flush();
+                        if !remaining.is_empty() {
+                            yield Ok::<_, std::convert::Infallible>(
+                                http_body::Frame::data(bytes::Bytes::from(remaining)),
+                            );
                         }
                     }
                 });
@@ -732,7 +809,7 @@ fn model_price(model: &str) -> Option<(f64, f64)> {
 /// 判断请求路径是否为 Anthropic Messages 端点 (需转换)
 fn is_anthropic_messages_path(path: &str) -> bool {
     let p = path.split('?').next().unwrap_or(path);
-    p.ends_with("/v1/messages") || p.contains("/v1/messages")
+    p.ends_with("/v1/messages")
 }
 
 /// 把 anthropic /v1/messages 端点改写为 openai /v1/chat/completions
@@ -747,18 +824,19 @@ fn rewrite_to_chat_completions(base_url: &str, original_path: &str) -> Option<St
     Some(format!("{base}{new_path}{query}"))
 }
 
-/// 从请求路径粗略推断 app 类型
-fn infer_app_type(_base_url: &str, path: &str) -> String {
+/// 从请求路径推断 app 类型 (用于 per-app target 选择)
+fn infer_app_type(path: &str) -> String {
     let p = path.to_lowercase();
-    if p.contains("anthropic") || p.contains("/v1/messages") {
+    let path_only = p.split('?').next().unwrap_or(&p);
+    if path_only.ends_with("/v1/messages") || path_only.contains("/claude/") {
         "claude".to_string()
-    } else if p.contains("openai")
-        || p.contains("/v1/chat/completions")
-        || p.contains("/v1/responses")
+    } else if path_only.ends_with("/chat/completions")
+        || path_only.ends_with("/responses")
+        || path_only.contains("/codex/")
     {
         "codex".to_string()
     } else {
-        "proxy".to_string()
+        "claude".to_string()
     }
 }
 

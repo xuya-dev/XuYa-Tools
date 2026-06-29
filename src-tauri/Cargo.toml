@@ -41,6 +41,7 @@ hyper = { version = "1", features = ["full"] }
 hyper-util = { version = "0.1", features = ["client", "client-legacy", "tokio"] }
 hyper-tls = "0.6"
 http = "1"
+http-body = "1"
 http-body-util = "0.1"
 bytes = "1"
 async-stream = "0.3"

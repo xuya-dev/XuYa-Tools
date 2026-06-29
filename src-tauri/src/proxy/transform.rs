@@ -490,6 +490,170 @@ fn resolve_reasoning_effort(body: &Value) -> Option<&'static str> {
     }
 }
 
+/// OpenAI SSE → Anthropic SSE 流式转换器。
+///
+/// 逐 chunk feed 上游 SSE 字节,输出 Anthropic 格式 SSE 字节。
+/// 维护内部缓冲区处理跨 chunk 的不完整 SSE 事件。
+pub struct SseConverter {
+    buf: String,
+    started: bool,
+    finished: bool,
+}
+
+impl SseConverter {
+    pub fn new() -> Self {
+        Self {
+            buf: String::new(),
+            started: false,
+            finished: false,
+        }
+    }
+
+    /// 输入上游 SSE 字节,返回转换后的 Anthropic SSE 字节。
+    pub fn feed(&mut self, data: &[u8]) -> Vec<u8> {
+        self.buf.push_str(&String::from_utf8_lossy(data));
+        let mut out = String::new();
+
+        // 按 \n\n 分割完整 SSE 事件
+        while let Some(pos) = self.buf.find("\n\n") {
+            let raw_event = self.buf[..pos].to_string();
+            self.buf = self.buf[pos + 2..].to_string();
+            self.process_event(&raw_event, &mut out);
+        }
+
+        out.into_bytes()
+    }
+
+    /// 流结束时 flush 剩余缓冲
+    pub fn flush(&mut self) -> Vec<u8> {
+        let mut out = String::new();
+        if !self.buf.is_empty() {
+            self.process_event(&self.buf.clone(), &mut out);
+            self.buf.clear();
+        }
+        if !self.finished {
+            self.emit_stop(&mut out, "end_turn", 0);
+        }
+        out.into_bytes()
+    }
+
+    fn process_event(&mut self, raw: &str, out: &mut String) {
+        // 提取 data: 行
+        for line in raw.lines() {
+            let line = line.trim();
+            if !line.starts_with("data:") {
+                continue;
+            }
+            let data = line[5..].trim();
+            if data == "[DONE]" {
+                if !self.finished {
+                    self.emit_stop(out, "end_turn", 0);
+                }
+                continue;
+            }
+            let Ok(json_val) = serde_json::from_str::<Value>(data) else {
+                continue;
+            };
+            self.convert_openai_chunk(&json_val, out);
+        }
+    }
+
+    fn convert_openai_chunk(&mut self, chunk: &Value, out: &mut String) {
+        // 首次: 发 message_start + content_block_start
+        if !self.started {
+            self.started = true;
+            let msg_id = chunk
+                .get("id")
+                .and_then(|v| v.as_str())
+                .unwrap_or("msg_proxy")
+                .to_string();
+            let model = chunk
+                .get("model")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+            out.push_str(&format!(
+                "event: message_start\ndata: {}\n\nevent: content_block_start\ndata: {}\n\n",
+                json!({
+                    "type": "message_start",
+                    "message": {
+                        "id": msg_id, "type": "message", "role": "assistant",
+                        "content": [], "model": model,
+                        "stop_reason": null,
+                        "usage": {"input_tokens": 0, "output_tokens": 0}
+                    }
+                }),
+                json!({
+                    "type": "content_block_start",
+                    "index": 0,
+                    "content_block": {"type": "text", "text": ""}
+                }),
+            ));
+        }
+
+        // 提取 delta content
+        let choices = match chunk.get("choices").and_then(|v| v.as_array()) {
+            Some(c) => c,
+            None => return,
+        };
+        let choice = match choices.first() {
+            Some(c) => c,
+            None => return,
+        };
+
+        // 文本 delta
+        if let Some(content) = choice
+            .get("delta")
+            .and_then(|d| d.get("content"))
+            .and_then(|c| c.as_str())
+        {
+            if !content.is_empty() {
+                out.push_str(&format!(
+                    "event: content_block_delta\ndata: {}\n\n",
+                    json!({
+                        "type": "content_block_delta",
+                        "index": 0,
+                        "delta": {"type": "text_delta", "text": content}
+                    }),
+                ));
+            }
+        }
+
+        // finish_reason
+        let finish_reason = choice.get("finish_reason").and_then(|v| v.as_str());
+        if let Some(reason) = finish_reason {
+            if !self.finished {
+                let stop_reason = match reason {
+                    "stop" => "end_turn",
+                    "length" => "max_tokens",
+                    "tool_calls" | "function_call" => "tool_use",
+                    _ => "end_turn",
+                };
+                let output_tokens = chunk
+                    .get("usage")
+                    .and_then(|u| u.get("completion_tokens"))
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0);
+                self.emit_stop(out, stop_reason, output_tokens);
+            }
+        }
+    }
+
+    fn emit_stop(&mut self, out: &mut String, stop_reason: &str, output_tokens: u64) {
+        self.finished = true;
+        out.push_str(&format!(
+            "event: content_block_stop\ndata: {}\n\nevent: message_delta\ndata: {}\n\nevent: message_stop\ndata: {}\n\n",
+            json!({"type": "content_block_stop", "index": 0}),
+            json!({
+                "type": "message_delta",
+                "delta": {"stop_reason": stop_reason, "stop_sequence": null},
+                "usage": {"output_tokens": output_tokens}
+            }),
+            json!({"type": "message_stop"}),
+        ));
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

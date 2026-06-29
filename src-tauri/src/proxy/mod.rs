@@ -27,17 +27,17 @@ use types::{ProxyServerInfo, ProxyStatus, TakeoverResult};
 /// 持久化的自启动配置 — 文件存在即代表代理上次在运行,重启后应自动恢复。
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 struct AutoStartConfig {
-    /// Claude 接管时的原始 live config 备份路径 (None = 未接管)
     claude_backup: Option<String>,
-    /// Codex 接管时的原始 live config 备份路径
-    codex_backup: Option<String>,
+    codex_auth_backup: Option<String>,
+    codex_config_backup: Option<String>,
 }
 
-/// 接管状态记录 (内存, Phase 2 MVP)
+/// 接管状态记录
 #[derive(Default, Clone)]
 struct TakeoverState {
     claude_backup: Option<PathBuf>,
-    codex_backup: Option<PathBuf>,
+    codex_auth_backup: Option<PathBuf>,
+    codex_config_backup: Option<PathBuf>,
 }
 
 /// 代理服务
@@ -95,8 +95,12 @@ impl ProxyService {
                 .claude_backup
                 .as_ref()
                 .map(|p| p.to_string_lossy().to_string()),
-            codex_backup: tk
-                .codex_backup
+            codex_auth_backup: tk
+                .codex_auth_backup
+                .as_ref()
+                .map(|p| p.to_string_lossy().to_string()),
+            codex_config_backup: tk
+                .codex_config_backup
                 .as_ref()
                 .map(|p| p.to_string_lossy().to_string()),
         };
@@ -143,12 +147,14 @@ impl ProxyService {
                     self.state.status.write().await.claude_taken_over = true;
                 }
             }
-            // Codex
-            if let Some(backup_str) = &config.codex_backup {
-                let backup_path = PathBuf::from(backup_str);
-                if backup_path.exists() {
+            // Codex (需要 auth + config 两个备份路径)
+            let codex_auth_ok = config.codex_auth_backup.as_ref().map(PathBuf::from);
+            let codex_cfg_ok = config.codex_config_backup.as_ref().map(PathBuf::from);
+            if let (Some(auth_bak), Some(cfg_bak)) = (&codex_auth_ok, &codex_cfg_ok) {
+                if auth_bak.exists() && cfg_bak.exists() {
                     let _ = takeover::takeover_codex(&proxy_url);
-                    tk.codex_backup = Some(backup_path);
+                    tk.codex_auth_backup = Some(auth_bak.clone());
+                    tk.codex_config_backup = Some(cfg_bak.clone());
                     self.state.status.write().await.codex_taken_over = true;
                 }
             }
@@ -257,7 +263,7 @@ impl ProxyService {
         let port = self.state.status.read().await.port;
         let proxy_url = format!("http://127.0.0.1:{port}");
 
-        // 先备份当前 live config
+        // 先备份当前 live config (Codex 需要备份 auth.json + config.toml 两个文件)
         let backup_dir = self.data_dir.join("backups").join(app.as_str());
         let backup = match app {
             AppType::Claude => crate::cli_config::backup::create_backup(
@@ -280,6 +286,19 @@ impl ProxyService {
             }
         };
 
+        // Codex 还要备份 config.toml
+        let codex_config_backup = if app == AppType::Codex {
+            match crate::cli_config::backup::create_backup(
+                &crate::cli_config::codex::codex_config_path(),
+                &backup_dir,
+            ) {
+                Ok(Some(p)) => Some(p),
+                _ => None,
+            }
+        } else {
+            None
+        };
+
         // 执行接管写入
         let result = match app {
             AppType::Claude => takeover::takeover_claude(&proxy_url),
@@ -294,7 +313,8 @@ impl ProxyService {
                     self.state.status.write().await.claude_taken_over = true;
                 }
                 AppType::Codex => {
-                    tk.codex_backup = Some(backup_path);
+                    tk.codex_auth_backup = Some(backup_path);
+                    tk.codex_config_backup = codex_config_backup;
                     self.state.status.write().await.codex_taken_over = true;
                 }
             }
@@ -305,36 +325,52 @@ impl ProxyService {
     }
 
     async fn disable_takeover(&self, app: AppType) -> TakeoverResult {
-        let backup = {
+        let (claude_bak, codex_auth_bak, codex_cfg_bak) = {
             let tk = self.takeover.read().await;
-            match app {
-                AppType::Claude => tk.claude_backup.clone(),
-                AppType::Codex => tk.codex_backup.clone(),
-            }
+            (
+                tk.claude_backup.clone(),
+                tk.codex_auth_backup.clone(),
+                tk.codex_config_backup.clone(),
+            )
         };
 
-        let result = match (&backup, app) {
-            (Some(p), AppType::Claude) => takeover::restore_claude(p),
-            (Some(p), AppType::Codex) => takeover::restore_codex(p),
-            (None, _) => TakeoverResult {
-                success: false,
-                message: "没有备份记录, 无法恢复".into(),
+        let result = match app {
+            AppType::Claude => match &claude_bak {
+                Some(p) => takeover::restore_claude(p),
+                None => TakeoverResult {
+                    success: false,
+                    message: "没有备份记录, 无法恢复".into(),
+                },
+            },
+            AppType::Codex => match (&codex_auth_bak, &codex_cfg_bak) {
+                (Some(auth), Some(cfg)) => takeover::restore_codex(auth, cfg),
+                _ => TakeoverResult {
+                    success: false,
+                    message: "没有备份记录, 无法恢复".into(),
+                },
             },
         };
 
         if result.success {
             let mut tk = self.takeover.write().await;
+            let mut status = self.state.status.write().await;
             match app {
                 AppType::Claude => {
                     tk.claude_backup = None;
-                    self.state.status.write().await.claude_taken_over = false;
+                    status.claude_taken_over = false;
+                    status.claude_provider_id = None;
+                    status.claude_provider_name = None;
                 }
                 AppType::Codex => {
-                    tk.codex_backup = None;
-                    self.state.status.write().await.codex_taken_over = false;
+                    tk.codex_auth_backup = None;
+                    tk.codex_config_backup = None;
+                    status.codex_taken_over = false;
+                    status.codex_provider_id = None;
+                    status.codex_provider_name = None;
                 }
             }
             drop(tk);
+            drop(status);
             self.save_autostart().await;
         }
         result

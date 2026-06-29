@@ -189,3 +189,75 @@ fn write_atomic_json(path: &PathBuf, value: &Value) -> std::io::Result<()> {
     fs::write(&tmp, json)?;
     fs::rename(&tmp, path)
 }
+
+/// 在 TOML 文本中替换某 key 的值 (支持 top-level 和 [section] 内)。
+fn toml_replace_value(content: &str, section: Option<&str>, key: &str, value: &str) -> String {
+    let quoted = format!("\"{}\"", value.replace('\\', "\\\\").replace('"', "\\\""));
+    let lines: Vec<&str> = content.lines().collect();
+    let mut out: Vec<String> = Vec::new();
+    let mut in_target_section = section.is_none();
+    let mut found = false;
+
+    for line in &lines {
+        let trimmed = line.trim();
+
+        if trimmed.starts_with('[') && trimmed.ends_with(']') {
+            in_target_section = section.map_or(true, |s| trimmed == format!("[{s}]"));
+            out.push(line.to_string());
+            continue;
+        }
+
+        if in_target_section && !found {
+            let prefix_sp = format!("{key} ");
+            let prefix_eq = format!("{key}=");
+            if trimmed.starts_with(&prefix_sp) || trimmed.starts_with(&prefix_eq) {
+                let indent_len = line.len() - line.trim_start().len();
+                out.push(format!("{}{key} = {}", " ".repeat(indent_len), quoted));
+                found = true;
+                continue;
+            }
+        }
+        out.push(line.to_string());
+    }
+
+    if !found {
+        if let Some(s) = section {
+            let header = format!("[{s}]");
+            if !content.contains(&header) {
+                out.push(String::new());
+                out.push(header);
+            }
+            out.push(format!("{key} = {quoted}"));
+        } else {
+            out.insert(0, format!("{key} = {quoted}"));
+        }
+    }
+    out.join("\n")
+}
+
+/// 接管模式: 把 config.toml 的 [model_providers.custom].base_url 改为代理地址。
+/// 不动 model / 其他字段。
+pub fn update_config_base_url(base_url: &str) -> std::io::Result<()> {
+    let path = codex_config_path();
+    let content = fs::read_to_string(&path).unwrap_or_default();
+    let updated = toml_replace_value(
+        &content,
+        Some("model_providers.custom"),
+        "base_url",
+        base_url,
+    );
+    let tmp = path.with_extension("toml.tmp");
+    fs::write(&tmp, updated)?;
+    fs::rename(&tmp, &path)
+}
+
+/// 接管模式下切 provider: 只更新 config.toml 的 model 字段, 不动 base_url。
+pub fn update_live_model(provider: &CliProvider) -> std::io::Result<()> {
+    let path = codex_config_path();
+    let content = fs::read_to_string(&path).unwrap_or_default();
+    let model = primary_codex_model(provider);
+    let updated = toml_replace_value(&content, None, "model", &model);
+    let tmp = path.with_extension("toml.tmp");
+    fs::write(&tmp, updated)?;
+    fs::rename(&tmp, &path)
+}
