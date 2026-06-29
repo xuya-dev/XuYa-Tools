@@ -137,7 +137,7 @@ async function copyResult() {
 .ctrl-label { font-size: 11px; font-weight: 600; color: var(--xuya-text-secondary); }
 .count-group { min-width: 140px; }
 .seg { display: inline-flex; background: var(--xuya-input-bg); border-radius: var(--xuya-radius-sm); padding: 2px; gap: 2px; }
-.seg button { padding: 5px 12px; font-size: 12px; color: var(--xuya-text-secondary); background: transparent; border: none; border-radius: 4px; transition: .1s; }
+.seg button { padding: 5px 12px; font-size: 12px; color: var(--xuya-text-secondary); background: transparent; border: none; border-radius: var(--xuya-radius-sm); transition: .1s; }
 .seg button.active { background: var(--xuya-bg-elevated); color: var(--xuya-accent); font-weight: 600; }
 .range { width: 100%; accent-color: var(--xuya-accent); }
 .check { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--xuya-text-secondary); cursor: pointer; }

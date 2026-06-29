@@ -328,12 +328,12 @@ watch(tab, (t) => {
   flex: 1;
   height: 6px;
   background: var(--xuya-input-bg);
-  border-radius: 3px;
+  border-radius: var(--xuya-radius-sm);
   overflow: hidden;
 }
 .strength-fill {
   height: 100%;
-  border-radius: 3px;
+  border-radius: var(--xuya-radius-sm);
   transition: width 0.2s, background 0.2s;
 }
 .strength-fill.weak {

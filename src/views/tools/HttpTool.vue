@@ -252,7 +252,7 @@ async function copy(text: string) {
 .tab .badge.dot { width: 6px; height: 6px; padding: 0; border-radius: 50%; }
 .tab-extra { margin-left: auto; padding-bottom: 6px; }
 .timeout-label { font-size: 11px; color: var(--xuya-text-tertiary); display: inline-flex; align-items: center; gap: 4px; }
-.timeout-input { width: 48px; padding: 3px 6px; font-size: 12px; border-radius: 4px; border: 1px solid var(--xuya-border); background: var(--xuya-input-bg); color: var(--xuya-text); }
+.timeout-input { width: 48px; padding: 3px 6px; font-size: 12px; border-radius: var(--xuya-radius-sm); border: 1px solid var(--xuya-border); background: var(--xuya-input-bg); color: var(--xuya-text); }
 
 .tab-body { min-height: 120px; margin-bottom: 18px; }
 .kv-editor { display: flex; flex-direction: column; gap: 6px; }
@@ -267,7 +267,7 @@ async function copy(text: string) {
 
 .body-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
 .seg { display: inline-flex; background: var(--xuya-input-bg); border-radius: var(--xuya-radius-sm); padding: 2px; gap: 2px; }
-.seg button { padding: 4px 12px; font-size: 11px; color: var(--xuya-text-secondary); background: transparent; border: none; border-radius: 4px; transition: .1s; }
+.seg button { padding: 4px 12px; font-size: 11px; color: var(--xuya-text-secondary); background: transparent; border: none; border-radius: var(--xuya-radius-sm); transition: .1s; }
 .seg button.active { background: var(--xuya-bg-elevated); color: var(--xuya-accent); font-weight: 600; }
 .body-hint { font-size: 11px; color: var(--xuya-text-tertiary); }
 .body-editor { width: 100%; min-height: 120px; padding: 10px; border-radius: var(--xuya-radius); border: 1px solid var(--xuya-border); background: var(--xuya-input-bg); color: var(--xuya-text); font-family: var(--xuya-font-mono); font-size: 12.5px; line-height: 1.6; resize: vertical; }
@@ -275,7 +275,7 @@ async function copy(text: string) {
 
 .response { background: var(--xuya-card-bg); border: 1px solid var(--xuya-border); border-radius: var(--xuya-radius-lg); padding: 16px; }
 .resp-head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
-.status-badge { padding: 4px 12px; font-size: 13px; font-weight: 700; border-radius: 6px; font-family: var(--xuya-font-mono); }
+.status-badge { padding: 4px 12px; font-size: 13px; font-weight: 700; border-radius: var(--xuya-radius-sm); font-family: var(--xuya-font-mono); }
 .status-badge.ok { background: var(--xuya-success-soft); color: var(--xuya-success); }
 .status-badge.warn { background: var(--xuya-warn-soft); color: var(--xuya-warn); }
 .status-badge.err { background: var(--xuya-danger-soft); color: var(--xuya-danger); }
@@ -300,7 +300,7 @@ async function copy(text: string) {
 .history-list { display: flex; flex-direction: column; gap: 4px; }
 .history-item { display: flex; align-items: center; gap: 10px; padding: 6px 10px; font-size: 12px; border-radius: var(--xuya-radius-sm); transition: .1s; text-align: left; width: 100%; }
 .history-item:hover { background: var(--xuya-input-bg); }
-.hist-status { font-family: var(--xuya-font-mono); font-size: 11px; font-weight: 700; padding: 1px 6px; border-radius: 4px; min-width: 36px; text-align: center; }
+.hist-status { font-family: var(--xuya-font-mono); font-size: 11px; font-weight: 700; padding: 1px 6px; border-radius: var(--xuya-radius-sm); min-width: 36px; text-align: center; }
 .hist-status.ok { background: var(--xuya-success-soft); color: var(--xuya-success); }
 .hist-status.warn { background: var(--xuya-warn-soft); color: var(--xuya-warn); }
 .hist-status.err { background: var(--xuya-danger-soft); color: var(--xuya-danger); }

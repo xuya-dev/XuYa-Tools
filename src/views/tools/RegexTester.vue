@@ -186,7 +186,7 @@ async function copy(v: string) {
 .pat-input { flex: 1; border: none; background: none; color: var(--xuya-text); font-family: var(--xuya-font-mono); font-size: 14px; padding: 11px 0; outline: none; }
 .pat-input::placeholder { color: var(--xuya-text-tertiary); }
 .flag-toggles { display: flex; gap: 2px; padding: 0 6px 0 4px; }
-.flag-btn { width: 26px; height: 26px; border-radius: 6px; font-size: 12px; font-family: var(--xuya-font-mono); color: var(--xuya-text-tertiary); transition: .1s; }
+.flag-btn { width: 26px; height: 26px; border-radius: var(--xuya-radius-sm); font-size: 12px; font-family: var(--xuya-font-mono); color: var(--xuya-text-tertiary); transition: .1s; }
 .flag-btn:hover { background: var(--xuya-border); color: var(--xuya-text); }
 .flag-btn.active { background: var(--xuya-accent-soft); color: var(--xuya-accent); font-weight: 700; }
 .regex-error { margin-top: 8px; padding: 8px 12px; background: var(--xuya-danger-soft); color: var(--xuya-danger); border-radius: var(--xuya-radius-sm); font-size: 12.5px; font-family: var(--xuya-font-mono); }
@@ -200,7 +200,7 @@ async function copy(v: string) {
 .editor { flex: 1; min-height: 220px; padding: 12px; border-radius: var(--xuya-radius); border: 1px solid var(--xuya-border); background: var(--xuya-input-bg); color: var(--xuya-text); font-family: var(--xuya-font-mono); font-size: 12.5px; line-height: 1.6; resize: none; transition: border-color .12s, box-shadow .12s; }
 .editor:focus { outline: none; border-color: var(--xuya-accent); box-shadow: 0 0 0 3px var(--xuya-accent-ring); }
 .result-view { flex: 1; min-height: 220px; padding: 12px; border-radius: var(--xuya-radius); border: 1px solid var(--xuya-border); background: var(--xuya-input-bg); color: var(--xuya-text); font-family: var(--xuya-font-mono); font-size: 12.5px; line-height: 1.6; overflow: auto; white-space: pre-wrap; word-break: break-all; }
-.result-view :deep(mark) { background: var(--xuya-warn-soft); color: var(--xuya-warn); border-radius: 3px; padding: 1px 2px; font-weight: 600; }
+.result-view :deep(mark) { background: var(--xuya-warn-soft); color: var(--xuya-warn); border-radius: var(--xuya-radius-sm); padding: 1px 2px; font-weight: 600; }
 .result-view :deep(.ph) { color: var(--xuya-text-tertiary); }
 
 .captures { margin-bottom: 16px; }

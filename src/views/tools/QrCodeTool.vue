@@ -144,7 +144,7 @@ async function copyText() {
 .control-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .ctrl-item { display: flex; flex-direction: column; gap: 6px; }
 .seg { display: inline-flex; background: var(--xuya-input-bg); border-radius: var(--xuya-radius-sm); padding: 2px; gap: 2px; }
-.seg button { flex: 1; padding: 5px 8px; font-size: 11.5px; color: var(--xuya-text-secondary); background: transparent; border: none; border-radius: 4px; transition: .1s; }
+.seg button { flex: 1; padding: 5px 8px; font-size: 11.5px; color: var(--xuya-text-secondary); background: transparent; border: none; border-radius: var(--xuya-radius-sm); transition: .1s; }
 .seg button.active { background: var(--xuya-bg-elevated); color: var(--xuya-accent); font-weight: 600; box-shadow: var(--xuya-shadow); }
 .range { width: 100%; accent-color: var(--xuya-accent); }
 .color-pick { width: 100%; height: 34px; border: 1px solid var(--xuya-border); border-radius: var(--xuya-radius-sm); background: none; cursor: pointer; }

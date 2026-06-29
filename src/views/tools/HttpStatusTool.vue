@@ -38,12 +38,12 @@ import ToolShell from '@/components/layout/ToolShell.vue';
 import { copyToClipboard } from '@/composables/useClipboard';
 
 const CATS = [
-  { id: '', label: '全部', color: '#9aa3b2' },
-  { id: '1', label: '1xx 信息', color: '#60a5fa' },
-  { id: '2', label: '2xx 成功', color: '#34d399' },
-  { id: '3', label: '3xx 重定向', color: '#fbbf24' },
-  { id: '4', label: '4xx 客户端错误', color: '#fb923c' },
-  { id: '5', label: '5xx 服务端错误', color: '#f87171' },
+  { id: '', label: '全部', color: 'var(--xuya-text-secondary)' },
+  { id: '1', label: '1xx 信息', color: 'var(--xuya-accent)' },
+  { id: '2', label: '2xx 成功', color: 'var(--xuya-success)' },
+  { id: '3', label: '3xx 重定向', color: 'var(--xuya-warn)' },
+  { id: '4', label: '4xx 客户端错误', color: 'var(--xuya-warn)' },
+  { id: '5', label: '5xx 服务端错误', color: 'var(--xuya-danger)' },
 ];
 const activeCat = ref('');
 function toggleCat(id: string) { activeCat.value = activeCat.value === id ? '' : id; }
@@ -119,12 +119,12 @@ async function copyCode(code: number) {
 .table-body { overflow: auto; }
 .table-row { display: grid; grid-template-columns: 90px 180px 1fr; gap: 12px; padding: 10px 14px; border-bottom: 1px solid var(--xuya-border-light); align-items: center; cursor: pointer; transition: background .1s; }
 .table-row:hover { background: var(--xuya-input-bg); }
-.td-code code { font-family: var(--xuya-font-mono); font-size: 13px; font-weight: 700; padding: 2px 8px; border-radius: 5px; }
-.c1 code { background: rgba(96,165,250,.15); color: #60a5fa; }
-.c2 code { background: rgba(52,211,153,.15); color: #34d399; }
-.c3 code { background: rgba(251,191,36,.15); color: #fbbf24; }
-.c4 code { background: rgba(251,146,60,.15); color: #fb923c; }
-.c5 code { background: rgba(248,113,113,.15); color: #f87171; }
+.td-code code { font-family: var(--xuya-font-mono); font-size: 13px; font-weight: 700; padding: 2px 8px; border-radius: var(--xuya-radius-sm); }
+.c1 code { background: var(--xuya-accent-soft); color: var(--xuya-accent); }
+.c2 code { background: var(--xuya-success-soft); color: var(--xuya-success); }
+.c3 code { background: var(--xuya-warn-soft); color: var(--xuya-warn); }
+.c4 code { background: var(--xuya-warn-soft); color: var(--xuya-warn); }
+.c5 code { background: var(--xuya-danger-soft); color: var(--xuya-danger); }
 .td-name { font-size: 13px; font-weight: 500; color: var(--xuya-text); }
 .td-desc { font-size: 12.5px; color: var(--xuya-text-secondary); line-height: 1.5; }
 .empty { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 50px; color: var(--xuya-text-tertiary); }

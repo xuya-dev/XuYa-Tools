@@ -245,18 +245,18 @@ async function copy(text: string | undefined) {
 }
 .seg {
   padding: 2px 4px;
-  border-radius: 3px;
+  border-radius: var(--xuya-radius-sm);
 }
 .seg-0 {
-  background: rgba(99, 102, 241, 0.16);
-  color: #818cf8;
+  background: var(--xuya-accent-soft);
+  color: var(--xuya-accent-2);
 }
 .seg-1 {
-  background: rgba(16, 185, 129, 0.16);
+  background: var(--xuya-success-soft);
   color: var(--xuya-success);
 }
 .seg-2 {
-  background: rgba(245, 158, 11, 0.16);
+  background: var(--xuya-warn-soft);
   color: var(--xuya-warn);
 }
 .seg-dot {
@@ -288,7 +288,7 @@ async function copy(text: string | undefined) {
   border-radius: 50%;
 }
 .seg-0-bg {
-  background: #818cf8;
+  background: var(--xuya-accent-2);
 }
 .seg-1-bg {
   background: var(--xuya-success);

@@ -181,9 +181,10 @@ function copyResult(e: MouseEvent) {
   color: var(--xuya-text-secondary);
   background: transparent;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--xuya-radius-sm);
   transition: all 0.12s;
 }
+
 .unit-toggle button.active {
   background: var(--xuya-bg-elevated);
   color: var(--xuya-accent);

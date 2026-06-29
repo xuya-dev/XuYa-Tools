@@ -179,7 +179,7 @@ onUnmounted(() => {
 .url-input { flex: 1; padding: 9px 14px; font-size: 13px; font-family: var(--xuya-font-mono); border-radius: var(--xuya-radius-sm); border: 1px solid var(--xuya-border); background: var(--xuya-input-bg); color: var(--xuya-text); transition: border-color .12s, box-shadow .12s; }
 .url-input:focus { outline: none; border-color: var(--xuya-accent); box-shadow: 0 0 0 3px var(--xuya-accent-ring); }
 .status-light { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-.status-light.on { background: var(--xuya-success); box-shadow: 0 0 8px rgba(52,211,153,.6); }
+.status-light.on { background: var(--xuya-success); box-shadow: 0 0 8px var(--xuya-success); }
 .status-light.connecting { background: var(--xuya-warn); animation: pulse 1s infinite; }
 .status-light.off { background: var(--xuya-text-3); }
 @keyframes pulse { 50% { opacity: .4; } }

@@ -18,12 +18,12 @@
     <div class="contrast-section">
       <div class="section-label">对比度检测 (WCAG)</div>
       <div class="contrast-grid">
-        <div class="contrast-card fg" :style="{ background: hex, color: '#fff' }">
+        <div class="contrast-card fg" :style="{ background: hex, color: 'var(--xuya-bg-elevated)' }">
           <div>前景 {{ hex }}</div>
           <div class="ctext" style="font-size:18px">Aa 文字</div>
           <div class="cbadge" :class="contrastWhite.pass ? 'pass' : 'fail'">{{ contrastWhite.ratio }} : 1</div>
         </div>
-        <div class="contrast-card fg" :style="{ background: hex, color: '#000' }">
+        <div class="contrast-card fg" :style="{ background: hex, color: 'var(--xuya-text)' }">
           <div>前景 {{ hex }} (黑字)</div>
           <div class="ctext" style="font-size:18px">Aa 文字</div>
           <div class="cbadge" :class="contrastBlack.pass ? 'pass' : 'fail'">{{ contrastBlack.ratio }} : 1</div>
@@ -186,14 +186,14 @@ async function copy(v: string) { await copyToClipboard(v, '已复制 ' + v); }
 .contrast-card { padding: 18px; border-radius: var(--xuya-radius); border: 1px solid var(--xuya-border); font-size: 12px; }
 .ctext { margin: 12px 0; font-weight: 600; }
 .cbadge { display: inline-block; padding: 3px 10px; border-radius: 99px; font-size: 12px; font-weight: 700; }
-.cbadge.pass { background: rgba(0,0,0,.25); color: #fff; }
-.cbadge.fail { background: rgba(0,0,0,.25); color: #fff; }
+.cbadge.pass { background: rgba(0,0,0,.25); color: var(--xuya-bg-elevated); }
+.cbadge.fail { background: rgba(0,0,0,.25); color: var(--xuya-bg-elevated); }
 .hint { margin-top: 10px; font-size: 12px; color: var(--xuya-text-tertiary); }
 
 .scheme-list { display: flex; flex-direction: column; gap: 10px; }
 .scheme-row { display: flex; align-items: center; gap: 12px; }
 .scheme-name { width: 60px; font-size: 12px; color: var(--xuya-text-secondary); flex-shrink: 0; }
 .swatches { display: flex; gap: 6px; flex: 1; }
-.swatch-btn { flex: 1; height: 44px; border-radius: var(--xuya-radius-sm); border: 1px solid var(--xuya-border); font-size: 9px; color: rgba(255,255,255,.9); text-shadow: 0 1px 2px rgba(0,0,0,.5); transition: transform .1s; font-family: var(--xuya-font-mono); }
+.swatch-btn { flex: 1; height: 44px; border-radius: var(--xuya-radius-sm); border: 1px solid var(--xuya-border); font-size: 9px; color: rgba(255,255,255,.9); text-shadow: var(--xuya-shadow-sm); transition: transform .1s; font-family: var(--xuya-font-mono); }
 .swatch-btn:hover { transform: translateY(-2px); }
 </style>
