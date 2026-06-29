@@ -682,7 +682,7 @@ const isCurrentForTab = (p: CliProvider) => {
 };
 
 // ---------- 编辑器 (两步式: 预设首屏 -> 表单) ----------
-const emptyForm = (): CliProvider => ({
+const emptyForm = (tab: 'claude' | 'codex' = 'claude'): CliProvider => ({
     id: '', name: '', scope: 'claude', kind: 'relay', category: 'custom',
     base_url: '', api_key: '', model: '',
     model_sonnet: '', model_haiku: '', model_opus: '',
@@ -690,7 +690,7 @@ const emptyForm = (): CliProvider => ({
     sonnet_1m: false, opus_1m: false, haiku_1m: false,
     note: '', website_url: '',
     auth_field: 'ANTHROPIC_AUTH_TOKEN',
-    api_format: editor.appTab === 'codex' ? 'openai_chat' : 'anthropic',
+    api_format: tab === 'codex' ? 'openai_chat' : 'anthropic',
     custom_user_agent: '', models_url: '', preset_id: '',
     icon: '', icon_color: '', codex_auth_json: '', codex_config_toml: '',
     updated_at: 0,
@@ -703,7 +703,7 @@ const editor = reactive({
     step: 'preset' as 'preset' | 'form',
     /** 当前应用 Tab */
     appTab: 'claude' as 'claude' | 'codex',
-    form: emptyForm(),
+    form: emptyForm('claude'),
 });
 
 // 预设选择器状态
