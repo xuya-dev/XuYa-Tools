@@ -408,7 +408,7 @@ async fn forward_handler(req: Request<Body>, state: ProxyState) -> Response<Body
                             buf.extend_from_slice(&b);
                         }
                     }
-                    let parsed = parse_usage(&buf);
+                    let parsed = parse_usage_from_sse(&buf);
                     let (in_tok, out_tok, cache_read, cache_create) = (
                         parsed.input,
                         parsed.output,
@@ -949,7 +949,9 @@ struct ParsedUsage {
     cache_creation: u64,
 }
 
-/// 从响应体解析 token 用量 (尽力而为, 支持 OpenAI / Anthropic 常见格式, 含缓存 token)
+/// 从非流式响应体解析 token 用量。
+/// 参考 cc-switch: Anthropic input_tokens 已是 fresh (不含 cache_read),
+/// OpenAI prompt_tokens 包含 cache_read → 需扣减。
 fn parse_usage(body: &[u8]) -> ParsedUsage {
     let Ok(text) = std::str::from_utf8(body) else {
         return ParsedUsage::default();
@@ -957,37 +959,145 @@ fn parse_usage(body: &[u8]) -> ParsedUsage {
     let Ok(json) = serde_json::from_str::<serde_json::Value>(text) else {
         return ParsedUsage::default();
     };
+    parse_usage_from_json(&json)
+}
 
+/// 从 JSON 值解析 usage (非流式共用)
+fn parse_usage_from_json(json: &serde_json::Value) -> ParsedUsage {
+    // Anthropic 响应: usage 在顶层
+    // OpenAI 响应: usage 在顶层
+    // Codex Responses: usage 在顶层
     let Some(usage) = json.get("usage") else {
         return ParsedUsage::default();
     };
 
-    // input: anthropic input_tokens / openai prompt_tokens
-    let input = usage
-        .get("input_tokens")
-        .and_then(|v| v.as_u64())
-        .or_else(|| usage.get("prompt_tokens").and_then(|v| v.as_u64()))
-        .unwrap_or(0);
-    let output = usage
-        .get("output_tokens")
-        .and_then(|v| v.as_u64())
-        .or_else(|| usage.get("completion_tokens").and_then(|v| v.as_u64()))
-        .unwrap_or(0);
+    // 判断格式: Anthropic 用 input_tokens, OpenAI 用 prompt_tokens
+    let is_anthropic = usage.get("input_tokens").is_some();
+    let is_openai = usage.get("prompt_tokens").is_some();
 
-    // 缓存 token: anthropic 直传 / openai nested
-    let cache_read = usage
-        .get("cache_read_input_tokens")
-        .and_then(|v| v.as_u64())
-        .or_else(|| {
-            usage
-                .pointer("/prompt_tokens_details/cached_tokens")
-                .and_then(|v| v.as_u64())
-        })
-        .unwrap_or(0);
-    let cache_creation = usage
-        .get("cache_creation_input_tokens")
-        .and_then(|v| v.as_u64())
-        .unwrap_or(0);
+    if is_anthropic {
+        // Anthropic: input_tokens 已是 fresh, cache 字段独立
+        let input = usage
+            .get("input_tokens")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+        let output = usage
+            .get("output_tokens")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+        let cache_read = usage
+            .get("cache_read_input_tokens")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+        let cache_creation = usage
+            .get("cache_creation_input_tokens")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+        ParsedUsage {
+            input,
+            output,
+            cache_read,
+            cache_creation,
+        }
+    } else if is_openai {
+        // OpenAI: prompt_tokens 包含 cached_tokens → 扣减得到 fresh input
+        let prompt = usage
+            .get("prompt_tokens")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+        let output = usage
+            .get("completion_tokens")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+        let cache_read = usage
+            .pointer("/prompt_tokens_details/cached_tokens")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+        ParsedUsage {
+            input: prompt.saturating_sub(cache_read),
+            output,
+            cache_read,
+            cache_creation: 0,
+        }
+    } else {
+        ParsedUsage::default()
+    }
+}
+
+/// 从流式 SSE 响应体解析 token 用量。
+/// 遍历所有 data: 行, 自动适配 Anthropic (message_start + message_delta) 或 OpenAI (末 chunk usage)。
+fn parse_usage_from_sse(body: &[u8]) -> ParsedUsage {
+    let text = String::from_utf8_lossy(body);
+    let mut input = 0u64;
+    let mut output = 0u64;
+    let mut cache_read = 0u64;
+    let mut cache_creation = 0u64;
+    let mut found_anthropic = false;
+    let mut found_openai_usage = false;
+
+    for line in text.lines() {
+        let line = line.trim();
+        if !line.starts_with("data:") {
+            continue;
+        }
+        let data = line[5..].trim();
+        if data == "[DONE]" || data.is_empty() {
+            continue;
+        }
+        let Ok(evt) = serde_json::from_str::<serde_json::Value>(data) else {
+            continue;
+        };
+
+        // Anthropic SSE: message_start 携带 input + cache, message_delta 携带 output
+        let evt_type = evt.get("type").and_then(|t| t.as_str()).unwrap_or("");
+        if evt_type == "message_start" {
+            if let Some(usage) = evt.pointer("/message/usage") {
+                found_anthropic = true;
+                input = usage
+                    .get("input_tokens")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(input);
+                cache_read = usage
+                    .get("cache_read_input_tokens")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(cache_read);
+                cache_creation = usage
+                    .get("cache_creation_input_tokens")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(cache_creation);
+            }
+        } else if evt_type == "message_delta" {
+            if let Some(usage) = evt.get("usage") {
+                found_anthropic = true;
+                if let Some(v) = usage.get("output_tokens").and_then(|v| v.as_u64()) {
+                    output = v;
+                }
+            }
+        } else if let Some(usage) = evt.get("usage") {
+            // OpenAI SSE: 末 chunk 带 usage
+            if usage.get("prompt_tokens").is_some() || usage.get("completion_tokens").is_some() {
+                found_openai_usage = true;
+                let prompt = usage
+                    .get("prompt_tokens")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0);
+                let cached = usage
+                    .pointer("/prompt_tokens_details/cached_tokens")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0);
+                input = prompt.saturating_sub(cached);
+                output = usage
+                    .get("completion_tokens")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(output);
+                cache_read = cached;
+            }
+        }
+    }
+
+    if !found_anthropic && !found_openai_usage {
+        return ParsedUsage::default();
+    }
 
     ParsedUsage {
         input,
