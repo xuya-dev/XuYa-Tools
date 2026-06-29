@@ -5,7 +5,7 @@
             <button class="cli-refresh-btn" @click="onRefresh">刷新</button>
         </div>
 
-        <div class="usage-grid" v-if="usageSummary">
+        <div v-if="usageSummary" class="usage-grid">
             <div class="usage-stat">
                 <span class="usage-stat-val">{{ usageSummary.totalRequests }}</span>
                 <span class="usage-stat-label">总请求</span>
@@ -30,7 +30,7 @@
                 <span class="usage-stat-val">{{ usageSummary.totalInputTokens + usageSummary.totalOutputTokens }}</span>
                 <span class="usage-stat-label">Tokens</span>
             </div>
-            <div class="usage-stat" v-if="usageSummary.totalCostUsd > 0">
+            <div v-if="usageSummary.totalCostUsd > 0" class="usage-stat">
                 <span class="usage-stat-val">${{ usageSummary.totalCostUsd.toFixed(4) }}</span>
                 <span class="usage-stat-label">预估费用</span>
             </div>

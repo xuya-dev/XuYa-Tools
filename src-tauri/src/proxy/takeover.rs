@@ -11,8 +11,8 @@ use std::path::Path;
 
 use serde_json::{json, Value};
 
-use crate::cli_config::{claude, codex};
 use super::types::TakeoverResult;
+use crate::cli_config::{claude, codex};
 
 /// 接管 Claude Code: 把 base_url 指向 proxy_url
 pub fn takeover_claude(proxy_url: &str) -> TakeoverResult {

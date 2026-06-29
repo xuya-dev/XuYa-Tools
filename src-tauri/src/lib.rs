@@ -12,8 +12,10 @@ use tauri_plugin_autostart::{MacosLauncher, ManagerExt};
 
 // ==================== 业务模块 ====================
 mod cli_config;
+use cli_config::types::{
+    ApiFormat, AppType, AuthField, CliProvider, ProviderCategory, ProviderKind, ProviderScope,
+};
 use cli_config::CliConfigService;
-use cli_config::types::{ApiFormat, AppType, AuthField, CliProvider, ProviderCategory, ProviderKind, ProviderScope};
 
 mod proxy;
 use proxy::ProxyService;
@@ -138,7 +140,9 @@ pub fn run() {
 // ==================== CLI 配置切换命令 ====================
 
 #[tauri::command]
-fn get_cli_status(svc: State<'_, CliConfigService>) -> Result<cli_config::types::CliStatus, String> {
+fn get_cli_status(
+    svc: State<'_, CliConfigService>,
+) -> Result<cli_config::types::CliStatus, String> {
     Ok(svc.detect_status())
 }
 
@@ -154,8 +158,7 @@ fn get_cli_live_config(
     svc: State<'_, CliConfigService>,
     app_type: String,
 ) -> Result<LiveConfigContent, String> {
-    let app = AppType::from_str(&app_type)
-        .ok_or_else(|| format!("未知 app 类型: {app_type}"))?;
+    let app = AppType::from_str(&app_type).ok_or_else(|| format!("未知 app 类型: {app_type}"))?;
     let (path, content) = svc.read_live_config(app);
     Ok(LiveConfigContent { path, content })
 }
@@ -163,8 +166,7 @@ fn get_cli_live_config(
 /// 在系统默认编辑器中打开配置文件 (通过 opener 插件)
 #[tauri::command]
 async fn open_cli_config_file(app_type: String) -> Result<(), String> {
-    let app = AppType::from_str(&app_type)
-        .ok_or_else(|| format!("未知 app 类型: {app_type}"))?;
+    let app = AppType::from_str(&app_type).ok_or_else(|| format!("未知 app 类型: {app_type}"))?;
     let path = match app {
         AppType::Claude => cli_config::claude::claude_settings_path(),
         AppType::Codex => cli_config::codex::codex_config_path(),
@@ -184,7 +186,10 @@ fn list_cli_providers(svc: State<'_, CliConfigService>) -> Result<Vec<CliProvide
 }
 
 #[tauri::command]
-fn save_cli_provider(svc: State<'_, CliConfigService>, provider: CliProvider) -> Result<CliProvider, String> {
+fn save_cli_provider(
+    svc: State<'_, CliConfigService>,
+    provider: CliProvider,
+) -> Result<CliProvider, String> {
     Ok(svc.save_provider(provider))
 }
 
@@ -199,8 +204,7 @@ fn switch_cli_provider(
     app_type: String,
     provider_id: String,
 ) -> Result<cli_config::types::SwitchResult, String> {
-    let app = AppType::from_str(&app_type)
-        .ok_or_else(|| format!("未知 app 类型: {app_type}"))?;
+    let app = AppType::from_str(&app_type).ok_or_else(|| format!("未知 app 类型: {app_type}"))?;
     Ok(svc.switch(app, &provider_id))
 }
 
@@ -298,7 +302,9 @@ async fn fetch_cli_models(
 // ==================== 本地代理命令 ====================
 
 #[tauri::command]
-async fn start_cli_proxy(svc: State<'_, ProxyService>) -> Result<proxy::types::ProxyServerInfo, String> {
+async fn start_cli_proxy(
+    svc: State<'_, ProxyService>,
+) -> Result<proxy::types::ProxyServerInfo, String> {
     svc.start().await
 }
 
@@ -308,7 +314,9 @@ async fn stop_cli_proxy(svc: State<'_, ProxyService>) -> Result<(), String> {
 }
 
 #[tauri::command]
-async fn get_cli_proxy_status(svc: State<'_, ProxyService>) -> Result<proxy::types::ProxyStatus, String> {
+async fn get_cli_proxy_status(
+    svc: State<'_, ProxyService>,
+) -> Result<proxy::types::ProxyStatus, String> {
     Ok(svc.status().await)
 }
 
@@ -318,8 +326,7 @@ async fn set_cli_takeover(
     app_type: String,
     enabled: bool,
 ) -> Result<proxy::types::TakeoverResult, String> {
-    let app = AppType::from_str(&app_type)
-        .ok_or_else(|| format!("未知 app 类型: {app_type}"))?;
+    let app = AppType::from_str(&app_type).ok_or_else(|| format!("未知 app 类型: {app_type}"))?;
     Ok(svc.set_takeover(app, enabled).await)
 }
 

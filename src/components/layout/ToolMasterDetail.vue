@@ -40,8 +40,8 @@
             <span
               class="md-star"
               :class="{ on: true }"
-              @click.stop="toggleFavorite(t.id)"
               title="取消收藏"
+              @click.stop="toggleFavorite(t.id)"
             >
               <Star :size="14" fill="currentColor" />
             </span>
@@ -68,8 +68,8 @@
             <span
               class="md-star"
               :class="{ on: isFavorite(t.id) }"
-              @click.stop="toggleFavorite(t.id)"
               :title="isFavorite(t.id) ? '取消收藏' : '添加收藏'"
+              @click.stop="toggleFavorite(t.id)"
             >
               <Star :size="14" :fill="isFavorite(t.id) ? 'currentColor' : 'none'" />
             </span>
@@ -83,7 +83,7 @@
 
       <div class="md-master-foot">
         <span class="md-foot-text">v0.1.0 · {{ tools.length }} 个工具</span>
-        <button class="md-settings-btn" @click="goSettings" title="设置">
+        <button class="md-settings-btn" title="设置" @click="goSettings">
           <Settings :size="14" />
         </button>
       </div>

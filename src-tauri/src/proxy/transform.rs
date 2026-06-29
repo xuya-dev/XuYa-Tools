@@ -28,7 +28,12 @@ pub fn anthropic_to_openai(body: &Value) -> Result<Value, String> {
         } else if let Some(arr) = system.as_array() {
             let parts: Vec<String> = arr
                 .iter()
-                .filter_map(|m| m.get("text").and_then(|t| t.as_str()).filter(|t| !t.is_empty()).map(String::from))
+                .filter_map(|m| {
+                    m.get("text")
+                        .and_then(|t| t.as_str())
+                        .filter(|t| !t.is_empty())
+                        .map(String::from)
+                })
                 .collect();
             if !parts.is_empty() {
                 messages.push(json!({"role": "system", "content": parts.join("\n")}));
@@ -103,7 +108,11 @@ pub fn anthropic_to_openai(body: &Value) -> Result<Value, String> {
     }
 
     // 流式请求注入 include_usage, 确保 usage 在末尾 chunk 返回 (便于计费)
-    if result.get("stream").and_then(|v| v.as_bool()).unwrap_or(false) {
+    if result
+        .get("stream")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false)
+    {
         match result.get_mut("stream_options") {
             Some(Value::Object(opts)) => {
                 opts.insert("include_usage".to_string(), json!(true));
@@ -176,7 +185,10 @@ pub fn openai_to_anthropic(body: &Value) -> Result<Value, String> {
             let empty_obj = json!({});
             let func = tc.get("function").unwrap_or(&empty_obj);
             let name = func.get("name").and_then(|n| n.as_str()).unwrap_or("");
-            let args_str = func.get("arguments").and_then(|a| a.as_str()).unwrap_or("{}");
+            let args_str = func
+                .get("arguments")
+                .and_then(|a| a.as_str())
+                .unwrap_or("{}");
             let input: Value = serde_json::from_str(args_str).unwrap_or(json!({}));
             content.push(json!({"type": "tool_use", "id": id, "name": name, "input": input}));
         }
@@ -210,9 +222,17 @@ pub fn openai_to_anthropic(body: &Value) -> Result<Value, String> {
         .get("cache_creation_input_tokens")
         .and_then(|v| v.as_u64())
         .unwrap_or(0);
-    let prompt_tokens = usage.get("prompt_tokens").and_then(|v| v.as_u64()).unwrap_or(0);
-    let input_tokens = prompt_tokens.saturating_sub(cached).saturating_sub(cache_creation);
-    let output_tokens = usage.get("completion_tokens").and_then(|v| v.as_u64()).unwrap_or(0);
+    let prompt_tokens = usage
+        .get("prompt_tokens")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(0);
+    let input_tokens = prompt_tokens
+        .saturating_sub(cached)
+        .saturating_sub(cache_creation);
+    let output_tokens = usage
+        .get("completion_tokens")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(0);
 
     let mut usage_json = json!({"input_tokens": input_tokens, "output_tokens": output_tokens});
     if cached > 0 {
@@ -267,7 +287,10 @@ fn convert_message_to_openai(role: &str, content: Option<&Value>) -> Result<Vec<
                 }
                 "image" => {
                     if let Some(source) = block.get("source") {
-                        let media_type = source.get("media_type").and_then(|m| m.as_str()).unwrap_or("image/png");
+                        let media_type = source
+                            .get("media_type")
+                            .and_then(|m| m.as_str())
+                            .unwrap_or("image/png");
                         let data = source.get("data").and_then(|d| d.as_str()).unwrap_or("");
                         content_parts.push(json!({
                             "type": "image_url",
@@ -285,7 +308,10 @@ fn convert_message_to_openai(role: &str, content: Option<&Value>) -> Result<Vec<
                     }));
                 }
                 "tool_result" => {
-                    let tool_use_id = block.get("tool_use_id").and_then(|i| i.as_str()).unwrap_or("");
+                    let tool_use_id = block
+                        .get("tool_use_id")
+                        .and_then(|i| i.as_str())
+                        .unwrap_or("");
                     let content_str = match block.get("content") {
                         Some(Value::String(s)) => s.clone(),
                         Some(v) => canonical_json_string(v),
@@ -417,7 +443,13 @@ fn canonical_json_string(value: &Value) -> String {
             entries.sort_by_key(|(k, _)| *k);
             let parts: Vec<String> = entries
                 .into_iter()
-                .map(|(k, v)| format!("{}:{}", serde_json::to_string(k).unwrap_or_default(), canonical_json_string(v)))
+                .map(|(k, v)| {
+                    format!(
+                        "{}:{}",
+                        serde_json::to_string(k).unwrap_or_default(),
+                        canonical_json_string(v)
+                    )
+                })
                 .collect();
             format!("{{{}}}", parts.join(","))
         }
@@ -508,7 +540,10 @@ mod tests {
         let result = anthropic_to_openai(&input).unwrap();
         let msgs = result["messages"].as_array().unwrap();
         assert_eq!(msgs[0]["tool_calls"][0]["function"]["name"], "get_weather");
-        assert_eq!(msgs[0]["tool_calls"][0]["function"]["arguments"], "{\"city\":\"NYC\"}");
+        assert_eq!(
+            msgs[0]["tool_calls"][0]["function"]["arguments"],
+            "{\"city\":\"NYC\"}"
+        );
     }
 
     #[test]
@@ -613,7 +648,10 @@ mod tests {
 
     #[test]
     fn test_canonical_json_string() {
-        assert_eq!(canonical_json_string(&json!({"b": 1, "a": 2})), "{\"a\":2,\"b\":1}");
+        assert_eq!(
+            canonical_json_string(&json!({"b": 1, "a": 2})),
+            "{\"a\":2,\"b\":1}"
+        );
         assert_eq!(canonical_json_string(&json!("hi")), "\"hi\"");
         assert_eq!(canonical_json_string(&json!(null)), "null");
     }

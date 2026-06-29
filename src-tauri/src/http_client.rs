@@ -2,11 +2,11 @@
 // - HTTP: 使用 reqwest 发起请求 (绕过浏览器 CORS)
 // - WebSocket: 使用 tokio-tungstenite, 后台任务读循环 + AppHandle emit 推送消息
 
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
-use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, State};
 use tokio::sync::mpsc;
 
@@ -15,18 +15,18 @@ use tokio::sync::mpsc;
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct HttpRequestInput {
-    pub method: String,                       // GET/POST/PUT/PATCH/DELETE/HEAD/OPTIONS
+    pub method: String, // GET/POST/PUT/PATCH/DELETE/HEAD/OPTIONS
     pub url: String,
     #[serde(default)]
-    pub headers: Vec<KeyValue>,               // 自定义请求头
+    pub headers: Vec<KeyValue>, // 自定义请求头
     #[serde(default)]
-    pub query: Vec<KeyValue>,                 // 查询参数
+    pub query: Vec<KeyValue>, // 查询参数
     #[serde(default)]
-    pub body: Option<String>,                 // 请求体
+    pub body: Option<String>, // 请求体
     #[serde(default)]
-    pub body_type: Option<String>,            // "json" | "form" | "raw"
+    pub body_type: Option<String>, // "json" | "form" | "raw"
     #[serde(default)]
-    pub timeout_ms: Option<u64>,              // 超时(毫秒)
+    pub timeout_ms: Option<u64>, // 超时(毫秒)
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -57,8 +57,8 @@ pub async fn http_request(req: HttpRequestInput) -> Result<HttpResponseOutput, S
     let url = reqwest::Url::parse(&req.url).map_err(|e| format!("URL 无效: {e}"))?;
 
     // 构建客户端
-    let mut client_builder = reqwest::Client::builder()
-        .redirect(reqwest::redirect::Policy::limited(10));
+    let mut client_builder =
+        reqwest::Client::builder().redirect(reqwest::redirect::Policy::limited(10));
     if let Some(ms) = req.timeout_ms {
         if ms > 0 {
             client_builder = client_builder.timeout(Duration::from_millis(ms));
@@ -99,7 +99,9 @@ pub async fn http_request(req: HttpRequestInput) -> Result<HttpResponseOutput, S
             let body_type = req.body_type.as_deref().unwrap_or("raw");
             match body_type {
                 "json" => {
-                    builder = builder.header("content-type", "application/json").body(body.clone());
+                    builder = builder
+                        .header("content-type", "application/json")
+                        .body(body.clone());
                 }
                 "form" => {
                     // form body: 解析 key=value&key2=value2
@@ -157,7 +159,10 @@ pub async fn http_request(req: HttpRequestInput) -> Result<HttpResponseOutput, S
     }
 
     // 读取 body (二进制安全: 转 lossy 字符串)
-    let bytes = response.bytes().await.map_err(|e| format!("读取响应体失败: {e}"))?;
+    let bytes = response
+        .bytes()
+        .await
+        .map_err(|e| format!("读取响应体失败: {e}"))?;
     let size_bytes = bytes.len();
     let body_raw = String::from_utf8_lossy(&bytes).to_string();
 
@@ -189,9 +194,9 @@ pub async fn http_request(req: HttpRequestInput) -> Result<HttpResponseOutput, S
 #[serde(rename_all = "camelCase")]
 pub struct WsEvent {
     pub connection_id: String,
-    pub kind: String,     // "open" | "message" | "close" | "error"
+    pub kind: String, // "open" | "message" | "close" | "error"
     pub data: String,
-    pub ts: i64,          // unix 毫秒
+    pub ts: i64, // unix 毫秒
 }
 
 /// 一个连接的写端 + 取消句柄
@@ -280,10 +285,7 @@ pub async fn ws_connect(
 
     // 注册连接
     {
-        let mut conns = state
-            .connections
-            .lock()
-            .expect("WebSocket 连接表锁被毒化");
+        let mut conns = state.connections.lock().expect("WebSocket 连接表锁被毒化");
         conns.insert(conn_id.clone(), WsConnection { tx: out_tx });
     }
 
@@ -299,8 +301,8 @@ pub async fn ws_connect(
     );
 
     // 后台任务: 读循环 + 写循环
-    use tokio_tungstenite::WebSocketStream;
     use futures_util::{SinkExt, StreamExt};
+    use tokio_tungstenite::WebSocketStream;
     let mut stream: WebSocketStream<_> = ws_stream;
 
     tokio::spawn(async move {
@@ -395,18 +397,14 @@ pub async fn ws_send(
     message: String,
 ) -> Result<(), String> {
     let tx = {
-        let conns = state
-            .connections
-            .lock()
-            .expect("WebSocket 连接表锁被毒化");
+        let conns = state.connections.lock().expect("WebSocket 连接表锁被毒化");
         conns.get(&connection_id).map(|c| c.tx.clone())
     };
     match tx {
-        Some(tx) => {
-            tx.send(WsOutgoing::Text(message))
-                .await
-                .map_err(|_| "连接已关闭,无法发送".to_string())
-        }
+        Some(tx) => tx
+            .send(WsOutgoing::Text(message))
+            .await
+            .map_err(|_| "连接已关闭,无法发送".to_string()),
         None => Err("连接不存在".to_string()),
     }
 }
@@ -417,10 +415,7 @@ pub async fn ws_disconnect(
     connection_id: String,
 ) -> Result<(), String> {
     let conn = {
-        let mut conns = state
-            .connections
-            .lock()
-            .expect("WebSocket 连接表锁被毒化");
+        let mut conns = state.connections.lock().expect("WebSocket 连接表锁被毒化");
         conns.remove(&connection_id)
     };
     if let Some(c) = conn {

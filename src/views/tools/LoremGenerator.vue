@@ -18,7 +18,7 @@
         <label class="ctrl-label">数量 {{ count }}</label>
         <input v-model.number="count" type="range" min="1" max="20" class="range" />
       </div>
-      <label class="check"><input type="checkbox" v-model="startClassic" :disabled="lang === 'zh'" /> 以 "Lorem ipsum..." 开头</label>
+      <label class="check"><input v-model="startClassic" type="checkbox" :disabled="lang === 'zh'" /> 以 "Lorem ipsum..." 开头</label>
     </div>
 
     <div class="lorem-result">

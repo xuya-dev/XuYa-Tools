@@ -6,7 +6,7 @@
         <button :class="{ active: mode === 'unified' }" @click="mode = 'unified'">合并视图</button>
       </div>
       <span class="sep"></span>
-      <div class="diff-stats" v-if="lines.length">
+      <div v-if="lines.length" class="diff-stats">
         <span class="stat add">+{{ stat.add }}</span>
         <span class="stat del">-{{ stat.del }}</span>
         <span class="stat eq">={{ stat.eq }}</span>
@@ -27,7 +27,7 @@
       </div>
     </div>
 
-    <div class="diff-result" v-if="leftText || rightText">
+    <div v-if="leftText || rightText" class="diff-result">
       <div class="section-label">差异结果</div>
       <div v-if="!lines.length" class="ph">两段文本完全相同</div>
       <div v-else-if="mode === 'split'" class="split-view">

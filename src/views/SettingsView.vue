@@ -40,7 +40,7 @@
           <div class="settings-name">数据目录</div>
           <div class="settings-desc mono small">{{ dataDir || '加载中…' }}</div>
         </div>
-        <BaseButton variant="ghost" @click="openDataDir" :disabled="!dataDir">
+        <BaseButton variant="ghost" :disabled="!dataDir" @click="openDataDir">
           <FolderOpen :size="14" /> 打开
         </BaseButton>
       </div>

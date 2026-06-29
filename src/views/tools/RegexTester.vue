@@ -41,7 +41,7 @@
       </div>
     </div>
 
-    <div class="captures" v-if="captureGroups.length">
+    <div v-if="captureGroups.length" class="captures">
       <div class="section-label">捕获组 ({{ captureGroups.length }} 组)</div>
       <div class="capture-grid">
         <div v-for="(g, gi) in captureGroups" :key="gi" class="capture-card">

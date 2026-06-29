@@ -32,10 +32,10 @@
           </div>
         </div>
 
-        <BaseButton variant="primary" block @click="download" :disabled="!text">
+        <BaseButton variant="primary" block :disabled="!text" @click="download">
           <Download :size="14" /> 下载 PNG
         </BaseButton>
-        <BaseButton variant="ghost" block @click="copyText" :disabled="!text" style="margin-top:8px">
+        <BaseButton variant="ghost" block :disabled="!text" style="margin-top:8px" @click="copyText">
           <Copy :size="14" /> 复制文本
         </BaseButton>
       </div>

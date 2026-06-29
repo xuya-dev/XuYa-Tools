@@ -120,10 +120,7 @@ impl CliConfigService {
         if !provider.applies_to(app) {
             return SwitchResult {
                 success: false,
-                message: format!(
-                    "该 provider 不适用于 {}",
-                    app.as_str()
-                ),
+                message: format!("该 provider 不适用于 {}", app.as_str()),
                 backup_path: String::new(),
             };
         }
@@ -141,10 +138,9 @@ impl CliConfigService {
                 &claude::claude_settings_path(),
                 &self.backup_dir.join("claude"),
             ),
-            AppType::Codex => backup::create_backup(
-                &codex::codex_auth_path(),
-                &self.backup_dir.join("codex"),
-            ),
+            AppType::Codex => {
+                backup::create_backup(&codex::codex_auth_path(), &self.backup_dir.join("codex"))
+            }
         };
         let backup_str = match &backup_path {
             Ok(Some(p)) => p.to_string_lossy().to_string(),

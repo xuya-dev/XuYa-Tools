@@ -80,26 +80,21 @@ onMounted(() => {
 });
 onUnmounted(() => clearInterval(timer));
 
-// 时间戳 → 时间
+// 时间戳 → 时间 (pure compute,error/value 由同一计算派生,避免副作用)
 const tsInput = useToolState('timestamp', 'tsInput', '');
 const tsUnit = useToolState<'s' | 'ms'>('timestamp', 'tsUnit', 's');
-const tsError = ref('');
-const tsResult = computed(() => {
-  tsError.value = '';
-  if (!tsInput.value.trim()) return '';
-  const n = Number(tsInput.value);
-  if (!Number.isFinite(n) || n < 0) {
-    tsError.value = '请输入有效的非负数字';
-    return '';
-  }
+const tsComputed = computed<{ value: string; error: string }>(() => {
+  const input = tsInput.value.trim();
+  if (!input) return { value: '', error: '' };
+  const n = Number(input);
+  if (!Number.isFinite(n) || n < 0) return { value: '', error: '请输入有效的非负数字' };
   const ms = tsUnit.value === 's' ? n * 1000 : n;
   const d = new Date(ms);
-  if (isNaN(d.getTime())) {
-    tsError.value = '时间戳超出范围';
-    return '';
-  }
-  return d.toLocaleString('zh-CN', { hour12: false });
+  if (isNaN(d.getTime())) return { value: '', error: '时间戳超出范围' };
+  return { value: d.toLocaleString('zh-CN', { hour12: false }), error: '' };
 });
+const tsResult = computed(() => tsComputed.value.value);
+const tsError = computed(() => tsComputed.value.error);
 
 // 时间 → 时间戳
 const dtInput = ref('');

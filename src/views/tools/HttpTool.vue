@@ -57,14 +57,14 @@
           <div class="seg">
             <button v-for="bt in BODY_TYPES" :key="bt" :class="{ active: bodyType === bt }" @click="bodyType = bt">{{ bt.toUpperCase() }}</button>
           </div>
-          <span class="body-hint" v-if="bodyType === 'form'">格式: key=value&key2=value2</span>
+          <span v-if="bodyType === 'form'" class="body-hint">格式: key=value&key2=value2</span>
         </div>
         <textarea v-model="body" class="body-editor" :placeholder="bodyPlaceholder" spellcheck="false"></textarea>
       </div>
     </div>
 
     <!-- 响应 -->
-    <div class="response" v-if="response || errorMsg">
+    <div v-if="response || errorMsg" class="response">
       <div class="resp-head">
         <template v-if="response">
           <span class="status-badge" :class="statusClass">{{ response.status }} {{ response.statusText }}</span>
@@ -98,7 +98,7 @@
     </div>
 
     <!-- 历史 -->
-    <div class="history" v-if="history.length">
+    <div v-if="history.length" class="history">
       <div class="section-label">历史 ({{ history.length }})</div>
       <div class="history-list">
         <button v-for="(h, i) in history" :key="i" class="history-item" @click="loadHistory(h)">

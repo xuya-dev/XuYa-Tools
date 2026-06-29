@@ -3,10 +3,10 @@
     <!-- 预览 + 选色 -->
     <div class="color-top">
       <div class="swatch" :style="{ background: hex }">
-        <input type="color" :value="hex" @input="setHex(($event.target as HTMLInputElement).value)" class="picker" />
+        <input type="color" :value="hex" class="picker" @input="setHex(($event.target as HTMLInputElement).value)" />
       </div>
       <div class="formats">
-        <div class="fmt-row" v-for="f in FMTS" :key="f.key">
+        <div v-for="f in FMTS" :key="f.key" class="fmt-row">
           <span class="fmt-label">{{ f.label }}</span>
           <input class="fmt-input mono" :value="f.value" spellcheck="false" @change="setFrom(f.key, ($event.target as HTMLInputElement).value)" />
           <button class="mini-btn" @click="copy(f.value)"><Copy :size="13" /></button>
@@ -33,7 +33,7 @@
     </div>
 
     <!-- 调色方案 -->
-    <div class="scheme-section" v-if="schemes.length">
+    <div v-if="schemes.length" class="scheme-section">
       <div class="section-label">配色方案</div>
       <div class="scheme-list">
         <div v-for="(sc, si) in schemes" :key="si" class="scheme-row">

@@ -119,10 +119,7 @@ pub fn write_live(provider: &CliProvider) -> std::io::Result<()> {
 fn set_env(env: &mut Map<String, Value>, provider: &CliProvider) {
     // base URL
     if !provider.base_url.is_empty() {
-        env.insert(
-            "ANTHROPIC_BASE_URL".into(),
-            json!(provider.base_url),
-        );
+        env.insert("ANTHROPIC_BASE_URL".into(), json!(provider.base_url));
     } else {
         env.remove("ANTHROPIC_BASE_URL");
     }
@@ -145,7 +142,10 @@ fn set_env(env: &mut Map<String, Value>, provider: &CliProvider) {
 
     // 自定义 User-Agent
     if !provider.custom_user_agent.is_empty() {
-        env.insert("CLAUDE_CODE_CUSTOM_HEADERS".into(), json!(format!("User-Agent: {}", provider.custom_user_agent)));
+        env.insert(
+            "CLAUDE_CODE_CUSTOM_HEADERS".into(),
+            json!(format!("User-Agent: {}", provider.custom_user_agent)),
+        );
     }
 
     // 模型: 对齐 cc-switch, 按角色分别写入 ANTHROPIC_DEFAULT_{SONNET,OPUS,HAIKU}_MODEL。
@@ -173,17 +173,26 @@ fn set_env(env: &mut Map<String, Value>, provider: &CliProvider) {
     // 各角色显示名 (写入 *_MODEL_NAME, 影响 Claude Code /model 菜单)
     // 仅当对应角色模型非空时写入, 否则移除
     if !sonnet.is_empty() && !provider.sonnet_name.is_empty() {
-        env.insert("ANTHROPIC_DEFAULT_SONNET_MODEL_NAME".into(), json!(provider.sonnet_name));
+        env.insert(
+            "ANTHROPIC_DEFAULT_SONNET_MODEL_NAME".into(),
+            json!(provider.sonnet_name),
+        );
     } else {
         env.remove("ANTHROPIC_DEFAULT_SONNET_MODEL_NAME");
     }
     if !opus.is_empty() && !provider.opus_name.is_empty() {
-        env.insert("ANTHROPIC_DEFAULT_OPUS_MODEL_NAME".into(), json!(provider.opus_name));
+        env.insert(
+            "ANTHROPIC_DEFAULT_OPUS_MODEL_NAME".into(),
+            json!(provider.opus_name),
+        );
     } else {
         env.remove("ANTHROPIC_DEFAULT_OPUS_MODEL_NAME");
     }
     if !haiku.is_empty() && !provider.haiku_name.is_empty() {
-        env.insert("ANTHROPIC_DEFAULT_HAIKU_MODEL_NAME".into(), json!(provider.haiku_name));
+        env.insert(
+            "ANTHROPIC_DEFAULT_HAIKU_MODEL_NAME".into(),
+            json!(provider.haiku_name),
+        );
     } else {
         env.remove("ANTHROPIC_DEFAULT_HAIKU_MODEL_NAME");
     }
@@ -223,8 +232,7 @@ fn with_one_m_marker(model: &str, enable_1m: bool) -> String {
 fn strip_one_m_marker(model: &str) -> &str {
     let trimmed = model.trim_end();
     if trimmed.len() >= ONE_M_MARKER.len()
-        && trimmed[trimmed.len() - ONE_M_MARKER.len()..]
-            .eq_ignore_ascii_case(ONE_M_MARKER)
+        && trimmed[trimmed.len() - ONE_M_MARKER.len()..].eq_ignore_ascii_case(ONE_M_MARKER)
     {
         trimmed[..trimmed.len() - ONE_M_MARKER.len()].trim_end()
     } else {
@@ -236,8 +244,7 @@ fn strip_one_m_marker(model: &str) -> &str {
 fn has_one_m_marker(model: &str) -> bool {
     let trimmed = model.trim_end();
     trimmed.len() >= ONE_M_MARKER.len()
-        && trimmed[trimmed.len() - ONE_M_MARKER.len()..]
-            .eq_ignore_ascii_case(ONE_M_MARKER)
+        && trimmed[trimmed.len() - ONE_M_MARKER.len()..].eq_ignore_ascii_case(ONE_M_MARKER)
 }
 
 fn write_atomic_json(path: &PathBuf, value: &Value) -> std::io::Result<()> {
@@ -255,13 +262,25 @@ mod tests {
     #[test]
     fn test_one_m_marker_helpers() {
         // with_one_m_marker
-        assert_eq!(with_one_m_marker("claude-sonnet-4", true), "claude-sonnet-4[1M]");
-        assert_eq!(with_one_m_marker("claude-sonnet-4", false), "claude-sonnet-4");
+        assert_eq!(
+            with_one_m_marker("claude-sonnet-4", true),
+            "claude-sonnet-4[1M]"
+        );
+        assert_eq!(
+            with_one_m_marker("claude-sonnet-4", false),
+            "claude-sonnet-4"
+        );
         assert_eq!(with_one_m_marker("", true), "");
         // 不重复追加
-        assert_eq!(with_one_m_marker("claude-sonnet-4[1M]", true), "claude-sonnet-4[1M]");
+        assert_eq!(
+            with_one_m_marker("claude-sonnet-4[1M]", true),
+            "claude-sonnet-4[1M]"
+        );
         // 大小写不敏感
-        assert_eq!(with_one_m_marker("claude-sonnet-4[1m]", true), "claude-sonnet-4[1m]");
+        assert_eq!(
+            with_one_m_marker("claude-sonnet-4[1m]", true),
+            "claude-sonnet-4[1m]"
+        );
     }
 
     #[test]
@@ -269,7 +288,10 @@ mod tests {
         assert_eq!(strip_one_m_marker("claude-sonnet-4[1M]"), "claude-sonnet-4");
         assert_eq!(strip_one_m_marker("claude-sonnet-4[1m]"), "claude-sonnet-4");
         assert_eq!(strip_one_m_marker("claude-sonnet-4"), "claude-sonnet-4");
-        assert_eq!(strip_one_m_marker("claude-sonnet-4 [1M] "), "claude-sonnet-4");
+        assert_eq!(
+            strip_one_m_marker("claude-sonnet-4 [1M] "),
+            "claude-sonnet-4"
+        );
     }
 
     #[test]
@@ -283,9 +305,13 @@ mod tests {
     fn test_set_env_writes_per_role_models() {
         let mut env = Map::new();
         let provider = CliProvider {
-            id: "t".into(), name: "t".into(), scope: ProviderScope::Claude,
-            kind: ProviderKind::Relay, category: ProviderCategory::Custom,
-            base_url: "https://x.com".into(), api_key: "sk".into(),
+            id: "t".into(),
+            name: "t".into(),
+            scope: ProviderScope::Claude,
+            kind: ProviderKind::Relay,
+            category: ProviderCategory::Custom,
+            base_url: "https://x.com".into(),
+            api_key: "sk".into(),
             model: String::new(),
             model_sonnet: "claude-sonnet-4".into(),
             model_haiku: "claude-haiku-4".into(),
@@ -296,23 +322,56 @@ mod tests {
             sonnet_1m: true,
             opus_1m: false,
             haiku_1m: false,
-            note: String::new(), website_url: String::new(),
-            auth_field: AuthField::AnthropicAuthToken, api_format: ApiFormat::Anthropic,
-            custom_user_agent: String::new(), models_url: String::new(), preset_id: String::new(),
-            icon: String::new(), icon_color: String::new(),
-            codex_auth_json: String::new(), codex_config_toml: String::new(),
+            note: String::new(),
+            website_url: String::new(),
+            auth_field: AuthField::AnthropicAuthToken,
+            api_format: ApiFormat::Anthropic,
+            custom_user_agent: String::new(),
+            models_url: String::new(),
+            preset_id: String::new(),
+            icon: String::new(),
+            icon_color: String::new(),
+            codex_auth_json: String::new(),
+            codex_config_toml: String::new(),
             updated_at: 0,
         };
         set_env(&mut env, &provider);
         // sonnet 带 1M 后缀
-        assert_eq!(env.get("ANTHROPIC_DEFAULT_SONNET_MODEL").unwrap().as_str().unwrap(), "claude-sonnet-4[1M]");
+        assert_eq!(
+            env.get("ANTHROPIC_DEFAULT_SONNET_MODEL")
+                .unwrap()
+                .as_str()
+                .unwrap(),
+            "claude-sonnet-4[1M]"
+        );
         // opus/haiku 不带
-        assert_eq!(env.get("ANTHROPIC_DEFAULT_OPUS_MODEL").unwrap().as_str().unwrap(), "claude-opus-4");
-        assert_eq!(env.get("ANTHROPIC_DEFAULT_HAIKU_MODEL").unwrap().as_str().unwrap(), "claude-haiku-4");
+        assert_eq!(
+            env.get("ANTHROPIC_DEFAULT_OPUS_MODEL")
+                .unwrap()
+                .as_str()
+                .unwrap(),
+            "claude-opus-4"
+        );
+        assert_eq!(
+            env.get("ANTHROPIC_DEFAULT_HAIKU_MODEL")
+                .unwrap()
+                .as_str()
+                .unwrap(),
+            "claude-haiku-4"
+        );
         // 兜底 ANTHROPIC_MODEL 取 sonnet (剥后缀)
-        assert_eq!(env.get("ANTHROPIC_MODEL").unwrap().as_str().unwrap(), "claude-sonnet-4");
+        assert_eq!(
+            env.get("ANTHROPIC_MODEL").unwrap().as_str().unwrap(),
+            "claude-sonnet-4"
+        );
         // 显示名: sonnet 有 (其他为空不写)
-        assert_eq!(env.get("ANTHROPIC_DEFAULT_SONNET_MODEL_NAME").unwrap().as_str().unwrap(), "我的 Sonnet");
+        assert_eq!(
+            env.get("ANTHROPIC_DEFAULT_SONNET_MODEL_NAME")
+                .unwrap()
+                .as_str()
+                .unwrap(),
+            "我的 Sonnet"
+        );
         assert!(env.get("ANTHROPIC_DEFAULT_OPUS_MODEL_NAME").is_none());
     }
 
@@ -322,9 +381,13 @@ mod tests {
         // 预置一个旧的 sonnet model
         env.insert("ANTHROPIC_DEFAULT_SONNET_MODEL".into(), json!("old-value"));
         let provider = CliProvider {
-            id: "t".into(), name: "t".into(), scope: ProviderScope::Claude,
-            kind: ProviderKind::Relay, category: ProviderCategory::Custom,
-            base_url: "https://x.com".into(), api_key: "sk".into(),
+            id: "t".into(),
+            name: "t".into(),
+            scope: ProviderScope::Claude,
+            kind: ProviderKind::Relay,
+            category: ProviderCategory::Custom,
+            base_url: "https://x.com".into(),
+            api_key: "sk".into(),
             model: "gpt-4o".into(),
             model_sonnet: String::new(), // 空应移除旧值
             model_haiku: String::new(),
@@ -332,16 +395,27 @@ mod tests {
             sonnet_name: String::new(),
             opus_name: String::new(),
             haiku_name: String::new(),
-            sonnet_1m: false, opus_1m: false, haiku_1m: false,
-            note: String::new(), website_url: String::new(),
-            auth_field: AuthField::AnthropicAuthToken, api_format: ApiFormat::Anthropic,
-            custom_user_agent: String::new(), models_url: String::new(), preset_id: String::new(),
-            icon: String::new(), icon_color: String::new(),
-            codex_auth_json: String::new(), codex_config_toml: String::new(),
+            sonnet_1m: false,
+            opus_1m: false,
+            haiku_1m: false,
+            note: String::new(),
+            website_url: String::new(),
+            auth_field: AuthField::AnthropicAuthToken,
+            api_format: ApiFormat::Anthropic,
+            custom_user_agent: String::new(),
+            models_url: String::new(),
+            preset_id: String::new(),
+            icon: String::new(),
+            icon_color: String::new(),
+            codex_auth_json: String::new(),
+            codex_config_toml: String::new(),
             updated_at: 0,
         };
         set_env(&mut env, &provider);
         assert!(env.get("ANTHROPIC_DEFAULT_SONNET_MODEL").is_none());
-        assert_eq!(env.get("ANTHROPIC_MODEL").unwrap().as_str().unwrap(), "gpt-4o");
+        assert_eq!(
+            env.get("ANTHROPIC_MODEL").unwrap().as_str().unwrap(),
+            "gpt-4o"
+        );
     }
 }

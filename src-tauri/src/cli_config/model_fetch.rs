@@ -256,14 +256,18 @@ mod tests {
         // 版本段结尾 → /models 优先
         assert_eq!(c[0], "https://open.bigmodel.cn/api/paas/v4/models");
         // 非 /v1 → 追加 /v1/models 兜底
-        assert!(c.iter().any(|u| u == "https://open.bigmodel.cn/api/paas/v4/v1/models"));
+        assert!(c
+            .iter()
+            .any(|u| u == "https://open.bigmodel.cn/api/paas/v4/v1/models"));
     }
 
     #[test]
     fn test_build_candidates_compat_suffix() {
         let c = build_models_url_candidates("https://api.example.com/anthropic", None).unwrap();
         // 直接拼 /v1/models
-        assert!(c.iter().any(|u| u == "https://api.example.com/anthropic/v1/models"));
+        assert!(c
+            .iter()
+            .any(|u| u == "https://api.example.com/anthropic/v1/models"));
         // 剥离后缀再拼
         assert!(c.iter().any(|u| u == "https://api.example.com/v1/models"));
         assert!(c.iter().any(|u| u == "https://api.example.com/models"));
@@ -277,7 +281,10 @@ mod tests {
             Some("https://api.example.com/internal/models"),
         )
         .unwrap();
-        assert_eq!(c, vec!["https://api.example.com/internal/models".to_string()]);
+        assert_eq!(
+            c,
+            vec!["https://api.example.com/internal/models".to_string()]
+        );
     }
 
     #[test]

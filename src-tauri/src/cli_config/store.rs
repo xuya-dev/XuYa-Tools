@@ -40,7 +40,11 @@ impl ProviderStore {
     }
 
     pub fn list(&self) -> Vec<CliProvider> {
-        self.data.lock().expect("ProviderStore 数据锁被毒化").providers.clone()
+        self.data
+            .lock()
+            .expect("ProviderStore 数据锁被毒化")
+            .providers
+            .clone()
     }
 
     #[allow(dead_code)]
@@ -69,11 +73,7 @@ impl ProviderStore {
         }
         provider.updated_at = now_secs();
         let mut data = self.data.lock().expect("ProviderStore 数据锁被毒化");
-        if let Some(existing) = data
-            .providers
-            .iter_mut()
-            .find(|p| p.id == provider.id)
-        {
+        if let Some(existing) = data.providers.iter_mut().find(|p| p.id == provider.id) {
             *existing = provider.clone();
         } else {
             data.providers.push(provider.clone());
@@ -137,7 +137,9 @@ fn now_secs() -> i64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cli_config::types::{AppType, AuthField, ApiFormat, CliProvider, ProviderCategory, ProviderKind, ProviderScope};
+    use crate::cli_config::types::{
+        ApiFormat, AppType, AuthField, CliProvider, ProviderCategory, ProviderKind, ProviderScope,
+    };
 
     fn tmp_dir() -> PathBuf {
         let dir = std::env::temp_dir().join(format!("xuya-test-{}", uuid::Uuid::new_v4()));

@@ -9,7 +9,7 @@
         <button :class="{ active: dialect === 'postgres' }" @click="dialect = 'postgres'">PostgreSQL</button>
         <button :class="{ active: dialect === 'standard' }" @click="dialect = 'standard'">标准</button>
       </div>
-      <label class="check"><input type="checkbox" v-model="uppercase" /> 关键字大写</label>
+      <label class="check"><input v-model="uppercase" type="checkbox" /> 关键字大写</label>
       <span style="flex:1"></span>
       <BaseButton variant="ghost" :disabled="!output" @click="copy"><Copy :size="13" /> 复制</BaseButton>
       <BaseButton variant="ghost" @click="clearAll">清空</BaseButton>

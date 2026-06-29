@@ -7,7 +7,11 @@ use crate::db::Database;
 use super::types::{LogFilters, PaginatedLogs, RequestLogDetail, UsageSummary};
 
 /// 起止时间内的汇总 (None 表示全部)
-pub fn get_summary(db: &Database, start: Option<i64>, end: Option<i64>) -> Result<UsageSummary, String> {
+pub fn get_summary(
+    db: &Database,
+    start: Option<i64>,
+    end: Option<i64>,
+) -> Result<UsageSummary, String> {
     let conn = crate::lock_conn!(db.conn);
 
     let mut conditions: Vec<String> = Vec::new();
@@ -155,25 +159,28 @@ pub fn get_logs(
 
     let mut stmt = conn.prepare(&data_sql).map_err(|e| e.to_string())?;
     let rows = stmt
-        .query_map(params_from_iter(all_binds.iter().map(|b| b.as_ref())), |row| {
-            Ok(RequestLogDetail {
-                id: row.get(0)?,
-                request_id: row.get(1)?,
-                app_type: row.get(2)?,
-                provider_id: row.get(3)?,
-                provider_name: row.get(4)?,
-                model: row.get(5)?,
-                input_tokens: row.get::<_, i64>(6)? as u64,
-                output_tokens: row.get::<_, i64>(7)? as u64,
-                total_cost_usd: row.get(8)?,
-                latency_ms: row.get::<_, i64>(9)? as u64,
-                first_token_ms: row.get::<_, Option<i64>>(10)?.map(|v| v as u64),
-                status_code: row.get::<_, i64>(11)? as u16,
-                error_message: row.get(12)?,
-                is_streaming: row.get::<_, i64>(13)? != 0,
-                created_at: row.get(14)?,
-            })
-        })
+        .query_map(
+            params_from_iter(all_binds.iter().map(|b| b.as_ref())),
+            |row| {
+                Ok(RequestLogDetail {
+                    id: row.get(0)?,
+                    request_id: row.get(1)?,
+                    app_type: row.get(2)?,
+                    provider_id: row.get(3)?,
+                    provider_name: row.get(4)?,
+                    model: row.get(5)?,
+                    input_tokens: row.get::<_, i64>(6)? as u64,
+                    output_tokens: row.get::<_, i64>(7)? as u64,
+                    total_cost_usd: row.get(8)?,
+                    latency_ms: row.get::<_, i64>(9)? as u64,
+                    first_token_ms: row.get::<_, Option<i64>>(10)?.map(|v| v as u64),
+                    status_code: row.get::<_, i64>(11)? as u16,
+                    error_message: row.get(12)?,
+                    is_streaming: row.get::<_, i64>(13)? != 0,
+                    created_at: row.get(14)?,
+                })
+            },
+        )
         .map_err(|e| e.to_string())?;
 
     let mut data = Vec::new();

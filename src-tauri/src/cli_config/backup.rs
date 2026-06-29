@@ -14,10 +14,7 @@ pub fn create_backup(src: &Path, backup_dir: &Path) -> std::io::Result<Option<Pa
     }
     fs::create_dir_all(backup_dir)?;
 
-    let stem = src
-        .file_stem()
-        .and_then(|s| s.to_str())
-        .unwrap_or("config");
+    let stem = src.file_stem().and_then(|s| s.to_str()).unwrap_or("config");
     let ext = src.extension().and_then(|s| s.to_str()).unwrap_or("json");
     let ts = chrono_like_ts();
     let backup_name = format!("{stem}_{ts}.{ext}");
@@ -31,9 +28,7 @@ fn cleanup_old_backups(dir: &Path, retain: usize) -> std::io::Result<()> {
     if retain == 0 {
         return Ok(());
     }
-    let mut entries: Vec<_> = fs::read_dir(dir)?
-        .filter_map(|e| e.ok())
-        .collect();
+    let mut entries: Vec<_> = fs::read_dir(dir)?.filter_map(|e| e.ok()).collect();
     if entries.len() <= retain {
         return Ok(());
     }

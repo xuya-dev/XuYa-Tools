@@ -150,7 +150,9 @@ impl ProxyServer {
 
     pub async fn stop(&self) -> Result<(), String> {
         // 清理 shutdown 通道 (虽然服务器任务用 abort 终止, 仍保留语义)
-        if self.shutdown_tx.write().await.take().is_none() && self.server_handle.read().await.is_none() {
+        if self.shutdown_tx.write().await.take().is_none()
+            && self.server_handle.read().await.is_none()
+        {
             return Err("代理服务器未运行".to_string());
         }
         if let Some(handle) = self.server_handle.write().await.take() {
@@ -237,7 +239,9 @@ async fn forward_handler(req: Request<Body>, state: ProxyState) -> Response<Body
                 fwd_body_bytes = bytes::Bytes::from(vec);
                 transformed_request = true;
                 // 改写 URI 路径 (转换失败则保持原 URI, 后续 fallback 处理)
-                if let Some(rewritten) = rewrite_to_chat_completions(&target.base_url, &original_path) {
+                if let Some(rewritten) =
+                    rewrite_to_chat_completions(&target.base_url, &original_path)
+                {
                     if let Ok(uri) = rewritten.parse::<http::Uri>() {
                         parts.uri = uri;
                     }
@@ -278,7 +282,9 @@ async fn forward_handler(req: Request<Body>, state: ProxyState) -> Response<Body
                 return error_response(500, "API Key 含非法字符");
             }
         };
-        parts.headers.insert(HeaderName::from_static("authorization"), hv);
+        parts
+            .headers
+            .insert(HeaderName::from_static("authorization"), hv);
     }
 
     let fwd_req = Request::from_parts(parts, FullBody::from(fwd_body_bytes));
@@ -310,7 +316,8 @@ async fn forward_handler(req: Request<Body>, state: ProxyState) -> Response<Body
             if is_stream {
                 // 真流式: 用 channel 把上游 body 分流 —— 一路回写给客户端, 一路收集用于日志。
                 // 使用 mpsc 把收集任务解耦, 避免阻塞转发。
-                let (tx, mut rx) = tokio::sync::mpsc::channel::<Result<bytes::Bytes, std::io::Error>>(32);
+                let (tx, mut rx) =
+                    tokio::sync::mpsc::channel::<Result<bytes::Bytes, std::io::Error>>(32);
                 // 首 token 时间: 在转发流中记录第一个 data chunk 到达时刻
                 let first_token_instant = Arc::new(std::sync::Mutex::new(Option::<Instant>::None));
                 let ft_clone = first_token_instant.clone();
@@ -398,8 +405,15 @@ async fn forward_handler(req: Request<Body>, state: ProxyState) -> Response<Body
                         .error_count
                         .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
                     log_request(
-                        &state, &request_id, &target, &app_type, &original_path,
-                        status_code, latency_ms, None, 0.0,
+                        &state,
+                        &request_id,
+                        &target,
+                        &app_type,
+                        &original_path,
+                        status_code,
+                        latency_ms,
+                        None,
+                        0.0,
                         Some(format!("读取上游响应失败: {e}")),
                     );
                     return error_response(502, &format!("读取上游响应失败: {e}"));
@@ -411,7 +425,8 @@ async fn forward_handler(req: Request<Body>, state: ProxyState) -> Response<Body
                 if let Ok(resp_json) = serde_json::from_slice::<serde_json::Value>(&rbody_bytes) {
                     match super::transform::openai_to_anthropic(&resp_json) {
                         Ok(converted) => {
-                            let vec = serde_json::to_vec(&converted).unwrap_or_else(|_| rbody_bytes.to_vec());
+                            let vec = serde_json::to_vec(&converted)
+                                .unwrap_or_else(|_| rbody_bytes.to_vec());
                             bytes::Bytes::from(vec)
                         }
                         Err(_) => rbody_bytes.clone(), // 转换失败则透传原始 (兼容错误页)
@@ -429,9 +444,20 @@ async fn forward_handler(req: Request<Body>, state: ProxyState) -> Response<Body
             let cost = calculate_cost_full(&app_type, &final_bytes, &parsed);
 
             log_request(
-                &state, &request_id, &target, &app_type, &original_path,
-                status_code, latency_ms, Some((in_tok, out_tok)), cost,
-                if status_code >= 400 { Some(format!("HTTP {status_code}")) } else { None },
+                &state,
+                &request_id,
+                &target,
+                &app_type,
+                &original_path,
+                status_code,
+                latency_ms,
+                Some((in_tok, out_tok)),
+                cost,
+                if status_code >= 400 {
+                    Some(format!("HTTP {status_code}"))
+                } else {
+                    None
+                },
             );
 
             let mut resp_builder = Response::builder().status(status);
@@ -456,8 +482,15 @@ async fn forward_handler(req: Request<Body>, state: ProxyState) -> Response<Body
                 .error_count
                 .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
             log_request(
-                &state, &request_id, &target, &app_type, &original_path,
-                0, latency_ms, None, 0.0,
+                &state,
+                &request_id,
+                &target,
+                &app_type,
+                &original_path,
+                0,
+                latency_ms,
+                None,
+                0.0,
                 Some(format!("转发到上游失败: {e}")),
             );
             error_response(502, &format!("转发到上游失败: {e}"))
@@ -480,8 +513,16 @@ fn log_request(
     error_message: Option<String>,
 ) {
     log_request_with_cost(
-        state, request_id, target, app_type, path, status_code, latency_ms,
-        usage, cost_usd, error_message,
+        state,
+        request_id,
+        target,
+        app_type,
+        path,
+        status_code,
+        latency_ms,
+        usage,
+        cost_usd,
+        error_message,
     );
 }
 
@@ -500,8 +541,17 @@ fn log_request_with_cost(
     error_message: Option<String>,
 ) {
     log_request_with_first_token(
-        state, request_id, target, app_type, path, status_code, latency_ms,
-        None, usage, cost_usd, error_message,
+        state,
+        request_id,
+        target,
+        app_type,
+        path,
+        status_code,
+        latency_ms,
+        None,
+        usage,
+        cost_usd,
+        error_message,
     );
 }
 
@@ -695,7 +745,10 @@ fn infer_app_type(_base_url: &str, path: &str) -> String {
     let p = path.to_lowercase();
     if p.contains("anthropic") || p.contains("/v1/messages") {
         "claude".to_string()
-    } else if p.contains("openai") || p.contains("/v1/chat/completions") || p.contains("/v1/responses") {
+    } else if p.contains("openai")
+        || p.contains("/v1/chat/completions")
+        || p.contains("/v1/responses")
+    {
         "codex".to_string()
     } else {
         "proxy".to_string()
@@ -783,7 +836,10 @@ fn build_upstream_url(base_url: &str, original_uri: &http::Uri) -> Result<String
 type FullBody = http_body_util::Full<bytes::Bytes>;
 
 /// HTTP 客户端类型别名 (明确 connector + body 类型)
-type HttpClient = hyper_util::client::legacy::Client<hyper_tls::HttpsConnector<hyper_util::client::legacy::connect::HttpConnector>, FullBody>;
+type HttpClient = hyper_util::client::legacy::Client<
+    hyper_tls::HttpsConnector<hyper_util::client::legacy::connect::HttpConnector>,
+    FullBody,
+>;
 
 fn build_http_client() -> HttpClient {
     use hyper_tls::HttpsConnector;

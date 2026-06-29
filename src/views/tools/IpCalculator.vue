@@ -17,7 +17,7 @@
 
     <!-- 结果网格 -->
     <div v-if="result" class="ip-results">
-      <div class="ip-card" v-for="f in FIELDS" :key="f.key" @click="copy(result![f.key] || '')">
+      <div v-for="f in FIELDS" :key="f.key" class="ip-card" @click="copy(result![f.key] || '')">
         <span class="ip-card-label">{{ f.label }}</span>
         <code class="ip-card-value mono">{{ result[f.key] }}</code>
         <span class="ip-card-copy"><Copy :size="12" /></span>

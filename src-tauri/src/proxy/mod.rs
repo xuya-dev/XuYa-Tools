@@ -247,7 +247,8 @@ mod tests {
     /// disable_takeover (内部请求 status 写锁), 形成读→写死锁。
     #[tokio::test]
     async fn stop_does_not_deadlock_with_takeover_flag_set() {
-        let dir = std::env::temp_dir().join(format!("xuya_test_stop_deadlock_{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("xuya_test_stop_deadlock_{}", std::process::id()));
         let svc = ProxyService::new(dir.clone());
 
         {
@@ -269,7 +270,8 @@ mod tests {
     /// 导致前端始终认为代理在运行 (反代无法关闭)。
     #[tokio::test]
     async fn stop_resets_running_status() {
-        let dir = std::env::temp_dir().join(format!("xuya_test_stop_status_{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("xuya_test_stop_status_{}", std::process::id()));
         let svc = ProxyService::new(dir.clone());
 
         let info = svc.start().await.expect("start failed");

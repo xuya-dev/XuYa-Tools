@@ -14,23 +14,23 @@
             >{{ proxyStatus?.running ? '停止' : '启动' }}</button>
         </div>
 
-        <div class="proxy-detail" v-if="proxyStatus?.running">
+        <div v-if="proxyStatus?.running" class="proxy-detail">
             <div class="proxy-detail-row">
                 <span class="proxy-detail-label">地址</span>
                 <span class="proxy-detail-val mono">{{ proxyUrl }}</span>
                 <button class="cli-mini-btn ghost" @click="copy(proxyUrl)">复制</button>
             </div>
-            <div class="proxy-detail-row" v-if="proxyStatus.active_provider_name">
+            <div v-if="proxyStatus.active_provider_name" class="proxy-detail-row">
                 <span class="proxy-detail-label">上游</span>
                 <span class="proxy-detail-val">{{ proxyStatus.active_provider_name }}</span>
             </div>
-            <div class="proxy-detail-row" v-if="proxyStatus.started_at">
+            <div v-if="proxyStatus.started_at" class="proxy-detail-row">
                 <span class="proxy-detail-label">启动于</span>
                 <span class="proxy-detail-val mono">{{ startedAtText }}</span>
             </div>
         </div>
 
-        <div class="proxy-takeover" v-if="proxyStatus?.running">
+        <div v-if="proxyStatus?.running" class="proxy-takeover">
             <div class="proxy-takeover-title">接管 CLI (将 CLI 流量导向代理)</div>
             <div class="proxy-takeover-item">
                 <span>Claude Code 接管</span>
@@ -56,11 +56,11 @@
             </div>
         </div>
 
-        <div class="proxy-hint" v-if="!proxyStatus?.running">
+        <div v-if="!proxyStatus?.running" class="proxy-hint">
             启动本地代理后,可接管 Claude Code / Codex CLI,将它们的请求导向你配置的供应商上游,并记录请求日志用于统计。
         </div>
 
-        <div class="proxy-quick-target" v-if="proxyStatus?.running && providers.length">
+        <div v-if="proxyStatus?.running && providers.length" class="proxy-quick-target">
             <div class="proxy-quick-title">快速设为上游</div>
             <div class="proxy-quick-list">
                 <button
@@ -71,7 +71,7 @@
                     @click="onSetTarget(p)"
                 >
                     {{ p.name }}
-                    <span class="proxy-quick-url mono" v-if="p.base_url">{{ p.base_url }}</span>
+                    <span v-if="p.base_url" class="proxy-quick-url mono">{{ p.base_url }}</span>
                 </button>
             </div>
         </div>

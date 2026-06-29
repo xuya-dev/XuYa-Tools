@@ -18,11 +18,11 @@
         <div class="pane-head">
           <span>消息流 ({{ messages.length }})</span>
           <div class="pane-actions">
-            <label class="auto-scroll"><input type="checkbox" v-model="autoScroll" checked /> 自动滚动</label>
-            <button class="mini-btn" @click="messages = []" v-if="messages.length">清空</button>
+            <label class="auto-scroll"><input v-model="autoScroll" type="checkbox" checked /> 自动滚动</label>
+            <button v-if="messages.length" class="mini-btn" @click="messages = []">清空</button>
           </div>
         </div>
-        <div class="msg-list" ref="msgListRef">
+        <div ref="msgListRef" class="msg-list">
           <div v-if="!messages.length" class="empty">连接后在此查看消息流</div>
           <div v-for="(m, i) in messages" :key="i" class="msg-item" :class="m.dir">
             <span class="msg-dir">{{ m.dir === 'send' ? '→ 发送' : m.dir === 'recv' ? '← 接收' : '● 系统' }}</span>
@@ -41,14 +41,14 @@
             <button :class="{ active: sendFormat === 'json' }" @click="sendFormat = 'json'">JSON</button>
           </div>
         </div>
-        <textarea v-model="sendText" class="send-editor" :placeholder="sendPlaceholder" spellcheck="false" @keydown.ctrl.enter="onSend" :disabled="!connected"></textarea>
+        <textarea v-model="sendText" class="send-editor" :placeholder="sendPlaceholder" spellcheck="false" :disabled="!connected" @keydown.ctrl.enter="onSend"></textarea>
         <div class="send-actions">
           <BaseButton variant="primary" :disabled="!connected || !sendText" @click="onSend">发送 (Ctrl+Enter)</BaseButton>
-          <button class="mini-btn" @click="formatJson" v-if="sendFormat === 'json'">格式化</button>
+          <button v-if="sendFormat === 'json'" class="mini-btn" @click="formatJson">格式化</button>
         </div>
 
         <!-- 快捷发送 -->
-        <div class="quick-send" v-if="connected">
+        <div v-if="connected" class="quick-send">
           <div class="section-label">快捷</div>
           <div class="quick-list">
             <button v-for="q in QUICK" :key="q" class="quick-item" @click="sendText = q">{{ q }}</button>

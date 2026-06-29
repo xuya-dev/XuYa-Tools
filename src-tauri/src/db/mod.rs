@@ -49,7 +49,9 @@ impl Database {
 #[macro_export]
 macro_rules! lock_conn {
     ($conn:expr) => {
-        $conn.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
+        $conn
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
     };
 }
 
@@ -63,12 +65,16 @@ mod tests {
         // schema_version 表应存在且版本=1
         let conn = db.conn.lock().unwrap();
         let version: u32 = conn
-            .query_row("SELECT MAX(version) FROM schema_version", [], |row| row.get(0))
+            .query_row("SELECT MAX(version) FROM schema_version", [], |row| {
+                row.get(0)
+            })
             .unwrap();
         assert_eq!(version, 1, "schema 版本应为 1");
         // proxy_request_logs 表应存在
         let count: i64 = conn
-            .query_row("SELECT COUNT(*) FROM proxy_request_logs", [], |row| row.get(0))
+            .query_row("SELECT COUNT(*) FROM proxy_request_logs", [], |row| {
+                row.get(0)
+            })
             .unwrap();
         assert_eq!(count, 0, "新建表应为空");
     }

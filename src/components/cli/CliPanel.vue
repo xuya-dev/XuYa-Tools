@@ -5,7 +5,7 @@
             <div class="cli-status-card" :class="{ active: status?.claude.matched_provider_id }">
                 <div class="cli-status-head">
                     <div class="cli-app-name-wrap">
-                        <span class="cli-app-icon" v-if="iconSvg('claude')" v-html="iconSvg('claude')!"></span>
+                        <span v-if="iconSvg('claude')" class="cli-app-icon" v-html="iconSvg('claude')!"></span>
                         <span class="cli-app-name">Claude Code</span>
                     </div>
                     <span class="cli-badge" :class="claudeBadgeClass">{{ claudeBadgeText }}</span>
@@ -18,20 +18,20 @@
                     <span class="cli-status-label">Base URL</span>
                     <span class="cli-status-val mono">{{ status?.claude.base_url || '官方默认' }}</span>
                 </div>
-                <div class="cli-status-row" v-if="status?.claude.model_sonnet || status?.claude.model_opus || status?.claude.model_haiku || status?.claude.model">
+                <div v-if="status?.claude.model_sonnet || status?.claude.model_opus || status?.claude.model_haiku || status?.claude.model" class="cli-status-row">
                     <span class="cli-status-label">当前模型</span>
                     <span class="cli-status-val model-pills">
-                        <span class="live-model-pill" v-if="status?.claude.model_sonnet">
-                            Sonnet {{ strip1M(status.claude.model_sonnet) }}<span class="onem-badge" v-if="has1M(status.claude.model_sonnet)">1M</span>
+                        <span v-if="status?.claude.model_sonnet" class="live-model-pill">
+                            Sonnet {{ strip1M(status.claude.model_sonnet) }}<span v-if="has1M(status.claude.model_sonnet)" class="onem-badge">1M</span>
                         </span>
-                        <span class="live-model-pill" v-if="status?.claude.model_opus">
-                            Opus {{ strip1M(status.claude.model_opus) }}<span class="onem-badge" v-if="has1M(status.claude.model_opus)">1M</span>
+                        <span v-if="status?.claude.model_opus" class="live-model-pill">
+                            Opus {{ strip1M(status.claude.model_opus) }}<span v-if="has1M(status.claude.model_opus)" class="onem-badge">1M</span>
                         </span>
-                        <span class="live-model-pill" v-if="status?.claude.model_haiku">
+                        <span v-if="status?.claude.model_haiku" class="live-model-pill">
                             Haiku {{ strip1M(status.claude.model_haiku) }}
                         </span>
-                        <span class="live-model-pill" v-if="!status?.claude.model_sonnet && !status?.claude.model_opus && !status?.claude.model_haiku && status?.claude.model">
-                            {{ strip1M(status.claude.model) }}<span class="onem-badge" v-if="has1M(status.claude.model)">1M</span>
+                        <span v-if="!status?.claude.model_sonnet && !status?.claude.model_opus && !status?.claude.model_haiku && status?.claude.model" class="live-model-pill">
+                            {{ strip1M(status.claude.model) }}<span v-if="has1M(status.claude.model)" class="onem-badge">1M</span>
                         </span>
                     </span>
                 </div>
@@ -44,7 +44,7 @@
             <div class="cli-status-card" :class="{ active: status?.codex.matched_provider_id }">
                 <div class="cli-status-head">
                     <div class="cli-app-name-wrap">
-                        <span class="cli-app-icon" v-if="iconSvg('openai')" v-html="iconSvg('openai')!"></span>
+                        <span v-if="iconSvg('openai')" class="cli-app-icon" v-html="iconSvg('openai')!"></span>
                         <span class="cli-app-name">Codex CLI</span>
                     </div>
                     <span class="cli-badge" :class="codexBadgeClass">{{ codexBadgeText }}</span>
@@ -79,7 +79,7 @@
                         @click="loadConfigViewer('codex')"
                     >Codex 配置</button>
                 </div>
-                <div class="config-viewer-actions" v-if="configViewer.content">
+                <div v-if="configViewer.content" class="config-viewer-actions">
                     <button class="cli-mini-btn ghost" :disabled="configViewer.loading" @click="loadConfigViewer(configViewer.app, true)">
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
                         刷新
@@ -90,8 +90,8 @@
                     </button>
                 </div>
             </div>
-            <div class="config-viewer-body" v-if="configViewer.open">
-                <div class="config-viewer-path mono" v-if="configViewer.path">{{ configViewer.path }}</div>
+            <div v-if="configViewer.open" class="config-viewer-body">
+                <div v-if="configViewer.path" class="config-viewer-path mono">{{ configViewer.path }}</div>
                 <pre class="config-viewer-code"><code v-if="configViewer.loading">加载中…</code><code v-else>{{ configViewer.content || '（无内容 / 文件不存在）' }}</code></pre>
             </div>
         </div>
@@ -109,7 +109,7 @@
 
             <div v-else class="provider-card-grid">
                 <div v-for="p in providers" :key="p.id" class="provider-card" :class="{ active: isActiveProvider(p) }">
-                    <span class="provider-current-badge" v-if="isActiveProvider(p)">当前</span>
+                    <span v-if="isActiveProvider(p)" class="provider-current-badge">当前</span>
                     <div class="provider-card-head">
                         <div class="provider-icon" :style="{ color: p.icon_color || brandColor(p.icon) }">
                             <span v-if="hasIconImage(p.icon)" class="provider-icon-svg" v-html="iconSvg(p.icon)!"></span>
@@ -120,15 +120,15 @@
                             <span class="provider-card-cat" :class="p.category">{{ CATEGORY_LABELS[p.category] }} · {{ scopeLabel(p.scope) }}</span>
                         </div>
                     </div>
-                    <div class="provider-card-url mono" v-if="p.base_url">{{ p.base_url }}</div>
-                    <div class="provider-card-url" v-else>官方登录</div>
+                    <div v-if="p.base_url" class="provider-card-url mono">{{ p.base_url }}</div>
+                    <div v-else class="provider-card-url">官方登录</div>
                     <!-- 模型摘要 -->
-                    <div class="provider-models" v-if="modelSummary(p).length">
+                    <div v-if="modelSummary(p).length" class="provider-models">
                         <span v-for="(m, i) in modelSummary(p)" :key="i" class="model-tag" :class="m.role.toLowerCase()">
-                            {{ m.role }}: {{ m.model }}<span class="model-1m-mark" v-if="m.oneM"> ·1M</span>
+                            {{ m.role }}: {{ m.model }}<span v-if="m.oneM" class="model-1m-mark"> ·1M</span>
                         </span>
                     </div>
-                    <div class="provider-models" v-else>
+                    <div v-else class="provider-models">
                         <span class="model-tag default">默认模型</span>
                     </div>
                     <div class="provider-card-actions">
@@ -178,7 +178,7 @@
                                 :class="{ active: editor.appTab === 'claude' }"
                                 @click="switchAppTab('claude')"
                             >
-                                <span class="tab-icon" v-if="iconSvg('claude')" v-html="iconSvg('claude')!"></span>
+                                <span v-if="iconSvg('claude')" class="tab-icon" v-html="iconSvg('claude')!"></span>
                                 Claude Code
                             </button>
                             <button
@@ -186,7 +186,7 @@
                                 :class="{ active: editor.appTab === 'codex' }"
                                 @click="switchAppTab('codex')"
                             >
-                                <span class="tab-icon" v-if="iconSvg('openai')" v-html="iconSvg('openai')!"></span>
+                                <span v-if="iconSvg('openai')" class="tab-icon" v-html="iconSvg('openai')!"></span>
                                 Codex CLI
                             </button>
                         </div>
@@ -221,7 +221,7 @@
                     <!-- 步骤 2: 表单 -->
                     <div v-else class="cli-modal-body">
                         <!-- 已选预设提示 -->
-                        <div class="selected-preset-bar" v-if="!editor.isEdit && editor.form.preset_id">
+                        <div v-if="!editor.isEdit && editor.form.preset_id" class="selected-preset-bar">
                             <div class="provider-icon sm" :style="{ color: editor.form.icon_color || brandColor(editor.form.icon) }">
                                 <span v-if="hasIconImage(editor.form.icon)" class="provider-icon-svg" v-html="iconSvg(editor.form.icon)!"></span>
                                 <span v-else>{{ iconText(editor.form.name) }}</span>
@@ -263,7 +263,7 @@
                             </label>
 
                             <!-- Base URL (官方/云厂商隐藏) -->
-                            <label class="cli-field" v-if="editor.form.category !== 'official' && editor.form.category !== 'cloud_provider'">
+                            <label v-if="editor.form.category !== 'official' && editor.form.category !== 'cloud_provider'" class="cli-field">
                                 <span>API 端点地址</span>
                                 <input v-model="editor.form.base_url" class="mono" placeholder="https://your-api-endpoint.com" />
                                 <span class="field-hint">💡 填写兼容对应协议的服务端点地址，不要以斜杠结尾</span>
@@ -271,7 +271,7 @@
                         </div>
 
                         <!-- ===== 分区: 模型配置 (仅 Claude) ===== -->
-                        <div class="form-section" v-if="editor.appTab === 'claude'">
+                        <div v-if="editor.appTab === 'claude'" class="form-section">
                             <div class="form-section-title">
                                 <span>模型配置</span>
                                 <button
@@ -279,7 +279,7 @@
                                     :disabled="modelsLoading || !editor.form.base_url || editor.form.category === 'official'"
                                     @click="onFetchModels"
                                 >
-                                    <span class="fetch-spinner" v-if="modelsLoading"></span>
+                                    <span v-if="modelsLoading" class="fetch-spinner"></span>
                                     {{ modelsLoading ? '获取中…' : '🔄 获取模型' }}
                                 </button>
                             </div>
@@ -305,7 +305,7 @@
                                         title="显示名称 (影响 Claude Code /model 菜单, 可选)"
                                     />
                                     <label class="model-1m-toggle" title="声明支持 1M 上下文 (写入模型名 [1M] 后缀, Claude Code 原生识别)">
-                                        <input type="checkbox" v-model="editor.form.sonnet_1m" />
+                                        <input v-model="editor.form.sonnet_1m" type="checkbox" />
                                         <span class="model-1m-label">1M</span>
                                     </label>
                                 </div>
@@ -324,7 +324,7 @@
                                         title="显示名称 (影响 Claude Code /model 菜单, 可选)"
                                     />
                                     <label class="model-1m-toggle" title="声明支持 1M 上下文">
-                                        <input type="checkbox" v-model="editor.form.opus_1m" />
+                                        <input v-model="editor.form.opus_1m" type="checkbox" />
                                         <span class="model-1m-label">1M</span>
                                     </label>
                                 </div>
@@ -351,11 +351,11 @@
                                 <input v-model="editor.form.model" class="mono" list="xuya-fetched-models" placeholder="留空则按 Sonnet → Opus → Haiku 取主模型" />
                                 <span class="field-hint">💡 Claude Code 按角色分别使用模型 (ANTHROPIC_DEFAULT_*_MODEL)。勾选 1M 会给对应模型名追加 [1M] 后缀，启用百万 token 上下文窗口。</span>
                             </label>
-                            <span class="field-hint" v-if="fetchedModels.length">✅ 已获取 {{ fetchedModels.length }} 个模型，可在输入框下拉选择</span>
+                            <span v-if="fetchedModels.length" class="field-hint">✅ 已获取 {{ fetchedModels.length }} 个模型，可在输入框下拉选择</span>
                         </div>
 
                         <!-- ===== 分区: Codex 凭据 (仅 Codex) ===== -->
-                        <div class="form-section" v-if="editor.appTab === 'codex'">
+                        <div v-if="editor.appTab === 'codex'" class="form-section">
                             <div class="form-section-title">Codex 凭据</div>
                             <label class="cli-field">
                                 <span><span class="file-badge">auth.json</span> <span class="req">*</span></span>
@@ -387,7 +387,7 @@
                         </div>
                         <div v-if="advancedOpen" class="advanced-section form-section">
                             <!-- Claude 认证字段 -->
-                            <label class="cli-field" v-if="editor.appTab === 'claude'">
+                            <label v-if="editor.appTab === 'claude'" class="cli-field">
                                 <span>认证字段</span>
                                 <select v-model="editor.form.auth_field">
                                     <option value="ANTHROPIC_AUTH_TOKEN">ANTHROPIC_AUTH_TOKEN（默认）</option>

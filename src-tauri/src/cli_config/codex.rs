@@ -132,7 +132,10 @@ fn write_auth_from_fields(provider: &CliProvider, auth_path: &PathBuf) -> std::i
 /// 用表单字段生成 config.toml
 /// 对齐 cc-switch generateThirdPartyConfig: 完整写出 model_provider + [model_providers.custom]
 /// 这样字段模式 (未填双编辑器) 切过去 Codex 也能正常工作。
-fn write_config_toml_from_fields(provider: &CliProvider, cfg_path: &PathBuf) -> std::io::Result<()> {
+fn write_config_toml_from_fields(
+    provider: &CliProvider,
+    cfg_path: &PathBuf,
+) -> std::io::Result<()> {
     // 字段模式: 完整生成, 不保留旧 table (避免半残配置混入)
     let model = primary_codex_model(provider);
     let provider_name = if provider.name.is_empty() {
@@ -149,10 +152,7 @@ fn write_config_toml_from_fields(provider: &CliProvider, cfg_path: &PathBuf) -> 
 
     text.push_str("[model_providers.custom]\n");
     text.push_str(&format!("name = {}\n", toml_quote(&provider_name)));
-    text.push_str(&format!(
-        "base_url = {}\n",
-        toml_quote(&provider.base_url)
-    ));
+    text.push_str(&format!("base_url = {}\n", toml_quote(&provider.base_url)));
     text.push_str("wire_api = \"responses\"\n");
     text.push_str("requires_openai_auth = true\n");
 

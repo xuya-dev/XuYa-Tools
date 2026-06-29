@@ -27,11 +27,11 @@
           <span class="label">类型</span>
           <span class="value">{{ parsed.header.typ || '—' }}</span>
         </div>
-        <div class="overview-item" v-if="issuedAt">
+        <div v-if="issuedAt" class="overview-item">
           <span class="label">签发于</span>
           <span class="value">{{ issuedAt }}</span>
         </div>
-        <div class="overview-item" v-if="expiresAt">
+        <div v-if="expiresAt" class="overview-item">
           <span class="label">过期时间</span>
           <span class="value" :class="{ expired: isExpired, valid: !isExpired }">
             {{ expiresAt }}
@@ -86,7 +86,6 @@ import ToolShell from '@/components/layout/ToolShell.vue';
 import { copyToClipboard } from '@/composables/useClipboard';
 
 const token = ref('');
-const errorMsg = ref('');
 
 interface Parsed {
   parts: string[];
@@ -96,30 +95,40 @@ interface Parsed {
   payloadRaw: string;
 }
 
-const parsed = computed<Parsed | null>(() => {
-  errorMsg.value = '';
+type ParseResult = { ok: true; data: Parsed } | { ok: false; error: string } | null;
+
+const parsedResult = computed<ParseResult>(() => {
   const t = token.value.trim();
   if (!t) return null;
   const parts = t.split('.');
   if (parts.length !== 3) {
-    errorMsg.value = 'JWT 格式错误:应由 3 段 (header.payload.signature) 用点号分隔。';
-    return null;
+    return { ok: false, error: 'JWT 格式错误:应由 3 段 (header.payload.signature) 用点号分隔。' };
   }
   try {
     const header = JSON.parse(b64urlDecode(parts[0] ?? ''));
     const payload = JSON.parse(b64urlDecode(parts[1] ?? ''));
     return {
-      parts,
-      header,
-      payload,
-      headerRaw: JSON.stringify(header, null, 2),
-      payloadRaw: JSON.stringify(payload, null, 2),
+      ok: true,
+      data: {
+        parts,
+        header,
+        payload,
+        headerRaw: JSON.stringify(header, null, 2),
+        payloadRaw: JSON.stringify(payload, null, 2),
+      },
     };
   } catch (e) {
-    errorMsg.value = `解码失败:${e instanceof Error ? e.message : String(e)}`;
-    return null;
+    return { ok: false, error: `解码失败:${e instanceof Error ? e.message : String(e)}` };
   }
 });
+
+const errorMsg = computed(() =>
+  parsedResult.value && !parsedResult.value.ok ? parsedResult.value.error : '',
+);
+
+const parsed = computed<Parsed | null>(() =>
+  parsedResult.value && parsedResult.value.ok ? parsedResult.value.data : null,
+);
 
 const issuedAt = computed(() => fmtClaim(parsed.value?.payload.iat));
 const expiresAt = computed(() => fmtClaim(parsed.value?.payload.exp));

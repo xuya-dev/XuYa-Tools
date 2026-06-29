@@ -12,7 +12,7 @@
       <ProxyPanel />
 
       <!-- 统计 (仅在反代开启后才有数据) -->
-      <div class="stats-anchor" id="stats"></div>
+      <div id="stats" class="stats-anchor"></div>
       <UsagePanel />
     </div>
   </ToolShell>

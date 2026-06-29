@@ -11,7 +11,7 @@
     </div>
 
     <div class="md-grid" :class="{ 'preview-only': view === 'preview' }">
-      <div class="md-edit-col" v-show="view !== 'preview'">
+      <div v-show="view !== 'preview'" class="md-edit-col">
         <div class="col-head"><span>Markdown</span><span class="stat">{{ md.length }} 字符</span></div>
         <textarea v-model="md" class="editor" placeholder="# 标题&#10;&#10;输入 Markdown..." spellcheck="false"></textarea>
       </div>
