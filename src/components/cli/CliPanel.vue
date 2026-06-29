@@ -391,10 +391,10 @@
                             <span v-if="fetchedModels.length" class="field-hint">✅ 已获取 {{ fetchedModels.length }} 个模型，可在输入框下拉选择</span>
                         </div>
 
-                        <!-- ===== 分区: 模型与凭据 (仅 Codex) ===== -->
+                        <!-- ===== 分区: 模型配置 (仅 Codex) ===== -->
                         <div v-if="editor.appTab === 'codex'" class="form-section">
                             <div class="form-section-title">
-                                <span>模型与凭据</span>
+                                <span>模型配置</span>
                                 <button
                                     class="fetch-models-btn"
                                     :disabled="modelsLoading || !editor.form.base_url || editor.form.category === 'official'"
@@ -410,33 +410,13 @@
                                 <span class="field-hint">Codex CLI 使用的主模型 ID</span>
                             </label>
                             <span v-if="fetchedModels.length" class="field-hint">✅ 已获取 {{ fetchedModels.length }} 个模型，可在输入框下拉选择</span>
-                            <label class="cli-field">
-                                <span><span class="file-badge">auth.json</span> <span class="req">*</span></span>
-                                <textarea
-                                    v-model="editor.form.codex_auth_json"
-                                    class="cli-textarea mono"
-                                    rows="6"
-                                    :placeholder='codexAuthPlaceholder'
-                                ></textarea>
-                                <span class="field-hint">Codex 凭据配置，API Key 会自动填入 OPENAI_API_KEY</span>
-                            </label>
-                            <label class="cli-field">
-                                <span><span class="file-badge">config.toml</span></span>
-                                <textarea
-                                    v-model="editor.form.codex_config_toml"
-                                    class="cli-textarea mono"
-                                    rows="8"
-                                    :placeholder='codexConfigPlaceholder'
-                                ></textarea>
-                                <span class="field-hint">Codex 行为配置。模型和 base_url 已由上方字段控制,此处留空则使用默认</span>
-                            </label>
                         </div>
 
                         <!-- ===== 高级选项折叠 ===== -->
                         <div class="advanced-toggle" @click="advancedOpen = !advancedOpen">
                             <span class="chevron" :class="{ open: advancedOpen }">▶</span>
                             <span>高级选项</span>
-                            <span class="advanced-toggle-hint">认证字段、API 格式、User-Agent</span>
+                            <span class="advanced-toggle-hint">认证字段、API 格式、User-Agent、原始配置文件</span>
                         </div>
                         <div v-if="advancedOpen" class="advanced-section form-section">
                             <!-- Claude 认证字段 -->
@@ -465,6 +445,28 @@
                             <label class="cli-field">
                                 <span>自定义 User-Agent（可选）</span>
                                 <input v-model="editor.form.custom_user_agent" class="mono" placeholder="Mozilla/5.0 ..." />
+                            </label>
+
+                            <!-- Codex 原始配置文件 (高级用户) -->
+                            <label v-if="editor.appTab === 'codex'" class="cli-field">
+                                <span><span class="file-badge">auth.json</span>（高级，留空则自动生成）</span>
+                                <textarea
+                                    v-model="editor.form.codex_auth_json"
+                                    class="cli-textarea mono"
+                                    rows="6"
+                                    :placeholder='codexAuthPlaceholder'
+                                ></textarea>
+                                <span class="field-hint">填入后完全覆盖自动生成的凭据。API Key 会自动填入 OPENAI_API_KEY</span>
+                            </label>
+                            <label v-if="editor.appTab === 'codex'" class="cli-field">
+                                <span><span class="file-badge">config.toml</span>（高级，留空则自动生成）</span>
+                                <textarea
+                                    v-model="editor.form.codex_config_toml"
+                                    class="cli-textarea mono"
+                                    rows="8"
+                                    :placeholder='codexConfigPlaceholder'
+                                ></textarea>
+                                <span class="field-hint">填入后完全覆盖自动生成的配置。模型和 base_url 已由上方字段控制</span>
                             </label>
                         </div>
                     </div>
