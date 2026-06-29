@@ -6,9 +6,10 @@
         <div class="md-search">
           <Search :size="15" />
           <input
+            ref="searchInputEl"
             v-model="keyword"
             type="text"
-            placeholder="搜索工具..."
+            placeholder="搜索工具... (Ctrl/⌘+K)"
             spellcheck="false"
           />
           <button v-if="keyword" class="md-search-clear" @click="keyword = ''">
@@ -91,27 +92,42 @@
 
     <!-- 右侧:工具详情(路由) -->
     <section class="md-detail">
-      <router-view v-slot="{ Component }">
-        <transition name="fade" mode="out-in">
-          <component :is="Component" />
-        </transition>
-      </router-view>
+      <ErrorBoundary>
+        <router-view v-slot="{ Component }">
+          <transition name="fade" mode="out-in">
+            <component :is="Component" />
+          </transition>
+        </router-view>
+      </ErrorBoundary>
     </section>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { Search, SearchX, X, Star, Settings } from '@lucide/vue';
 import { tools, CATEGORY_LABELS, type ToolMeta, type ToolCategory } from '@/config/tools';
 import { useFavorites } from '@/composables/useFavorites';
+import ErrorBoundary from './ErrorBoundary.vue';
 
 const router = useRouter();
 const route = useRoute();
 const { favorites, isFavorite, toggleFavorite } = useFavorites();
 
 const keyword = ref('');
+const searchInputEl = ref<HTMLInputElement | null>(null);
+
+function focusSearch(e: KeyboardEvent) {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+    e.preventDefault();
+    searchInputEl.value?.focus();
+    searchInputEl.value?.select();
+  }
+}
+
+onMounted(() => window.addEventListener('keydown', focusSearch));
+onUnmounted(() => window.removeEventListener('keydown', focusSearch));
 
 const filteredTools = computed(() => {
   const kw = keyword.value.trim().toLowerCase();
