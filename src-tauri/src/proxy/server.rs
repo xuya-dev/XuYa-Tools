@@ -88,26 +88,46 @@ impl ProxyServer {
         self.state.clone()
     }
 
-    /// 启动服务器, port=0 表示由系统分配空闲端口
-    pub async fn start(&self, address: &str, port: u16) -> Result<ProxyServerInfo, String> {
+    /// 启动服务器: 优先绑定 base_port, 占用时尝试后续 range 个端口。
+    /// range=0 时只尝试 base_port 本身。
+    pub async fn start_with_fallback(
+        &self,
+        address: &str,
+        base_port: u16,
+        range: u16,
+    ) -> Result<ProxyServerInfo, String> {
         if self.shutdown_tx.read().await.is_some() {
             return Err("代理服务器已在运行".to_string());
         }
 
-        let addr: SocketAddr = format!("{address}:{port}")
-            .parse()
-            .map_err(|e| format!("无效地址: {e}"))?;
+        let (listener, actual_port) = {
+            let mut last_err = String::new();
+            let mut found = None;
+            for offset in 0..=range {
+                let port = base_port + offset;
+                let addr: SocketAddr = format!("{address}:{port}")
+                    .parse()
+                    .map_err(|e| format!("无效地址: {e}"))?;
+                match tokio::net::TcpListener::bind(addr).await {
+                    Ok(l) => {
+                        let p = l
+                            .local_addr()
+                            .map_err(|e| format!("获取端口失败: {e}"))?
+                            .port();
+                        found = Some((l, p));
+                        break;
+                    }
+                    Err(e) => last_err = format!("端口 {port} 绑定失败: {e}"),
+                }
+            }
+            match found {
+                Some(v) => v,
+                None => return Err(last_err),
+            }
+        };
 
         let (shutdown_tx, shutdown_rx) = oneshot::channel();
         let app = build_router(self.state.clone());
-
-        let listener = tokio::net::TcpListener::bind(addr)
-            .await
-            .map_err(|e| format!("端口绑定失败: {e}"))?;
-        let actual_port = listener
-            .local_addr()
-            .map_err(|e| format!("获取端口失败: {e}"))?
-            .port();
 
         let started_at = now_secs();
         let state = self.state.clone();

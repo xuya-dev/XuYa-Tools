@@ -24,6 +24,10 @@ use crate::db::Database;
 use server::{ProxyServer, ProxyState, UpstreamTarget};
 use types::{ProxyServerInfo, ProxyStatus, TakeoverResult};
 
+/// 固定代理端口 (避免每次重启变化)
+const FIXED_PORT: u16 = 17117;
+const PORT_RANGE: u16 = 10;
+
 /// 持久化的自启动配置 — 文件存在即代表代理上次在运行,重启后应自动恢复。
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 struct AutoStartConfig {
@@ -182,10 +186,12 @@ impl ProxyService {
         self.save_autostart().await;
     }
 
-    /// 启动代理。若已设置上游则自动生效。
+    /// 启动代理。优先绑定固定端口 17117, 占用时向后尝试最多 10 个端口。
     pub async fn start(&self) -> Result<ProxyServerInfo, String> {
         let server = ProxyServer::new(self.state.clone());
-        let info = server.start("127.0.0.1", 0).await?;
+        let info = server
+            .start_with_fallback("127.0.0.1", FIXED_PORT, PORT_RANGE)
+            .await?;
         *self.server.write().await = Some(server);
         // 持久化: 文件存在 = 下次重启自动启动
         self.save_autostart().await;
