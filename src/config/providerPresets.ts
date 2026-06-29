@@ -297,6 +297,7 @@ export const CODEX_PRESETS: ProviderPreset[] = [
         websiteUrl: 'https://platform.moonshot.cn',
         apiKeyUrl: 'https://platform.moonshot.cn/console',
         apiFormat: 'openai_chat',
+        model: 'kimi-k2-0905-preview',
         icon: 'kimi',
     },
     {
@@ -308,6 +309,7 @@ export const CODEX_PRESETS: ProviderPreset[] = [
         websiteUrl: 'https://platform.moonshot.cn',
         apiKeyUrl: 'https://platform.moonshot.cn/console',
         apiFormat: 'openai_chat',
+        model: 'kimi-k2-0905-preview',
         icon: 'kimi',
     },
     {
@@ -319,6 +321,7 @@ export const CODEX_PRESETS: ProviderPreset[] = [
         websiteUrl: 'https://platform.deepseek.com',
         apiKeyUrl: 'https://platform.deepseek.com/api_keys',
         apiFormat: 'openai_chat',
+        model: 'deepseek-chat',
         icon: 'deepseek',
     },
     {
@@ -330,6 +333,7 @@ export const CODEX_PRESETS: ProviderPreset[] = [
         websiteUrl: 'https://open.bigmodel.cn',
         apiKeyUrl: 'https://open.bigmodel.cn/usercenter/apikeys',
         apiFormat: 'openai_chat',
+        model: 'glm-4.6',
         icon: 'glm',
     },
     {
@@ -341,6 +345,7 @@ export const CODEX_PRESETS: ProviderPreset[] = [
         websiteUrl: 'https://bailian.console.aliyun.com',
         apiKeyUrl: 'https://bailian.console.aliyun.com/?apiKey=1',
         apiFormat: 'openai_responses',
+        model: 'qwen-plus',
         icon: 'bailian',
     },
     {
@@ -352,6 +357,7 @@ export const CODEX_PRESETS: ProviderPreset[] = [
         websiteUrl: 'https://www.volcengine.com',
         apiKeyUrl: 'https://console.volcengine.com/ark/region:ark+cn-beijing/apiKey',
         apiFormat: 'openai_chat',
+        model: 'doubao-1-5-pro-256k-250115',
         icon: 'volcano',
     },
     {
@@ -363,6 +369,7 @@ export const CODEX_PRESETS: ProviderPreset[] = [
         websiteUrl: 'https://platform.minimaxi.com',
         apiKeyUrl: 'https://platform.minimaxi.com/user-center/basic-information/interface-key',
         apiFormat: 'openai_responses',
+        model: 'MiniMax-M1',
         icon: 'minimax',
     },
     {
@@ -374,6 +381,7 @@ export const CODEX_PRESETS: ProviderPreset[] = [
         websiteUrl: 'https://platform.stepfun.com',
         apiKeyUrl: 'https://platform.stepfun.com/interface-key',
         apiFormat: 'openai_chat',
+        model: 'step-2-16k',
         icon: 'stepfun',
     },
     {
@@ -385,6 +393,7 @@ export const CODEX_PRESETS: ProviderPreset[] = [
         websiteUrl: 'https://platform.longcat.chat',
         apiKeyUrl: 'https://platform.longcat.chat/operation/apikey',
         apiFormat: 'openai_responses',
+        model: 'longcat-flash',
         icon: 'longcat',
     },
     {

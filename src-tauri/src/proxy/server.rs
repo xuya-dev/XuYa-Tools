@@ -197,14 +197,10 @@ async fn forward_handler(req: Request<Body>, state: ProxyState) -> Response<Body
         .unwrap_or_default();
     let app_type = infer_app_type(&original_path);
 
-    // 按 app_type 选 target; 未匹配时优先 Claude (避免 HashMap 随机)
+    // P0-1: 严格按 app_type 选 target, 不回落到其他 app (防止 Codex 请求泄漏到 Claude 上游)
     let target = {
         let targets = state.targets.read().await;
-        targets
-            .get(&app_type)
-            .cloned()
-            .or_else(|| targets.get("claude").cloned())
-            .or_else(|| targets.values().next().cloned())
+        targets.get(&app_type).cloned()
     };
     let Some(target) = target else {
         state
@@ -892,7 +888,7 @@ fn infer_app_type(path: &str) -> String {
     {
         "codex".to_string()
     } else {
-        "claude".to_string()
+        "unknown".to_string()
     }
 }
 

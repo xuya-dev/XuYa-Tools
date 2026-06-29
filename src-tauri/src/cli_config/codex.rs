@@ -136,7 +136,6 @@ fn write_config_toml_from_fields(
     provider: &CliProvider,
     cfg_path: &PathBuf,
 ) -> std::io::Result<()> {
-    // 字段模式: 完整生成, 不保留旧 table (避免半残配置混入)
     let model = primary_codex_model(provider);
     let provider_name = if provider.name.is_empty() {
         "custom".to_string()
@@ -144,16 +143,30 @@ fn write_config_toml_from_fields(
         provider.name.clone()
     };
 
+    // P1-2: wire_api 根据 api_format 决定, 不再硬编码 "responses"
+    let wire_api = match provider.api_format {
+        crate::cli_config::types::ApiFormat::OpenaiChat => "chat",
+        crate::cli_config::types::ApiFormat::OpenaiResponses => "responses",
+        // anthropic / gemini_native 走代理转换, Codex CLI 侧用 chat 兼容
+        _ => "chat",
+    };
+    // openai_responses 模式需要 response storage; chat 模式不需要
+    let needs_response_storage = wire_api == "responses";
+
     let mut text = String::new();
     text.push_str("model_provider = \"custom\"\n");
     text.push_str(&format!("model = {}\n", toml_quote(&model)));
-    text.push_str("model_reasoning_effort = \"high\"\n");
-    text.push_str("disable_response_storage = true\n\n");
+    if needs_response_storage {
+        text.push_str("model_reasoning_effort = \"high\"\n");
+        text.push_str("disable_response_storage = true\n\n");
+    } else {
+        text.push('\n');
+    }
 
     text.push_str("[model_providers.custom]\n");
     text.push_str(&format!("name = {}\n", toml_quote(&provider_name)));
     text.push_str(&format!("base_url = {}\n", toml_quote(&provider.base_url)));
-    text.push_str("wire_api = \"responses\"\n");
+    text.push_str(&format!("wire_api = \"{wire_api}\"\n"));
     text.push_str("requires_openai_auth = true\n");
 
     let tmp = cfg_path.with_extension("toml.tmp");
@@ -253,12 +266,24 @@ pub fn update_config_base_url(base_url: &str) -> std::io::Result<()> {
     fs::rename(&tmp, &path)
 }
 
-/// 接管模式下切 provider: 只更新 config.toml 的 model 字段, 不动 base_url。
+/// 接管模式下切 provider: 更新 config.toml 的 model + wire_api, 不动 base_url (P2-10)。
 pub fn update_live_model(provider: &CliProvider) -> std::io::Result<()> {
     let path = codex_config_path();
     let content = fs::read_to_string(&path).unwrap_or_default();
     let model = primary_codex_model(provider);
-    let updated = toml_replace_value(&content, None, "model", &model);
+    let mut updated = toml_replace_value(&content, None, "model", &model);
+    // 同步 wire_api 以匹配新 provider 的 api_format
+    let wire_api = match provider.api_format {
+        crate::cli_config::types::ApiFormat::OpenaiChat => "chat",
+        crate::cli_config::types::ApiFormat::OpenaiResponses => "responses",
+        _ => "chat",
+    };
+    updated = toml_replace_value(
+        &updated,
+        Some("model_providers.custom"),
+        "wire_api",
+        wire_api,
+    );
     let tmp = path.with_extension("toml.tmp");
     fs::write(&tmp, updated)?;
     fs::rename(&tmp, &path)

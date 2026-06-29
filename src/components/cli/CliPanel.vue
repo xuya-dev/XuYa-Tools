@@ -247,6 +247,26 @@
                             <span class="selected-preset-cat" :class="editor.form.category">{{ CATEGORY_LABELS[editor.form.category] }}</span>
                         </div>
 
+                        <!-- 编辑模式下: scope='both' 时展示 app-tab 切换器 (P1-1) -->
+                        <div v-if="editor.isEdit && editor.form.scope === 'both'" class="app-tabs">
+                            <button
+                                class="app-tab"
+                                :class="{ active: editor.appTab === 'claude' }"
+                                @click="editor.appTab = 'claude'"
+                            >
+                                <span v-if="iconSvg('claude')" class="tab-icon" v-html="iconSvg('claude')!"></span>
+                                Claude
+                            </button>
+                            <button
+                                class="app-tab"
+                                :class="{ active: editor.appTab === 'codex' }"
+                                @click="editor.appTab = 'codex'"
+                            >
+                                <span v-if="iconSvg('openai')" class="tab-icon" v-html="iconSvg('openai')!"></span>
+                                Codex
+                            </button>
+                        </div>
+
                         <!-- ===== 分区: 基础信息 ===== -->
                         <div class="form-section">
                             <div class="form-section-title">基础信息</div>
@@ -371,14 +391,25 @@
                             <span v-if="fetchedModels.length" class="field-hint">✅ 已获取 {{ fetchedModels.length }} 个模型，可在输入框下拉选择</span>
                         </div>
 
-                        <!-- ===== 分区: Codex 凭据 (仅 Codex) ===== -->
+                        <!-- ===== 分区: Codex 配置 (仅 Codex) ===== -->
                         <div v-if="editor.appTab === 'codex'" class="form-section">
-                            <div class="form-section-title">Codex 配置</div>
+                            <div class="form-section-title">
+                                <span>Codex 配置</span>
+                                <button
+                                    class="fetch-models-btn"
+                                    :disabled="modelsLoading || !editor.form.base_url || editor.form.category === 'official'"
+                                    @click="onFetchModels"
+                                >
+                                    <span v-if="modelsLoading" class="fetch-spinner"></span>
+                                    {{ modelsLoading ? '获取中…' : '🔄 获取模型' }}
+                                </button>
+                            </div>
                             <label class="cli-field">
                                 <span>模型 <span class="req">*</span></span>
-                                <input v-model="editor.form.model" class="mono" placeholder="如 gpt-4o、o3、claude-sonnet-4" />
+                                <input v-model="editor.form.model" class="mono" list="xuya-fetched-models" placeholder="如 gpt-4o、o3、deepseek-chat" />
                                 <span class="field-hint">Codex CLI 使用的主模型 ID</span>
                             </label>
+                            <span v-if="fetchedModels.length" class="field-hint">✅ 已获取 {{ fetchedModels.length }} 个模型，可在输入框下拉选择</span>
                             <label class="cli-field">
                                 <span><span class="file-badge">auth.json</span> <span class="req">*</span></span>
                                 <textarea

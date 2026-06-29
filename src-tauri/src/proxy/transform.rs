@@ -696,6 +696,7 @@ pub struct AnthropicSseConverter {
     started: bool,
     finished: bool,
     tool_call_index: u32,
+    current_block_type: Option<&'static str>,
 }
 
 impl AnthropicSseConverter {
@@ -705,6 +706,7 @@ impl AnthropicSseConverter {
             started: false,
             finished: false,
             tool_call_index: 0,
+            current_block_type: None,
         }
     }
 
@@ -817,8 +819,18 @@ impl AnthropicSseConverter {
                 }
             }
             "content_block_start" => {
-                if data.pointer("/content_block/type").and_then(|t| t.as_str()) == Some("tool_use")
-                {
+                let btype = data
+                    .pointer("/content_block/type")
+                    .and_then(|t| t.as_str())
+                    .unwrap_or("");
+                self.current_block_type = Some(if btype == "tool_use" {
+                    "tool_use"
+                } else if btype == "thinking" {
+                    "thinking"
+                } else {
+                    "text"
+                });
+                if btype == "tool_use" {
                     let id = data
                         .pointer("/content_block/id")
                         .and_then(|i| i.as_str())
@@ -834,8 +846,11 @@ impl AnthropicSseConverter {
                 }
             }
             "content_block_stop" => {
-                // tool_use block 结束 → 增加下一个 tool_call index
-                // (Anthropic 每个 tool_use 是独立 block, OpenAI 用 index 区分)
+                // P1-3: tool_use block 结束 → 递增 tool_call_index 供下一个 tool call 使用
+                if self.current_block_type == Some("tool_use") {
+                    self.tool_call_index += 1;
+                }
+                self.current_block_type = None;
             }
             "message_delta" => {
                 let stop_reason = data.pointer("/delta/stop_reason").and_then(|s| s.as_str());
@@ -989,7 +1004,7 @@ impl SseConverter {
                 self.ensure_block(
                     "thinking",
                     out,
-                    |_| json!({"type": "thinking", "thinking": ""}),
+                    || json!({"type": "thinking", "thinking": ""}),
                 );
                 out.push_str(&format!(
                     "event: content_block_delta\ndata: {}\n\n",
@@ -1008,7 +1023,7 @@ impl SseConverter {
             .and_then(|c| c.as_str())
         {
             if !content.is_empty() {
-                self.ensure_block("text", out, |_| json!({"type": "text", "text": ""}));
+                self.ensure_block("text", out, || json!({"type": "text", "text": ""}));
                 out.push_str(&format!(
                     "event: content_block_delta\ndata: {}\n\n",
                     json!({
@@ -1056,7 +1071,7 @@ impl SseConverter {
         &mut self,
         desired: &'static str,
         out: &mut String,
-        make_block: impl Fn(usize) -> Value,
+        make_block: impl Fn() -> Value,
     ) {
         if self.current_block_type == Some(desired) {
             return;
@@ -1070,7 +1085,7 @@ impl SseConverter {
             json!({
                 "type": "content_block_start",
                 "index": self.block_index,
-                "content_block": make_block(self.block_index)
+                "content_block": make_block(),
             }),
         ));
     }
