@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { fileURLToPath, URL } from 'node:url'
@@ -30,6 +31,17 @@ export default defineConfig(async () => ({
     watch: {
       // 忽略 src-tauri 目录的变化
       ignored: ["**/src-tauri/**"],
+    },
+  },
+
+  // vitest 单元测试配置
+  test: {
+    environment: 'happy-dom',
+    include: ['src/**/*.{test,spec}.ts'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'html'],
+      include: ['src/composables/**', 'src/utils/**'],
     },
   },
 }));
