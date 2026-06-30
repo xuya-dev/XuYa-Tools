@@ -41,6 +41,9 @@ export interface CliProvider {
     codex_auth_json: string;
     codex_config_toml: string;
     claude_settings_json: string;
+    quota_provider_type: string;
+    quota_access_token: string;
+    quota_user_id: string;
     updated_at: number;
 }
 
@@ -400,13 +403,19 @@ const balanceCache = ref<Record<string, { result: BalanceResult; ts: number }>>(
 async function fetchBalance(
     p: CliProvider,
 ): Promise<BalanceResult> {
-    if (!p.base_url || !p.api_key) {
-        return { success: false, items: [], error: '缺少 base_url 或 API Key', isPlan: false };
+    if (!p.base_url) {
+        return { success: false, items: [], error: '缺少 base_url', isPlan: false };
+    }
+    if (!p.api_key && !p.quota_access_token) {
+        return { success: false, items: [], error: '缺少 API Key', isPlan: false };
     }
     try {
         const result = await invoke<BalanceResult>('fetch_balance', {
             baseUrl: p.base_url,
             apiKey: p.api_key,
+            quotaProviderType: p.quota_provider_type || null,
+            quotaAccessToken: p.quota_access_token || null,
+            quotaUserId: p.quota_user_id || null,
         });
         balanceCache.value[p.id] = { result, ts: Date.now() };
         return result;

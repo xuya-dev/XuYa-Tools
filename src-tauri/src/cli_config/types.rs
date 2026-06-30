@@ -201,6 +201,15 @@ pub struct CliProvider {
     /// Claude settings.json 完整内容 (高级模式, 留空则自动生成)
     #[serde(default)]
     pub claude_settings_json: String,
+    /// 余额查询类型: "newapi" | "sub2api" | "" (空=自动识别)
+    #[serde(default)]
+    pub quota_provider_type: String,
+    /// NewAPI 访问令牌 (仅 newapi 类型)
+    #[serde(default)]
+    pub quota_access_token: String,
+    /// NewAPI 用户 ID (仅 newapi 类型)
+    #[serde(default)]
+    pub quota_user_id: String,
     /// 最后更新时间 (Unix 秒)
     pub updated_at: i64,
 }

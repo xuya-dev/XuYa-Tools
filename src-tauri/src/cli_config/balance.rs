@@ -72,11 +72,36 @@ fn detect_provider(base_url: &str) -> Option<Provider> {
     }
 }
 
-/// 统一入口
+/// 统一入口 (自动识别 + 显式类型)
+#[allow(dead_code)]
 pub async fn get_balance(base_url: &str, api_key: &str) -> BalanceResult {
-    if api_key.is_empty() {
+    get_balance_with_quota(base_url, api_key, "", "", "").await
+}
+
+/// 带显式查询类型的入口
+pub async fn get_balance_with_quota(
+    base_url: &str,
+    api_key: &str,
+    quota_type: &str,
+    quota_access_token: &str,
+    quota_user_id: &str,
+) -> BalanceResult {
+    if api_key.is_empty() && quota_access_token.is_empty() {
         return BalanceResult::error("API Key 为空");
     }
+
+    // 显式类型优先
+    match quota_type.to_lowercase().as_str() {
+        "newapi" | "new-api" | "new_api" => {
+            return query_newapi(base_url, quota_access_token, quota_user_id).await;
+        }
+        "sub2api" | "sub2-api" | "sub2_api" => {
+            return query_sub2api(base_url, api_key).await;
+        }
+        _ => {}
+    }
+
+    // 自动识别
     let Some(provider) = detect_provider(base_url) else {
         return BalanceResult::unsupported();
     };
@@ -89,6 +114,175 @@ pub async fn get_balance(base_url: &str, api_key: &str) -> BalanceResult {
     }
 }
 
+// ==================== New API (自定义中转站) ====================
+
+async fn query_newapi(base_url: &str, access_token: &str, user_id: &str) -> BalanceResult {
+    if access_token.is_empty() || user_id.is_empty() {
+        return BalanceResult::error("New API 需要配置访问令牌和用户 ID");
+    }
+
+    // 构造 URL: 剥离 /v1 等后缀 + /api/user/self
+    let mut base = base_url.trim_end_matches('/').to_string();
+    for suffix in [
+        "/v1/chat/completions",
+        "/v1/responses",
+        "/v1/messages",
+        "/v1",
+    ] {
+        if base.ends_with(suffix) {
+            base.truncate(base.len() - suffix.len());
+            break;
+        }
+    }
+    let url = format!("{}/api/user/self", base.trim_end_matches('/'));
+
+    let client = match reqwest::Client::builder()
+        .timeout(Duration::from_secs(TIMEOUT_SECS))
+        .build()
+    {
+        Ok(c) => c,
+        Err(e) => return BalanceResult::error(format!("HTTP 客户端构建失败: {e}")),
+    };
+
+    let resp = client
+        .get(&url)
+        .header("Authorization", format!("Bearer {access_token}"))
+        .header("Content-Type", "application/json")
+        .header("New-Api-User", user_id)
+        .header("User-Agent", "XuYa-Tools")
+        .send()
+        .await;
+
+    let resp = match resp {
+        Ok(r) => r,
+        Err(e) => return BalanceResult::error(format!("请求失败: {e}")),
+    };
+
+    let status = resp.status();
+    if status == reqwest::StatusCode::UNAUTHORIZED || status == reqwest::StatusCode::FORBIDDEN {
+        return BalanceResult {
+            success: true,
+            items: vec![auth_error_item("访问令牌或用户 ID 无效")],
+            error: None,
+            is_plan: false,
+        };
+    }
+    if !status.is_success() {
+        return BalanceResult::error(format!("HTTP {status}"));
+    }
+
+    let body: serde_json::Value = match resp.json().await {
+        Ok(v) => v,
+        Err(e) => return BalanceResult::error(format!("响应解析失败: {e}")),
+    };
+
+    if body.get("success").and_then(|v| v.as_bool()) == Some(false) {
+        let msg = body
+            .get("message")
+            .or_else(|| body.get("error"))
+            .and_then(|v| v.as_str())
+            .unwrap_or("查询失败");
+        return BalanceResult::error(msg);
+    }
+
+    // New API 内部 500000 单位 = 1 USD
+    let quota = parse_f64_path(&body, &["data", "quota"]).unwrap_or(0.0) / 500_000.0;
+    let used_quota = parse_f64_path(&body, &["data", "used_quota"]).unwrap_or(0.0) / 500_000.0;
+    let group = body
+        .pointer("/data/group")
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
+
+    BalanceResult {
+        success: true,
+        items: vec![BalanceItem {
+            label: if group.is_empty() {
+                "余额".into()
+            } else {
+                format!("余额 ({group})")
+            },
+            remaining: Some(quota),
+            total: Some(quota + used_quota),
+            used: Some(used_quota),
+            unit: "USD".into(),
+            is_valid: quota > 0.0,
+            invalid_message: if quota <= 0.0 {
+                Some("余额不足".into())
+            } else {
+                None
+            },
+            resets_at: None,
+        }],
+        error: None,
+        is_plan: false,
+    }
+}
+
+// ==================== Sub2API (自定义中转站) ====================
+
+async fn query_sub2api(base_url: &str, api_key: &str) -> BalanceResult {
+    // 构造 URL: 剥离 /v1/usage 等 + /v1/usage
+    let mut base = base_url.trim_end_matches('/').to_string();
+    loop {
+        let stripped = base
+            .strip_suffix("/v1/usage")
+            .or_else(|| base.strip_suffix("/usage"))
+            .or_else(|| base.strip_suffix("/v1"));
+        match stripped {
+            Some(s) => base = s.trim_end_matches('/').to_string(),
+            None => break,
+        }
+    }
+    let url = format!("{base}/v1/usage");
+
+    let body = match http_get(&url, &format!("Bearer {api_key}")).await {
+        Ok(v) => v,
+        Err(e) => return e,
+    };
+
+    // 多路径 fallback
+    let remaining =
+        parse_f64_path(&body, &["remaining"]).or_else(|| parse_f64_path(&body, &["balance"]));
+    let used = parse_f64_path(&body, &["quota", "used"])
+        .or_else(|| parse_f64_path(&body, &["usage", "total", "cost"]));
+    let total = parse_f64_path(&body, &["quota", "limit"])
+        .or_else(|| used.zip(remaining).map(|(u, r)| u + r));
+    let unit = body
+        .get("unit")
+        .or_else(|| body.pointer("/quota/unit"))
+        .and_then(|v| v.as_str())
+        .unwrap_or("USD");
+    let plan = body
+        .get("planName")
+        .or_else(|| body.get("mode"))
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
+
+    BalanceResult {
+        success: true,
+        items: vec![BalanceItem {
+            label: if plan.is_empty() {
+                "余额".into()
+            } else {
+                format!("余额 ({plan})")
+            },
+            remaining,
+            total,
+            used,
+            unit: unit.to_string(),
+            is_valid: remaining.map(|r| r > 0.0).unwrap_or(false),
+            invalid_message: if remaining.map(|r| r <= 0.0).unwrap_or(false) {
+                Some("余额不足".into())
+            } else {
+                None
+            },
+            resets_at: None,
+        }],
+        error: None,
+        is_plan: false,
+    }
+}
+
 // ==================== 工具函数 ====================
 
 fn parse_f64(obj: &serde_json::Value, field: &str) -> Option<f64> {
@@ -96,6 +290,16 @@ fn parse_f64(obj: &serde_json::Value, field: &str) -> Option<f64> {
         v.as_f64()
             .or_else(|| v.as_str().and_then(|s| s.parse().ok()))
     })
+}
+
+/// 按路径取数值 (如 ["data", "quota"])
+fn parse_f64_path(root: &serde_json::Value, path: &[&str]) -> Option<f64> {
+    let mut cur = root;
+    for &seg in path {
+        cur = cur.get(seg)?;
+    }
+    cur.as_f64()
+        .or_else(|| cur.as_str().and_then(|s| s.parse().ok()))
 }
 
 fn auth_error_item(msg: &str) -> BalanceItem {

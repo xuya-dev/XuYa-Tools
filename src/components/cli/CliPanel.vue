@@ -463,7 +463,7 @@
                         <div class="advanced-toggle" @click="advancedOpen = !advancedOpen">
                             <span class="chevron" :class="{ open: advancedOpen }">▶</span>
                             <span>高级选项</span>
-                            <span class="advanced-toggle-hint">认证字段、API 格式、User-Agent、原始配置文件</span>
+                            <span class="advanced-toggle-hint">认证字段、API 格式、User-Agent、原始配置文件、余额查询</span>
                         </div>
                         <div v-if="advancedOpen" class="advanced-section form-section">
                             <!-- Claude 认证字段 -->
@@ -524,6 +524,41 @@
                                 ></textarea>
                                 <span class="field-hint">上方为根据当前字段实时生成的预览。填入后完全覆盖自动生成的配置</span>
                             </label>
+
+                            <!-- 余额查询类型 (仅自定义分类) -->
+                            <label v-if="editor.form.category === 'custom'" class="cli-field">
+                                <span>余额查询类型</span>
+                                <select v-model="editor.form.quota_provider_type">
+                                    <option value="">自动识别</option>
+                                    <option value="sub2api">Sub2API</option>
+                                    <option value="newapi">New API</option>
+                                </select>
+                                <span class="field-hint">内置供应商自动识别,自定义供应商可手动指定查询类型</span>
+                            </label>
+
+                            <!-- New API 额外字段 -->
+                            <template v-if="editor.form.category === 'custom' && editor.form.quota_provider_type === 'newapi'">
+                                <label class="cli-field">
+                                    <span>访问令牌 <span class="req">*</span></span>
+                                    <input
+                                        v-model="editor.form.quota_access_token"
+                                        class="mono"
+                                        type="password"
+                                        autocomplete="off"
+                                        placeholder="New API System Access Token"
+                                    />
+                                    <span class="field-hint">New API 后台的 System Access Token</span>
+                                </label>
+                                <label class="cli-field">
+                                    <span>用户 ID <span class="req">*</span></span>
+                                    <input
+                                        v-model="editor.form.quota_user_id"
+                                        class="mono"
+                                        placeholder="New API 用户 ID"
+                                    />
+                                    <span class="field-hint">New API 后台的用户 ID</span>
+                                </label>
+                            </template>
                         </div>
                     </div>
 
@@ -760,6 +795,7 @@ const emptyForm = (tab: 'claude' | 'codex' = 'claude'): CliProvider => ({
     api_format: tab === 'codex' ? 'openai_chat' : 'anthropic',
     custom_user_agent: '', models_url: '', preset_id: '',
     icon: '', icon_color: '', codex_auth_json: '', codex_config_toml: '', claude_settings_json: '',
+    quota_provider_type: '', quota_access_token: '', quota_user_id: '',
     updated_at: 0,
 });
 

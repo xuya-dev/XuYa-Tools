@@ -384,6 +384,9 @@ fn new_cli_provider_template() -> Result<CliProvider, String> {
         codex_auth_json: String::new(),
         codex_config_toml: String::new(),
         claude_settings_json: String::new(),
+        quota_provider_type: String::new(),
+        quota_access_token: String::new(),
+        quota_user_id: String::new(),
         updated_at: 0,
     })
 }
@@ -495,6 +498,16 @@ fn cli_data_dir() -> PathBuf {
 async fn fetch_balance(
     base_url: String,
     api_key: String,
+    quota_provider_type: Option<String>,
+    quota_access_token: Option<String>,
+    quota_user_id: Option<String>,
 ) -> Result<cli_config::balance::BalanceResult, String> {
-    Ok(cli_config::balance::get_balance(&base_url, &api_key).await)
+    Ok(cli_config::balance::get_balance_with_quota(
+        &base_url,
+        &api_key,
+        &quota_provider_type.unwrap_or_default(),
+        &quota_access_token.unwrap_or_default(),
+        &quota_user_id.unwrap_or_default(),
+    )
+    .await)
 }
