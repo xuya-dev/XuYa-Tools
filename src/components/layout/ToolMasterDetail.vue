@@ -298,7 +298,7 @@ function goSettings() {
   box-shadow: 0 2px 6px var(--xuya-accent-glow);
 }
 .md-item.active .md-item-name {
-  color: var(--xuya-accent);
+  color: var(--xuya-text);
   font-weight: 600;
 }
 .md-item-icon {
