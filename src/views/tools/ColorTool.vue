@@ -60,7 +60,7 @@ import { Palette, Copy } from '@lucide/vue';
 import ToolShell from '@/components/layout/ToolShell.vue';
 import { copyToClipboard } from '@/composables/useClipboard';
 
-const hex = ref('#3b82f6');
+const hex = ref('#2563eb');
 
 function setHex(h: string) {
   if (/^#?[0-9a-fA-F]{6}$/.test(h)) {

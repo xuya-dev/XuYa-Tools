@@ -148,11 +148,11 @@ onUnmounted(() => { if (toastTimer) window.clearTimeout(toastTimer); });
 .proxy-head-info { display: flex; align-items: center; gap: 8px; }
 .proxy-title { font-size: 15px; font-weight: 700; }
 .proxy-status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--xuya-text-3, #888); }
-.proxy-status-dot.on { background: #34d399; box-shadow: 0 0 8px rgba(52,211,153,.6); }
+.proxy-status-dot.on { background: var(--xuya-success); box-shadow: 0 0 8px var(--xuya-success-soft); }
 .proxy-status-text { font-size: 12px; color: var(--xuya-text-2, #888); }
 .proxy-toggle-btn {
     padding: 7px 18px; font-size: 13px; font-weight: 600; border-radius: 8px; cursor: pointer;
-    background: var(--xuya-accent, #3b82f6); color: #fff; border: none; transition: .12s;
+    background: var(--xuya-accent); color: #fff; border: none; transition: .12s;
 }
 .proxy-toggle-btn:hover:not(:disabled) { filter: brightness(1.1); }
 .proxy-toggle-btn.running { background: var(--xuya-danger, #ef4444); }
@@ -170,12 +170,12 @@ onUnmounted(() => { if (toastTimer) window.clearTimeout(toastTimer); });
 .switch input { opacity: 0; width: 0; height: 0; }
 .slider { position: absolute; cursor: pointer; inset: 0; background: var(--xuya-border, #444); border-radius: 22px; transition: .2s; }
 .slider::before { content: ''; position: absolute; height: 16px; width: 16px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: .2s; }
-.switch input:checked + .slider { background: #34d399; }
+.switch input:checked + .slider { background: var(--xuya-success); }
 .switch input:checked + .slider::before { transform: translateX(18px); }
 
 .proxy-hint { margin-top: 14px; padding: 12px 14px; font-size: 12.5px; line-height: 1.6; color: var(--xuya-text-2, #888); background: var(--xuya-input-bg, rgba(127,127,127,.06)); border-radius: 8px; }
 
 .mono { font-family: var(--xuya-font-mono, 'Consolas', monospace); }
 .cli-mini-btn { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; font-size: 11px; color: var(--xuya-text-2, #888); background: var(--xuya-bg-elevated, rgba(127,127,127,.1)); border: 1px solid var(--xuya-border, rgba(127,127,127,.2)); border-radius: 6px; transition: .1s; }
-.cli-mini-btn:hover { color: var(--xuya-text, inherit); border-color: var(--xuya-accent, #3b82f6); }
+.cli-mini-btn:hover { color: var(--xuya-text, inherit); border-color: var(--xuya-accent); }
 </style>

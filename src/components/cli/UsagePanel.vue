@@ -289,10 +289,10 @@ onUnmounted(() => {
 /* 统计卡片 */
 .stat-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; margin-bottom: 20px; }
 .stat-card { display: flex; flex-direction: column; gap: 3px; padding: 12px 10px; background: var(--xuya-input-bg); border-radius: var(--xuya-radius); border: 1px solid var(--xuya-border-light); }
-.stat-card.input .stat-val { color: #3b82f6; }
-.stat-card.output .stat-val { color: #10b981; }
-.stat-card.cache-read .stat-val { color: #8b5cf6; }
-.stat-card.cache-write .stat-val { color: #f59e0b; }
+.stat-card.input .stat-val { color: var(--xuya-accent); }
+.stat-card.output .stat-val { color: var(--xuya-success); }
+.stat-card.cache-read .stat-val { color: var(--xuya-text-secondary); }
+.stat-card.cache-write .stat-val { color: var(--xuya-warn); }
 .stat-card.cost .stat-val { color: var(--xuya-text); }
 .stat-val { font-size: 18px; font-weight: 700; color: var(--xuya-text); }
 .stat-val .unit { font-size: 12px; font-weight: 500; opacity: 0.6; margin-left: 1px; }
@@ -307,9 +307,9 @@ onUnmounted(() => {
 .heatmap { display: grid; grid-template-columns: repeat(auto-fill, minmax(12px, 1fr)); gap: 3px; }
 .heatmap-cell { width: 12px; height: 12px; border-radius: 2px; }
 .heatmap-cell.l0 { background: var(--xuya-border); }
-.heatmap-cell.l1 { background: rgba(59, 130, 246, 0.25); }
-.heatmap-cell.l2 { background: rgba(59, 130, 246, 0.5); }
-.heatmap-cell.l3 { background: rgba(59, 130, 246, 0.75); }
+.heatmap-cell.l1 { background: var(--xuya-accent-soft); }
+.heatmap-cell.l2 { background: var(--xuya-accent-soft-strong); }
+.heatmap-cell.l3 { background: var(--xuya-accent); }
 .heatmap-cell.l4 { background: var(--xuya-accent); }
 .heatmap-legend { display: flex; align-items: center; gap: 4px; margin-top: 8px; font-size: 10px; color: var(--xuya-text-tertiary); }
 .heatmap-legend .heatmap-cell { width: 10px; height: 10px; }

@@ -1825,13 +1825,13 @@ onUnmounted(() => {
 }
 
 .model-tag.sonnet {
-    background: rgba(217, 119, 87, 0.13);
-    color: #d97757;
+    background: var(--xuya-accent-soft);
+    color: var(--xuya-accent);
 }
 
 .model-tag.opus {
-    background: rgba(139, 92, 246, 0.13);
-    color: #8b5cf6;
+    background: var(--xuya-success-soft);
+    color: var(--xuya-success);
 }
 
 .model-tag.haiku {
@@ -2578,13 +2578,13 @@ onUnmounted(() => {
 }
 
 .model-role-tag.sonnet {
-    background: rgba(217, 119, 87, 0.15);
-    color: #d97757;
+    background: var(--xuya-accent-soft);
+    color: var(--xuya-accent);
 }
 
 .model-role-tag.opus {
-    background: rgba(139, 92, 246, 0.15);
-    color: #8b5cf6;
+    background: var(--xuya-success-soft);
+    color: var(--xuya-success);
 }
 
 .model-role-tag.haiku {
