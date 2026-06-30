@@ -46,7 +46,7 @@ pub fn takeover_claude(proxy_url: &str) -> TakeoverResult {
 pub fn takeover_codex(proxy_url: &str) -> TakeoverResult {
     let dir = codex::codex_config_dir();
     let _ = fs::create_dir_all(&dir);
-    let codex_base = format!("{}/v1", proxy_url.trim_end_matches('/'));
+    let codex_base = proxy_url.trim_end_matches('/').to_string();
 
     // P1-4: 先写 config.toml (文本, 可安全失败不破坏 auth.json)
     if let Err(e) = codex::update_config_base_url(&codex_base) {

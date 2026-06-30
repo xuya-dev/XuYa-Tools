@@ -1148,7 +1148,18 @@ fn build_upstream_url(base_url: &str, original_uri: &http::Uri) -> Result<String
         .path_and_query()
         .map(|p| p.as_str())
         .unwrap_or("/");
-    Ok(format!("{base}{path_and_query}"))
+
+    // 去重: 如果 base_url 以 /v1 结尾且请求路径以 /v1/ 开头, 去掉路径里的重复 /v1
+    // 场景: provider base_url = "https://api.example.com/v1",
+    //       请求路径 = "/v1/responses" (Codex 追加的)
+    //       → 正确结果 = "https://api.example.com/v1/responses"
+    let final_path = if base.ends_with("/v1") && path_and_query.starts_with("/v1/") {
+        &path_and_query[3..] // 去掉第一个 "/v1", 保留 "/responses..."
+    } else {
+        path_and_query
+    };
+
+    Ok(format!("{base}{final_path}"))
 }
 
 /// 完整 body 类型别名 (collect 后的全量字节)
