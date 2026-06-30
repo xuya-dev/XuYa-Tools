@@ -447,22 +447,31 @@
                                 <span class="field-hint">选择写入配置的认证环境变量名</span>
                             </label>
 
-                            <!-- API 格式 -->
+                            <!-- API 格式 (选项标签按 Tab 动态变化) -->
                             <label class="cli-field">
                                 <span>API 格式</span>
                                 <select v-model="editor.form.api_format">
-                                    <option value="anthropic">Anthropic Messages（原生）</option>
-                                    <option value="openai_chat">OpenAI Chat Completions（需转换）</option>
-                                    <option value="openai_responses">OpenAI Responses API（需转换）</option>
-                                    <option value="gemini_native">Gemini Native（需转换）</option>
+                                    <option v-for="opt in apiFormatOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
                                 </select>
-                                <span class="field-hint">选择供应商 API 的输入格式</span>
+                                <span class="field-hint">{{ editor.appTab === 'codex' ? 'Codex CLI 原生支持的格式直接直连,其他格式需启动代理转换' : 'Claude Code 原生支持 Anthropic,其他格式需启动代理转换' }}</span>
                             </label>
 
                             <!-- 自定义 User-Agent -->
                             <label class="cli-field">
                                 <span>自定义 User-Agent（可选）</span>
                                 <input v-model="editor.form.custom_user_agent" class="mono" placeholder="Mozilla/5.0 ..." />
+                            </label>
+
+                            <!-- Claude: settings.json 原始编辑 (高级, 与 Codex 的 auth.json/config.toml 对等) -->
+                            <label v-if="editor.appTab === 'claude'" class="cli-field">
+                                <span><span class="file-badge">settings.json</span>（高级，留空则自动生成）</span>
+                                <textarea
+                                    v-model="editor.form.claude_settings_json"
+                                    class="cli-textarea mono"
+                                    rows="8"
+                                    placeholder='{ "env": { "ANTHROPIC_BASE_URL": "...", "ANTHROPIC_AUTH_TOKEN": "..." } }'
+                                ></textarea>
+                                <span class="field-hint">填入后完全覆盖自动生成的 Claude Code 配置。API Key 和 base_url 已由上方字段控制</span>
                             </label>
 
                             <!-- Codex 原始配置文件 (高级用户) -->
@@ -719,7 +728,7 @@ const emptyForm = (tab: 'claude' | 'codex' = 'claude'): CliProvider => ({
     auth_field: 'ANTHROPIC_AUTH_TOKEN',
     api_format: tab === 'codex' ? 'openai_chat' : 'anthropic',
     custom_user_agent: '', models_url: '', preset_id: '',
-    icon: '', icon_color: '', codex_auth_json: '', codex_config_toml: '',
+    icon: '', icon_color: '', codex_auth_json: '', codex_config_toml: '', claude_settings_json: '',
     updated_at: 0,
 });
 
@@ -745,6 +754,24 @@ const canSave = computed(() => {
     if (!editor.form.name.trim()) return false;
     if (editor.appTab === 'codex' && !editor.form.model.trim()) return false;
     return true;
+});
+
+/** API 格式选项 — 按 Tab 动态标签 (原生 vs 需代理转换) */
+const apiFormatOptions = computed(() => {
+    if (editor.appTab === 'codex') {
+        return [
+            { value: 'openai_responses', label: 'OpenAI Responses（原生）' },
+            { value: 'openai_chat', label: 'OpenAI Chat Completions（原生）' },
+            { value: 'anthropic', label: 'Anthropic Messages（需代理转换）' },
+            { value: 'gemini_native', label: 'Gemini Native（需代理转换）' },
+        ];
+    }
+    return [
+        { value: 'anthropic', label: 'Anthropic Messages（原生）' },
+        { value: 'openai_chat', label: 'OpenAI Chat Completions（需代理转换）' },
+        { value: 'openai_responses', label: 'OpenAI Responses（需代理转换）' },
+        { value: 'gemini_native', label: 'Gemini Native（需代理转换）' },
+    ];
 });
 
 // ---------- 模型获取 ----------

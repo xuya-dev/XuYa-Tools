@@ -198,6 +198,9 @@ pub struct CliProvider {
     /// Codex config.toml 内容 (scope 含 codex 时生效)
     #[serde(default)]
     pub codex_config_toml: String,
+    /// Claude settings.json 完整内容 (高级模式, 留空则自动生成)
+    #[serde(default)]
+    pub claude_settings_json: String,
     /// 最后更新时间 (Unix 秒)
     pub updated_at: i64,
 }

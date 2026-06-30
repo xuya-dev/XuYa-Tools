@@ -40,6 +40,7 @@ export interface CliProvider {
     icon_color: string;
     codex_auth_json: string;
     codex_config_toml: string;
+    claude_settings_json: string;
     updated_at: number;
 }
 

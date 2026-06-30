@@ -382,6 +382,7 @@ fn new_cli_provider_template() -> Result<CliProvider, String> {
         icon_color: String::new(),
         codex_auth_json: String::new(),
         codex_config_toml: String::new(),
+        claude_settings_json: String::new(),
         updated_at: 0,
     })
 }
