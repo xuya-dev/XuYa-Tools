@@ -70,7 +70,7 @@ const themeLabel = computed(
   -webkit-app-region: drag;
   flex-shrink: 0;
   /* 标题栏底部微弱分隔 (替代生硬边框) */
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.02);
+  box-shadow: var(--xuya-shadow-sm);
 }
 
 .titlebar-left,
@@ -98,7 +98,7 @@ const themeLabel = computed(
   height: 24px;
   border-radius: 6px;
   object-fit: cover;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+  box-shadow: var(--xuya-shadow-hover);
 }
 
 .brand-name {
@@ -146,7 +146,7 @@ const themeLabel = computed(
 }
 
 .ctrl-btn.close:hover {
-  background: #e5484d;
-  color: #fff;
+  background: var(--xuya-danger);
+  color: var(--xuya-bg-elevated);
 }
 </style>

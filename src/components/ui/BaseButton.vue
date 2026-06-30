@@ -59,7 +59,7 @@ withDefaults(
 
 .variant-primary {
   background: var(--xuya-accent-gradient);
-  color: #fff;
+  color: var(--xuya-bg-elevated);
   border: none;
   box-shadow: 0 2px 8px var(--xuya-accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
@@ -85,13 +85,13 @@ withDefaults(
 
 .variant-danger {
   background: var(--xuya-danger);
-  color: #fff;
+  color: var(--xuya-bg-elevated);
   border: none;
-  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+  box-shadow: var(--xuya-shadow);
 }
 .variant-danger:hover:not(:disabled) {
   filter: brightness(1.08);
-  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4);
+  box-shadow: var(--xuya-shadow-hover);
   transform: translateY(-1px);
 }
 </style>
