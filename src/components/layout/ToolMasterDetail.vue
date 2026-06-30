@@ -414,7 +414,7 @@ function goSettings() {
 .md-detail {
   flex: 1;
   min-width: 0;
-  overflow: auto;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
 }

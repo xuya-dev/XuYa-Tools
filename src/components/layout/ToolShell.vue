@@ -36,17 +36,14 @@ defineProps<{
   flex-direction: column;
   min-height: 0;
   padding: 22px 30px 30px;
-  /* 入场动画 */
-  animation: tool-enter var(--xuya-duration-slow) var(--xuya-ease-out);
+  animation: tool-enter var(--xuya-duration) var(--xuya-ease-out);
 }
 @keyframes tool-enter {
   from {
     opacity: 0;
-    transform: translateY(8px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
   }
 }
 
@@ -101,6 +98,7 @@ defineProps<{
 .tool-body {
   flex: 1;
   min-height: 0;
+  overflow: auto;
   display: flex;
   flex-direction: column;
 }
