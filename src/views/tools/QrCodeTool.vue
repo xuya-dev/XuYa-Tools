@@ -42,7 +42,7 @@
 
       <div class="qr-preview">
         <div class="qr-frame">
-          <canvas ref="canvasRef" :width="size" :height="size"></canvas>
+          <canvas ref="canvasRef" :width="size * 2" :height="size * 2" :style="{ width: size + 'px', height: size + 'px' }"></canvas>
           <div v-if="!text" class="qr-placeholder">
             <QrCode :size="48" />
             <p>输入内容后生成二维码</p>
@@ -59,7 +59,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue';
+import { ref, watch } from 'vue';
 import { QrCode, Download, Copy } from '@lucide/vue';
 import ToolShell from '@/components/layout/ToolShell.vue';
 import BaseButton from '@/components/ui/BaseButton.vue';
@@ -92,21 +92,41 @@ function draw() {
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
+
+  // 清空
   ctx.fillStyle = bgColor.value;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-  if (!text.value.trim()) { qrVersion.value = 0; return; }
+  if (!text.value.trim()) {
+    qrVersion.value = 0;
+    return;
+  }
+
   try {
     const matrix = encodeQR(text.value, level.value);
     qrVersion.value = (matrix.size - 21) / 4 + 1;
     const count = matrix.size;
-    const margin = 2;
+    const margin = 4; // 标准静默区至少 4 模块
     const total = count + margin * 2;
-    const cell = canvas.width / total;
+
+    // 使用整数 cell 避免亚像素模糊
+    const cell = Math.floor(canvas.width / total);
+    // 实际绘制尺寸 (居中)
+    const drawSize = cell * total;
+    const offset = Math.floor((canvas.width - drawSize) / 2);
+
+    ctx.fillStyle = bgColor.value;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
     ctx.fillStyle = fgColor.value;
     for (let y = 0; y < count; y++) {
       for (let x = 0; x < count; x++) {
         if (matrix.get(x, y)) {
-          ctx.fillRect((x + margin) * cell, (y + margin) * cell, cell, cell);
+          ctx.fillRect(
+            offset + (x + margin) * cell,
+            offset + (y + margin) * cell,
+            cell,
+            cell,
+          );
         }
       }
     }
@@ -115,9 +135,7 @@ function draw() {
   }
 }
 
-watch([text, level, size, fgColor, bgColor], draw);
 watch(level, (l) => { levelLabel.value = l; });
-onMounted(draw);
 
 function download() {
   const canvas = canvasRef.value;
@@ -131,6 +149,15 @@ function download() {
 async function copyText() {
   if (text.value) await copyToClipboard(text.value, '已复制文本');
 }
+
+// 防止 ctx 抗锯齿: 禁用 imageSmoothing
+watch([text, level, size, fgColor, bgColor], () => {
+  const canvas = canvasRef.value;
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  if (ctx) ctx.imageSmoothingEnabled = false;
+  draw();
+}, { immediate: true });
 </script>
 
 <style scoped>
