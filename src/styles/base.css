@@ -57,21 +57,19 @@ button {
 
 ::selection {
   background: var(--xuya-accent-soft-strong);
-  color: var(--xuya-text);
 }
 
-/* ===== 滚动条 (WebKit) - 更精致 ===== */
+/* ===== 滚动条 (WebKit) - 极简 ===== */
 ::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
   background: var(--xuya-border-strong);
-  border-radius: 6px;
-  /* 透明边距营造悬浮感 */
+  border-radius: 4px;
   border: 2px solid transparent;
   background-clip: padding-box;
 }
