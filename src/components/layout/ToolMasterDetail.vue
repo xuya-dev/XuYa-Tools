@@ -293,9 +293,10 @@ function goSettings() {
   border-radius: 0 2px 2px 0;
 }
 .md-item.active .md-item-icon {
-  background: var(--xuya-accent-gradient);
+  background: var(--xuya-accent);
   color: var(--xuya-on-accent);
-  box-shadow: 0 2px 6px var(--xuya-accent-glow);
+  border-color: var(--xuya-accent);
+  box-shadow: 0 2px 8px var(--xuya-accent-glow);
 }
 .md-item.active .md-item-name {
   color: var(--xuya-text);
@@ -305,19 +306,20 @@ function goSettings() {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   flex-shrink: 0;
-  border-radius: 8px;
-  background: var(--xuya-input-bg);
+  border-radius: var(--xuya-radius-sm);
+  background: var(--xuya-bg-subtle);
   color: var(--xuya-text);
-  transition: background var(--xuya-duration-fast) var(--xuya-ease),
-    color var(--xuya-duration-fast) var(--xuya-ease),
-    box-shadow var(--xuya-duration-fast) var(--xuya-ease),
-    transform var(--xuya-duration-fast) var(--xuya-ease);
+  border: 1px solid var(--xuya-border);
+  transition: all var(--xuya-duration-fast) var(--xuya-ease);
 }
 .md-item:hover .md-item-icon {
-  background: var(--xuya-border);
+  background: var(--xuya-border-strong);
+  color: var(--xuya-on-accent);
+  background: var(--xuya-accent);
+  border-color: var(--xuya-accent);
 }
 .md-item-info {
   flex: 1;
