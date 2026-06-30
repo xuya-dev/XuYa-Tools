@@ -1,123 +1,137 @@
 /**
- * XuYa Tools 主题令牌系统 (高级质感版)
- * 统一使用 --xuya-* 命名空间,供所有工具组件复用。
- * 主题切换通过 <html> 上的 .dark-theme 类实现 (见 useTheme.ts)。
- * 默认 (无类) = 浅色;.dark-theme = 深色。暗色优先设计。
+ * XuYa Tools 主题令牌系统
+ * 参考 XuYa-Terminal (mist 灰阶 + OKLCH 风格) 统一为更克制的中性冷调。
+ * 保留 --xuya-* 命名空间, 主题切换通过 <html> .dark-theme 类实现。
  *
  * 设计原则:
- * - 层次感通过背景层级 + 阴影叠加营造,而非生硬边框
- * - 强调色用渐变,语义色保持纯净
- * - 阴影分层 (elevation): sm/md/lg,叠加环境光 + 投影
+ * - 背景层级靠亮度差, 边框用半透明白叠层 (深色)
+ * - 品牌色收敛为电光蓝 (#1447E6 系), 不用渐变发光
+ * - 阴影分层 (elevation): sm/md/lg/xl
+ * - 动画偏 premium 慢节奏 + reduced-motion 无障碍关怀
  */
 
 :root {
-  /* ===== 背景层级 (从底到顶) ===== */
-  --xuya-bg: #f4f5f8;
-  --xuya-bg-elevated: #ffffff;
-  --xuya-bg-subtle: #fafbfc;
+  /* ===== 背景层级 ===== */
+  --xuya-bg: #ffffff;
+  --xuya-bg-elevated: #f9fbfb;
+  --xuya-bg-subtle: #f4f6f6;
   --xuya-card-bg: #ffffff;
-  --xuya-input-bg: #f1f3f6;
+  --xuya-input-bg: #f1f3f3;
 
   /* 文字 */
-  --xuya-text: #111418;
-  --xuya-text-secondary: #525c69;
-  --xuya-text-tertiary: #8a94a3;
+  --xuya-text: #090b0c;
+  --xuya-text-secondary: #5b6b6f;
+  --xuya-text-tertiary: #8a9a9e;
 
-  /* 边框 / 分隔 */
-  --xuya-border: #e2e6ec;
-  --xuya-border-light: #eef1f5;
-  --xuya-border-strong: #d4d9e0;
-  --xuya-overlay: rgba(15, 23, 42, 0.4);
+  /* 边框 */
+  --xuya-border: #e3e7e8;
+  --xuya-border-light: #eef0f1;
+  --xuya-border-strong: #d0d6d8;
+  --xuya-overlay: rgba(9, 11, 12, 0.4);
 
-  /* ===== 主题色 (品牌蓝→靛 渐变) ===== */
-  --xuya-accent: #3b82f6;
-  --xuya-accent-hover: #2563eb;
-  --xuya-accent-2: #6366f1;
-  --xuya-accent-gradient: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
-  --xuya-accent-gradient-hover: linear-gradient(135deg, #2563eb 0%, #5457e0 100%);
-  --xuya-accent-soft: rgba(59, 130, 246, 0.1);
-  --xuya-accent-soft-strong: rgba(59, 130, 246, 0.16);
-  --xuya-accent-ring: rgba(59, 130, 246, 0.18);
-  --xuya-accent-glow: rgba(59, 130, 246, 0.35);
+  /* ===== 品牌色 (电光蓝, 对齐 Terminal sidebar-primary) ===== */
+  --xuya-accent: #1447e6;
+  --xuya-accent-hover: #0d3bca;
+  --xuya-accent-2: #3b5bdb;
+  --xuya-accent-gradient: linear-gradient(135deg, #1447e6 0%, #3b5bdb 100%);
+  --xuya-accent-gradient-hover: linear-gradient(135deg, #0d3bca 0%, #2f49b8 100%);
+  --xuya-accent-soft: rgba(20, 71, 230, 0.08);
+  --xuya-accent-soft-strong: rgba(20, 71, 230, 0.14);
+  --xuya-accent-ring: rgba(20, 71, 230, 0.16);
+  --xuya-accent-glow: rgba(20, 71, 230, 0.25);
 
   /* 语义色 */
-  --xuya-success: #10b981;
-  --xuya-success-soft: rgba(16, 185, 129, 0.1);
-  --xuya-warn: #f59e0b;
-  --xuya-warn-soft: rgba(245, 158, 11, 0.12);
-  --xuya-danger: #ef4444;
-  --xuya-danger-soft: rgba(239, 68, 68, 0.1);
+  --xuya-success: #059669;
+  --xuya-success-soft: rgba(5, 150, 105, 0.1);
+  --xuya-warn: #d97706;
+  --xuya-warn-soft: rgba(217, 119, 6, 0.1);
+  --xuya-danger: #dc2626;
+  --xuya-danger-soft: rgba(220, 38, 38, 0.1);
 
-  /* ===== 阴影分层 (elevation) ===== */
-  /* sm: 输入框、按钮等轻量元素 */
-  --xuya-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 1px rgba(15, 23, 42, 0.03);
-  /* md: 卡片、下拉默认态 */
-  --xuya-shadow: 0 2px 4px rgba(15, 23, 42, 0.04), 0 1px 2px rgba(15, 23, 42, 0.04);
-  /* lg: 卡片悬浮、弹层 */
-  --xuya-shadow-hover: 0 12px 32px rgba(15, 23, 42, 0.1), 0 4px 8px rgba(15, 23, 42, 0.05);
-  /* xl: 模态框、浮层 */
-  --xuya-shadow-xl: 0 24px 56px rgba(15, 23, 42, 0.16), 0 8px 16px rgba(15, 23, 42, 0.08);
+  /* ===== 阴影分层 ===== */
+  --xuya-shadow-sm: 0 1px 2px rgba(9, 11, 12, 0.05), 0 1px 1px rgba(9, 11, 12, 0.03);
+  --xuya-shadow: 0 2px 4px rgba(9, 11, 12, 0.05), 0 1px 2px rgba(9, 11, 12, 0.04);
+  --xuya-shadow-hover: 0 12px 32px rgba(9, 11, 12, 0.08), 0 4px 8px rgba(9, 11, 12, 0.04);
+  --xuya-shadow-xl: 0 24px 56px rgba(9, 11, 12, 0.12), 0 8px 16px rgba(9, 11, 12, 0.06);
 
-  /* 圆角 */
+  /* 圆角 (7 级阶梯, 对齐 Terminal) */
   --xuya-radius-sm: 6px;
   --xuya-radius: 10px;
   --xuya-radius-lg: 14px;
   --xuya-radius-xl: 18px;
+  --xuya-radius-2xl: 22px;
 
-  /* ===== 运动曲线 ===== */
+  /* ===== 运动曲线 (premium 节奏) ===== */
   --xuya-ease: cubic-bezier(0.4, 0, 0.2, 1);
-  --xuya-ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --xuya-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --xuya-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
-  --xuya-duration-fast: 0.12s;
-  --xuya-duration: 0.2s;
+  --xuya-duration-fast: 0.16s;
+  --xuya-duration: 0.24s;
   --xuya-duration-slow: 0.32s;
 
-  /* 等宽字体 */
+  /* 焦点环 (中性灰, 不蓝) */
+  --xuya-ring: rgba(156, 168, 171, 0.4);
+
+  /* 字体 */
   --xuya-font-mono: 'JetBrains Mono', 'Cascadia Code', 'Consolas', 'Monaco', 'Courier New', monospace;
   --xuya-font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
 
 .dark-theme {
-  /* ===== 背景层级 (深色优先:偏冷的深灰,非纯黑) ===== */
-  --xuya-bg: #131519;
-  --xuya-bg-elevated: #1a1d23;
-  --xuya-bg-subtle: #16181d;
-  --xuya-card-bg: #1c1f26;
-  --xuya-input-bg: #232730;
+  /* ===== 背景 (近黑冷调, 对齐 Terminal) ===== */
+  --xuya-bg: #090b0c;
+  --xuya-bg-elevated: #131719;
+  --xuya-bg-subtle: #0f1213;
+  --xuya-card-bg: #161b1d;
+  --xuya-input-bg: #1d2326;
 
   /* 文字 */
-  --xuya-text: #e8ebf1;
-  --xuya-text-secondary: #9aa3b2;
-  --xuya-text-tertiary: #646d7a;
+  --xuya-text: #f9fbfb;
+  --xuya-text-secondary: #9ca8ab;
+  --xuya-text-tertiary: #5b6b6f;
 
-  /* 边框 / 分隔 */
-  --xuya-border: #2b3038;
-  --xuya-border-light: #232730;
-  --xuya-border-strong: #383e48;
-  --xuya-overlay: rgba(0, 0, 0, 0.6);
+  /* 边框 (半透明白叠层, 对齐 Terminal) */
+  --xuya-border: rgba(255, 255, 255, 0.1);
+  --xuya-border-light: rgba(255, 255, 255, 0.06);
+  --xuya-border-strong: rgba(255, 255, 255, 0.16);
+  --xuya-overlay: rgba(0, 0, 0, 0.65);
 
-  /* 主题色 */
-  --xuya-accent: #60a5fa;
-  --xuya-accent-hover: #7cb6fc;
-  --xuya-accent-2: #818cf8;
-  --xuya-accent-gradient: linear-gradient(135deg, #60a5fa 0%, #818cf8 100%);
-  --xuya-accent-gradient-hover: linear-gradient(135deg, #7cb6fc 0%, #949cf9 100%);
-  --xuya-accent-soft: rgba(96, 165, 250, 0.14);
-  --xuya-accent-soft-strong: rgba(96, 165, 250, 0.22);
-  --xuya-accent-ring: rgba(96, 165, 250, 0.25);
-  --xuya-accent-glow: rgba(96, 165, 250, 0.4);
+  /* 品牌色 */
+  --xuya-accent: #3b82f6;
+  --xuya-accent-hover: #60a5fa;
+  --xuya-accent-2: #6366f1;
+  --xuya-accent-gradient: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
+  --xuya-accent-gradient-hover: linear-gradient(135deg, #60a5fa 0%, #818cf8 100%);
+  --xuya-accent-soft: rgba(59, 130, 246, 0.12);
+  --xuya-accent-soft-strong: rgba(59, 130, 246, 0.2);
+  --xuya-accent-ring: rgba(59, 130, 246, 0.22);
+  --xuya-accent-glow: rgba(59, 130, 246, 0.35);
 
   /* 语义色 */
   --xuya-success: #34d399;
-  --xuya-success-soft: rgba(52, 211, 153, 0.14);
+  --xuya-success-soft: rgba(52, 211, 153, 0.12);
   --xuya-warn: #fbbf24;
-  --xuya-warn-soft: rgba(251, 191, 36, 0.16);
-  --xuya-danger: #f87171;
-  --xuya-danger-soft: rgba(248, 113, 113, 0.14);
+  --xuya-warn-soft: rgba(251, 191, 36, 0.14);
+  --xuya-danger: #ff6467;
+  --xuya-danger-soft: rgba(255, 100, 103, 0.12);
 
-  /* 阴影 (深色下用更深的投影 + 微弱发光) */
+  /* 阴影 */
   --xuya-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4), 0 1px 1px rgba(0, 0, 0, 0.3);
   --xuya-shadow: 0 2px 4px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
   --xuya-shadow-hover: 0 12px 32px rgba(0, 0, 0, 0.5), 0 4px 8px rgba(0, 0, 0, 0.3);
   --xuya-shadow-xl: 0 24px 56px rgba(0, 0, 0, 0.6), 0 8px 16px rgba(0, 0, 0, 0.4);
+
+  /* 焦点环 */
+  --xuya-ring: rgba(156, 168, 171, 0.3);
+}
+
+/* ===== 无障碍: 减少动画 ===== */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
