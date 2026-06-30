@@ -310,14 +310,14 @@ function goSettings() {
   flex-shrink: 0;
   border-radius: 8px;
   background: var(--xuya-input-bg);
-  color: var(--xuya-text-secondary);
+  color: var(--xuya-text);
   transition: background var(--xuya-duration-fast) var(--xuya-ease),
     color var(--xuya-duration-fast) var(--xuya-ease),
     box-shadow var(--xuya-duration-fast) var(--xuya-ease),
     transform var(--xuya-duration-fast) var(--xuya-ease);
 }
 .md-item:hover .md-item-icon {
-  color: var(--xuya-text);
+  background: var(--xuya-border);
 }
 .md-item-info {
   flex: 1;
