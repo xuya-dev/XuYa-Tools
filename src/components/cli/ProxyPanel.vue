@@ -169,7 +169,7 @@ onUnmounted(() => { if (toastTimer) window.clearTimeout(toastTimer); });
 .switch { position: relative; display: inline-block; width: 40px; height: 22px; }
 .switch input { opacity: 0; width: 0; height: 0; }
 .slider { position: absolute; cursor: pointer; inset: 0; background: var(--xuya-border, #444); border-radius: 22px; transition: .2s; }
-.slider::before { content: ''; position: absolute; height: 16px; width: 16px; left: 3px; top: 3px; background: var(--xuya-bg-elevated); border-radius: 50%; transition: .2s; }
+.slider::before { content: ''; position: absolute; height: 16px; width: 16px; left: 3px; top: 3px; background: var(--xuya-on-accent); border-radius: 50%; transition: .2s; }
 .switch input:checked + .slider { background: var(--xuya-success); }
 .switch input:checked + .slider::before { transform: translateX(18px); }
 

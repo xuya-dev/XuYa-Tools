@@ -44,7 +44,7 @@ const { toasts, remove } = useToast();
   padding: 9px 16px;
   border-radius: var(--xuya-radius);
   font-size: 13px;
-  color: var(--xuya-bg-elevated);
+  color: var(--xuya-on-accent);
   box-shadow: var(--xuya-shadow-hover);
   pointer-events: auto;
   cursor: pointer;

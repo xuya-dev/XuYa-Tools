@@ -67,6 +67,9 @@
   /* 焦点环 */
   --xuya-ring: rgba(37, 99, 235, 0.15);
 
+  /* 彩色背景上的前景色 (始终浅色, 不跟随主题翻转) */
+  --xuya-on-accent: #ffffff;
+
   /* 字体 */
   --xuya-font-mono: 'JetBrains Mono', 'Cascadia Code', 'Consolas', 'Monaco', 'Courier New', monospace;
   --xuya-font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
@@ -118,6 +121,9 @@
 
   /* 焦点环 */
   --xuya-ring: rgba(59, 130, 246, 0.22);
+
+  /* 彩色背景上的前景色 (始终浅色) */
+  --xuya-on-accent: #fafafa;
 }
 
 /* ===== 无障碍: 减少动画 ===== */

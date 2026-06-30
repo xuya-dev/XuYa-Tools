@@ -1266,7 +1266,7 @@ onUnmounted(() => {
 
 .cli-badge.proxy {
     background: var(--xuya-accent-gradient);
-    color: var(--xuya-bg-elevated);
+    color: var(--xuya-on-accent);
     font-weight: 600;
 }
 
@@ -1485,7 +1485,7 @@ onUnmounted(() => {
 
 .cli-mini-btn.current {
     background: var(--xuya-success);
-    color: var(--xuya-bg-elevated);
+    color: var(--xuya-on-accent);
     cursor: default;
 }
 
@@ -1605,7 +1605,7 @@ onUnmounted(() => {
     border-radius: var(--xuya-radius);
     cursor: pointer;
     background: var(--xuya-accent-gradient);
-    color: var(--xuya-bg-elevated);
+    color: var(--xuya-on-accent);
     border: none;
     transition: transform var(--xuya-duration-fast) var(--xuya-ease),
         box-shadow var(--xuya-duration-fast) var(--xuya-ease);
@@ -1691,7 +1691,7 @@ onUnmounted(() => {
     top: 0;
     right: 0;
     background: var(--xuya-success);
-    color: var(--xuya-bg-elevated);
+    color: var(--xuya-on-accent);
     font-size: 10px;
     font-weight: 600;
     padding: 3px 12px;
@@ -2700,7 +2700,7 @@ onUnmounted(() => {
 
 .cli-modal-btn.primary {
     background: var(--xuya-accent-gradient);
-    color: var(--xuya-bg-elevated);
+    color: var(--xuya-on-accent);
     box-shadow: 0 2px 8px var(--xuya-accent-glow);
 }
 
@@ -2730,12 +2730,12 @@ onUnmounted(() => {
 
 .cli-toast.success {
     background: var(--xuya-success);
-    color: var(--xuya-bg-elevated);
+    color: var(--xuya-on-accent);
 }
 
 .cli-toast.error {
     background: var(--xuya-danger);
-    color: var(--xuya-bg-elevated);
+    color: var(--xuya-on-accent);
 }
 
 /* 过渡 */

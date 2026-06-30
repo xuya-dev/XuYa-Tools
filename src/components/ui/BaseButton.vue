@@ -59,7 +59,7 @@ withDefaults(
 
 .variant-primary {
   background: var(--xuya-accent-gradient);
-  color: var(--xuya-bg-elevated);
+  color: var(--xuya-on-accent);
   border: none;
   box-shadow: 0 2px 8px var(--xuya-accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
@@ -85,7 +85,7 @@ withDefaults(
 
 .variant-danger {
   background: var(--xuya-danger);
-  color: var(--xuya-bg-elevated);
+  color: var(--xuya-on-accent);
   border: none;
   box-shadow: var(--xuya-shadow);
 }

@@ -147,6 +147,6 @@ const themeLabel = computed(
 
 .ctrl-btn.close:hover {
   background: var(--xuya-danger);
-  color: var(--xuya-bg-elevated);
+  color: var(--xuya-on-accent);
 }
 </style>

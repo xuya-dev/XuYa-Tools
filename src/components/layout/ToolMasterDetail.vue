@@ -294,7 +294,7 @@ function goSettings() {
 }
 .md-item.active .md-item-icon {
   background: var(--xuya-accent-gradient);
-  color: var(--xuya-bg-elevated);
+  color: var(--xuya-on-accent);
   box-shadow: 0 2px 6px var(--xuya-accent-glow);
 }
 .md-item.active .md-item-name {
