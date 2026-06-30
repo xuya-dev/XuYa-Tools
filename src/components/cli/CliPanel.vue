@@ -169,6 +169,26 @@
                     <div v-else class="provider-models">
                         <span class="model-tag default">默认模型</span>
                     </div>
+
+                    <!-- 余额展示区 -->
+                    <div v-if="balanceCache[p.id]" class="balance-row">
+                        <template v-if="balanceCache[p.id]!.result.success">
+                            <template v-for="(item, bi) in balanceCache[p.id]!.result.items" :key="bi">
+                                <span v-if="item.isValid" class="balance-pill" :class="{ plan: balanceCache[p.id]!.result.isPlan }">
+                                    {{ balanceCache[p.id]!.result.isPlan
+                                        ? `${item.label} ${item.used?.toFixed(0)}%`
+                                        : `💰 ${item.remaining != null ? item.remaining.toFixed(2) : '-'} ${item.unit}`
+                                    }}
+                                    <span v-if="item.resetsAt" class="balance-reset">{{ formatBalanceTime(item.resetsAt) }}</span>
+                                </span>
+                                <span v-else class="balance-pill invalid">
+                                    ⚠ {{ item.invalidMessage || '失效' }}
+                                </span>
+                            </template>
+                        </template>
+                        <span v-else class="balance-pill unsupported">{{ balanceCache[p.id]!.result.error }}</span>
+                    </div>
+
                     <div class="provider-card-actions">
                         <button
                             class="cli-mini-btn"
@@ -176,6 +196,15 @@
                             :disabled="isCurrentForTab(p)"
                             @click="onSwitch(providerTab, p.id)"
                         >{{ isCurrentForTab(p) ? '当前' : '切换' }}</button>
+                        <button
+                            v-if="p.base_url && p.category !== 'official'"
+                            class="cli-mini-btn ghost"
+                            :disabled="balanceLoading[p.id]"
+                            @click="onQueryBalance(p)"
+                        >
+                            <span v-if="balanceLoading[p.id]" class="fetch-spinner"></span>
+                            {{ balanceLoading[p.id] ? '' : '余额' }}
+                        </button>
                         <button class="cli-mini-btn ghost" @click="onEdit(p)">编辑</button>
                         <button class="cli-mini-btn danger" @click="onDelete(p)">删除</button>
                     </div>
@@ -549,6 +578,8 @@ const {
     proxyStatus,
     refreshProxyStatus,
     fetchModels,
+    balanceCache,
+    fetchBalance,
     getLiveConfig,
     openConfigFile,
 } = useCliConfig();
@@ -746,6 +777,9 @@ const editor = reactive({
 const presetSearch = ref('');
 const advancedOpen = ref(false);
 const apiKeyVisible = ref(false);
+
+// ---------- 余额查询 ----------
+const balanceLoading = reactive<Record<string, boolean>>({});
 const lastPresetName = ref('');
 
 // ---------- 表单校验 ----------
@@ -1016,6 +1050,30 @@ const onDelete = async (p: CliProvider) => {
         showToast('删除失败: ' + e, 'error');
     }
 };
+
+// ---------- 余额查询 ----------
+async function onQueryBalance(p: CliProvider) {
+    balanceLoading[p.id] = true;
+    try {
+        const result = await fetchBalance(p);
+        if (!result.success && result.error) {
+            showToast(result.error, 'error');
+        } else if (result.items.some((i) => !i.isValid)) {
+            showToast('API Key 可能失效', 'error');
+        }
+    } finally {
+        balanceLoading[p.id] = false;
+    }
+}
+
+function formatBalanceTime(iso: string): string {
+    try {
+        const d = new Date(iso);
+        return `${d.getMonth() + 1}/${d.getDate()} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+    } catch {
+        return iso;
+    }
+}
 
 const onSwitch = async (app: AppType, id: string) => {
     const p = providers.value.find((item) => item.id === id);
@@ -1705,6 +1763,39 @@ onUnmounted(() => {
 }
 
 /* 卡片操作区: 主操作占满, 编辑/删除靠右 */
+.balance-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+.balance-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10.5px;
+    padding: 2px 8px;
+    border-radius: var(--xuya-radius-sm);
+    background: var(--xuya-success-soft);
+    color: var(--xuya-success);
+    font-weight: 500;
+}
+.balance-pill.plan {
+    background: var(--xuya-accent-soft);
+    color: var(--xuya-accent);
+}
+.balance-pill.invalid {
+    background: var(--xuya-danger-soft);
+    color: var(--xuya-danger);
+}
+.balance-pill.unsupported {
+    background: var(--xuya-input-bg);
+    color: var(--xuya-text-tertiary);
+}
+.balance-reset {
+    font-size: 9.5px;
+    opacity: 0.7;
+}
+
 .provider-card-actions {
     display: flex;
     flex-wrap: wrap;

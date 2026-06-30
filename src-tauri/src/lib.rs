@@ -70,6 +70,7 @@ pub fn run() {
             get_request_logs,
             clear_request_logs,
             get_daily_stats,
+            fetch_balance,
             // ---- HTTP / WebSocket 请求工具 ----
             http_client::http_request,
             http_client::ws_connect,
@@ -486,4 +487,14 @@ fn cli_data_dir() -> PathBuf {
         return dir.join(".xuya-tools");
     }
     PathBuf::from("./data")
+}
+
+// ==================== 余额查询命令 ====================
+
+#[tauri::command]
+async fn fetch_balance(
+    base_url: String,
+    api_key: String,
+) -> Result<cli_config::balance::BalanceResult, String> {
+    Ok(cli_config::balance::get_balance(&base_url, &api_key).await)
 }

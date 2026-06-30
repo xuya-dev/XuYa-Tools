@@ -175,6 +175,25 @@ export interface DailyStat {
 
 export type TimeRange = 'today' | '7d' | '30d';
 
+// ==================== 余额查询类型 ====================
+export interface BalanceItem {
+    label: string;
+    remaining: number | null;
+    total: number | null;
+    used: number | null;
+    unit: string;
+    isValid: boolean;
+    invalidMessage: string | null;
+    resetsAt: string | null;
+}
+
+export interface BalanceResult {
+    success: boolean;
+    items: BalanceItem[];
+    error: string | null;
+    isPlan: boolean;
+}
+
 export interface PaginatedLogs {
     data: RequestLogDetail[];
     total: number;
@@ -375,6 +394,34 @@ async function clearRequestLogs(): Promise<void> {
     await Promise.all([refreshUsageSummary(), refreshRequestLogs(1)]);
 }
 
+// ==================== 余额查询 ====================
+const balanceCache = ref<Record<string, { result: BalanceResult; ts: number }>>({});
+
+async function fetchBalance(
+    p: CliProvider,
+): Promise<BalanceResult> {
+    if (!p.base_url || !p.api_key) {
+        return { success: false, items: [], error: '缺少 base_url 或 API Key', isPlan: false };
+    }
+    try {
+        const result = await invoke<BalanceResult>('fetch_balance', {
+            baseUrl: p.base_url,
+            apiKey: p.api_key,
+        });
+        balanceCache.value[p.id] = { result, ts: Date.now() };
+        return result;
+    } catch (e) {
+        const result: BalanceResult = {
+            success: false,
+            items: [],
+            error: String(e),
+            isPlan: false,
+        };
+        balanceCache.value[p.id] = { result, ts: Date.now() };
+        return result;
+    }
+}
+
 export function useCliConfig() {
     return {
         providers,
@@ -410,5 +457,8 @@ export function useCliConfig() {
         setStatsTimeRange,
         refreshRequestLogs,
         clearRequestLogs,
+        // 余额查询
+        balanceCache,
+        fetchBalance,
     };
 }

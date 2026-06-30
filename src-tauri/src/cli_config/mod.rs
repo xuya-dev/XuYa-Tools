@@ -4,6 +4,7 @@
 //! live config 是「投影」，应用内 provider 才是源数据 (SSOT)。
 
 pub mod backup;
+pub mod balance;
 pub mod claude;
 pub mod codex;
 pub mod model_fetch;
