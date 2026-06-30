@@ -428,7 +428,7 @@ async fn forward_handler(req: Request<Body>, state: ProxyState) -> Response<Body
                             buf.extend_from_slice(&b);
                         }
                     }
-                    let parsed = parse_usage_from_sse(&buf);
+                    let parsed = parse_usage_from_sse(&buf, &collect_app_type);
                     let (in_tok, out_tok, cache_read, cache_create) = (
                         parsed.input,
                         parsed.output,
@@ -598,7 +598,7 @@ async fn forward_handler(req: Request<Body>, state: ProxyState) -> Response<Body
             };
 
             // 尝试从响应体解析 token usage + 计算成本 (基于转换后的 anthropic 格式, 含 cache)
-            let parsed = parse_usage(&final_bytes);
+            let parsed = parse_usage_with_app(&final_bytes, &app_type);
             let (in_tok, out_tok, cache_read, cache_create) = (
                 parsed.input,
                 parsed.output,
@@ -972,32 +972,34 @@ struct ParsedUsage {
 /// 从非流式响应体解析 token 用量。
 /// 参考 cc-switch: Anthropic input_tokens 已是 fresh (不含 cache_read),
 /// OpenAI prompt_tokens 包含 cache_read → 需扣减。
+#[allow(dead_code)]
 fn parse_usage(body: &[u8]) -> ParsedUsage {
+    parse_usage_with_app(body, "claude")
+}
+
+fn parse_usage_with_app(body: &[u8], app_type: &str) -> ParsedUsage {
     let Ok(text) = std::str::from_utf8(body) else {
         return ParsedUsage::default();
     };
     let Ok(json) = serde_json::from_str::<serde_json::Value>(text) else {
         return ParsedUsage::default();
     };
-    parse_usage_from_json(&json)
+    parse_usage_from_json(&json, app_type)
 }
 
 /// 从 JSON 值解析 usage (非流式共用)
-fn parse_usage_from_json(json: &serde_json::Value) -> ParsedUsage {
-    // Anthropic 响应: usage 在顶层
-    // OpenAI 响应: usage 在顶层
-    // Codex Responses: usage 在顶层
+/// app_type 决定缓存语义: "claude" = Anthropic (input_tokens 已是 fresh),
+///                         "codex" = Codex/OpenAI (input_tokens 包含 cache_read)
+fn parse_usage_from_json(json: &serde_json::Value, app_type: &str) -> ParsedUsage {
     let Some(usage) = json.get("usage") else {
         return ParsedUsage::default();
     };
 
-    // 判断格式: Anthropic 用 input_tokens, OpenAI 用 prompt_tokens
     let is_anthropic = usage.get("input_tokens").is_some();
     let is_openai = usage.get("prompt_tokens").is_some();
 
     if is_anthropic {
-        // Anthropic: input_tokens 已是 fresh, cache 字段独立
-        let input = usage
+        let raw_input = usage
             .get("input_tokens")
             .and_then(|v| v.as_u64())
             .unwrap_or(0);
@@ -1013,6 +1015,12 @@ fn parse_usage_from_json(json: &serde_json::Value) -> ParsedUsage {
             .get("cache_creation_input_tokens")
             .and_then(|v| v.as_u64())
             .unwrap_or(0);
+        // Codex/OpenAI 语义: input_tokens 包含 cache_read, 需扣减
+        let input = if app_type == "codex" {
+            raw_input.saturating_sub(cache_read)
+        } else {
+            raw_input
+        };
         ParsedUsage {
             input,
             output,
@@ -1048,7 +1056,7 @@ fn parse_usage_from_json(json: &serde_json::Value) -> ParsedUsage {
 /// 参考 cc-switch: 遍历所有 data: 行, 兼容 Anthropic / OpenAI / Codex 三种 SSE 格式,
 /// 从任何包含 usage 的事件中提取数据。部分中转商可能不在 message_start 携带 usage,
 /// 因此对每个事件都检查所有可能的 usage 位置。
-fn parse_usage_from_sse(body: &[u8]) -> ParsedUsage {
+fn parse_usage_from_sse(body: &[u8], app_type: &str) -> ParsedUsage {
     let text = String::from_utf8_lossy(body);
     let mut input = 0u64;
     let mut output = 0u64;
@@ -1113,6 +1121,10 @@ fn parse_usage_from_sse(body: &[u8]) -> ParsedUsage {
                     .and_then(|v| v.as_u64())
                 {
                     cache_creation = cc;
+                }
+                // Codex/OpenAI 语义: input_tokens 包含 cache_read, 需扣减得到 fresh input
+                if app_type == "codex" && cache_read > 0 && input > 0 {
+                    input = input.saturating_sub(cache_read);
                 }
             }
 
