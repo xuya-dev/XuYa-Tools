@@ -469,9 +469,9 @@
                                     v-model="editor.form.claude_settings_json"
                                     class="cli-textarea mono"
                                     rows="8"
-                                    placeholder='{ "env": { "ANTHROPIC_BASE_URL": "...", "ANTHROPIC_AUTH_TOKEN": "..." } }'
+                                    :placeholder="claudeSettingsPreview"
                                 ></textarea>
-                                <span class="field-hint">填入后完全覆盖自动生成的 Claude Code 配置。API Key 和 base_url 已由上方字段控制</span>
+                                <span class="field-hint">上方为根据当前字段实时生成的预览。填入后完全覆盖自动生成的 Claude Code 配置</span>
                             </label>
 
                             <!-- Codex 原始配置文件 (高级用户) -->
@@ -481,9 +481,9 @@
                                     v-model="editor.form.codex_auth_json"
                                     class="cli-textarea mono"
                                     rows="6"
-                                    :placeholder='codexAuthPlaceholder'
+                                    :placeholder="codexAuthPreview"
                                 ></textarea>
-                                <span class="field-hint">填入后完全覆盖自动生成的凭据。API Key 会自动填入 OPENAI_API_KEY</span>
+                                <span class="field-hint">上方为根据当前字段实时生成的预览。填入后完全覆盖自动生成的凭据</span>
                             </label>
                             <label v-if="editor.appTab === 'codex'" class="cli-field">
                                 <span><span class="file-badge">config.toml</span>（高级，留空则自动生成）</span>
@@ -491,9 +491,9 @@
                                     v-model="editor.form.codex_config_toml"
                                     class="cli-textarea mono"
                                     rows="8"
-                                    :placeholder='codexConfigPlaceholder'
+                                    :placeholder="codexConfigPreview"
                                 ></textarea>
-                                <span class="field-hint">填入后完全覆盖自动生成的配置。模型和 base_url 已由上方字段控制</span>
+                                <span class="field-hint">上方为根据当前字段实时生成的预览。填入后完全覆盖自动生成的配置</span>
                             </label>
                         </div>
                     </div>
@@ -858,10 +858,64 @@ async function onFetchModels() {
     }
 }
 
-/** Codex 双编辑器占位文本 */
-const codexAuthPlaceholder = JSON.stringify({ OPENAI_API_KEY: 'sk-your-api-key-here' }, null, 2);
-const codexConfigPlaceholder = `model = "gpt-5"
-model_provider = "custom"`;
+/** Codex 双编辑器占位文本 — 根据当前表单字段实时生成预览 */
+
+/** Claude settings.json 实时预览 */
+const claudeSettingsPreview = computed(() => {
+    const f = editor.form;
+    const env: Record<string, string> = {};
+    if (f.base_url) env.ANTHROPIC_BASE_URL = f.base_url;
+    if (f.api_key) {
+        const keyName = f.auth_field === 'ANTHROPIC_API_KEY' ? 'ANTHROPIC_API_KEY' : 'ANTHROPIC_AUTH_TOKEN';
+        env[keyName] = f.api_key;
+    }
+    const sonnet = f.sonnet_1m && f.model_sonnet ? `${f.model_sonnet}[1M]` : f.model_sonnet;
+    const opus = f.opus_1m && f.model_opus ? `${f.model_opus}[1M]` : f.model_opus;
+    if (sonnet) env.ANTHROPIC_DEFAULT_SONNET_MODEL = sonnet;
+    if (opus) env.ANTHROPIC_DEFAULT_OPUS_MODEL = opus;
+    if (f.model_haiku) env.ANTHROPIC_DEFAULT_HAIKU_MODEL = f.model_haiku;
+    if (f.sonnet_name && sonnet) env.ANTHROPIC_DEFAULT_SONNET_MODEL_NAME = f.sonnet_name;
+    if (f.opus_name && opus) env.ANTHROPIC_DEFAULT_OPUS_MODEL_NAME = f.opus_name;
+    if (f.haiku_name && f.model_haiku) env.ANTHROPIC_DEFAULT_HAIKU_MODEL_NAME = f.haiku_name;
+    const primary = f.model || sonnet || opus || f.model_haiku || '';
+    if (primary) {
+        env.ANTHROPIC_MODEL = primary.replace(/\[1M\]$/i, '');
+    }
+    return JSON.stringify({ env }, null, 2);
+});
+
+/** Codex auth.json 实时预览 */
+const codexAuthPreview = computed(() => {
+    const f = editor.form;
+    const obj: Record<string, string> = {};
+    if (f.api_key) obj.OPENAI_API_KEY = f.api_key;
+    if (f.base_url) obj.OPENAI_BASE_URL = f.base_url;
+    return JSON.stringify(
+        Object.keys(obj).length ? obj : { OPENAI_API_KEY: 'sk-your-api-key-here' },
+        null,
+        2,
+    );
+});
+
+/** Codex config.toml 实时预览 */
+const codexConfigPreview = computed(() => {
+    const f = editor.form;
+    const model = f.model || f.model_sonnet || f.model_opus || f.model_haiku || 'gpt-5';
+    const wireApi = f.api_format === 'openai_responses' ? 'responses' : 'chat';
+    const providerName = f.name || 'custom';
+    let text = `model_provider = "custom"\nmodel = "${model}"\n`;
+    if (wireApi === 'responses') {
+        text += 'model_reasoning_effort = "high"\ndisable_response_storage = true\n\n';
+    } else {
+        text += '\n';
+    }
+    text += '[model_providers.custom]\n';
+    text += `name = "${providerName}"\n`;
+    text += `base_url = "${f.base_url || 'https://api.example.com'}"\n`;
+    text += `wire_api = "${wireApi}"\n`;
+    text += 'requires_openai_auth = true\n';
+    return text;
+});
 
 /** 当前 Tab 对应的预设列表 */
 const availablePresets = computed(() => {
