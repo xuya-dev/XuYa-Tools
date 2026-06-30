@@ -171,22 +171,74 @@
                     </div>
 
                     <!-- 余额展示区 -->
-                    <div v-if="balanceCache[p.id]" class="balance-row">
+                    <div v-if="balanceCache[p.id]" class="balance-section">
                         <template v-if="balanceCache[p.id]!.result.success">
-                            <template v-for="(item, bi) in balanceCache[p.id]!.result.items" :key="bi">
-                                <span v-if="item.isValid" class="balance-pill" :class="{ plan: balanceCache[p.id]!.result.isPlan }">
-                                    {{ balanceCache[p.id]!.result.isPlan
-                                        ? `${item.label} ${item.used?.toFixed(0)}%`
-                                        : `💰 ${item.remaining != null ? item.remaining.toFixed(2) : '-'} ${item.unit}`
-                                    }}
-                                    <span v-if="item.resetsAt" class="balance-reset">{{ formatBalanceTime(item.resetsAt) }}</span>
-                                </span>
-                                <span v-else class="balance-pill invalid">
-                                    ⚠ {{ item.invalidMessage || '失效' }}
-                                </span>
+                            <!-- 余额制: 金额展示 + 进度条 -->
+                            <template v-if="!balanceCache[p.id]!.result.isPlan">
+                                <div
+                                    v-for="(item, bi) in balanceCache[p.id]!.result.items"
+                                    :key="bi"
+                                    class="balance-amount-row"
+                                >
+                                    <template v-if="item.isValid">
+                                        <div class="ba-header">
+                                            <span class="ba-remaining" :class="{ low: (item.remaining ?? 0) < (item.total ?? 0) * 0.1 }">
+                                                {{ item.remaining != null ? item.remaining.toFixed(2) : '-' }}
+                                                <span class="ba-unit">{{ item.unit }}</span>
+                                            </span>
+                                            <span v-if="item.total != null && item.total > 0" class="ba-detail">
+                                                已用 {{ item.used?.toFixed(2) }} / {{ item.total.toFixed(2) }}
+                                            </span>
+                                            <span v-else-if="item.used != null && item.used > 0" class="ba-detail">
+                                                已用 {{ item.used.toFixed(2) }}
+                                            </span>
+                                        </div>
+                                        <div v-if="item.total != null && item.total > 0" class="ba-bar">
+                                            <div
+                                                class="ba-bar-fill"
+                                                :style="{ width: Math.min(100, (item.used ?? 0) / item.total * 100) + '%' }"
+                                                :class="{ warn: (item.used ?? 0) / item.total > 0.9 }"
+                                            ></div>
+                                        </div>
+                                    </template>
+                                    <div v-else class="ba-invalid">
+                                        <span class="ba-invalid-icon">⚠</span>
+                                        {{ item.invalidMessage || 'API Key 失效' }}
+                                    </div>
+                                </div>
+                            </template>
+                            <!-- 套餐制: 多窗口百分比 -->
+                            <template v-else>
+                                <div class="plan-tiers">
+                                    <div
+                                        v-for="(item, bi) in balanceCache[p.id]!.result.items"
+                                        :key="bi"
+                                        class="plan-tier"
+                                    >
+                                        <template v-if="item.isValid">
+                                            <div class="pt-header">
+                                                <span class="pt-label">{{ item.label }}</span>
+                                                <span class="pt-pct" :class="{ high: (item.used ?? 0) >= 80 }">{{ item.used?.toFixed(0) }}%</span>
+                                            </div>
+                                            <div class="pt-bar">
+                                                <div
+                                                    class="pt-bar-fill"
+                                                    :style="{ width: Math.min(100, item.used ?? 0) + '%' }"
+                                                    :class="{ warn: (item.used ?? 0) >= 80 }"
+                                                ></div>
+                                            </div>
+                                            <div v-if="item.resetsAt" class="pt-reset">重置 {{ formatBalanceTime(item.resetsAt) }}</div>
+                                        </template>
+                                        <div v-else class="ba-invalid">
+                                            <span class="ba-invalid-icon">⚠</span>
+                                            {{ item.invalidMessage || '已用尽' }}
+                                        </div>
+                                    </div>
+                                </div>
                             </template>
                         </template>
-                        <span v-else class="balance-pill unsupported">{{ balanceCache[p.id]!.result.error }}</span>
+                        <!-- 查询失败 -->
+                        <div v-else class="ba-error">{{ balanceCache[p.id]!.result.error }}</div>
                     </div>
 
                     <div class="provider-card-actions">
@@ -1799,37 +1851,133 @@ onUnmounted(() => {
 }
 
 /* 卡片操作区: 主操作占满, 编辑/删除靠右 */
-.balance-row {
+/* 余额展示区 */
+.balance-section {
     display: flex;
-    flex-wrap: wrap;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 12px;
+    background: var(--xuya-bg-subtle, var(--xuya-input-bg));
+    border-radius: var(--xuya-radius);
+    border: 1px solid var(--xuya-border-light);
+}
+
+/* 余额制: 金额 */
+.balance-amount-row {
+    display: flex;
+    flex-direction: column;
     gap: 5px;
 }
-.balance-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 10.5px;
-    padding: 2px 8px;
-    border-radius: var(--xuya-radius-sm);
-    background: var(--xuya-success-soft);
+.ba-header {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+.ba-remaining {
+    font-size: 18px;
+    font-weight: 700;
     color: var(--xuya-success);
-    font-weight: 500;
+    font-family: var(--xuya-font-mono);
+    letter-spacing: -0.3px;
 }
-.balance-pill.plan {
-    background: var(--xuya-accent-soft);
-    color: var(--xuya-accent);
-}
-.balance-pill.invalid {
-    background: var(--xuya-danger-soft);
+.ba-remaining.low {
     color: var(--xuya-danger);
 }
-.balance-pill.unsupported {
-    background: var(--xuya-input-bg);
-    color: var(--xuya-text-tertiary);
-}
-.balance-reset {
-    font-size: 9.5px;
+.ba-unit {
+    font-size: 11px;
+    font-weight: 500;
     opacity: 0.7;
+    margin-left: 2px;
+}
+.ba-detail {
+    font-size: 11px;
+    color: var(--xuya-text-tertiary);
+    font-family: var(--xuya-font-mono);
+}
+.ba-bar {
+    height: 4px;
+    background: var(--xuya-border);
+    border-radius: 2px;
+    overflow: hidden;
+}
+.ba-bar-fill {
+    height: 100%;
+    background: var(--xuya-success);
+    border-radius: 2px;
+    transition: width var(--xuya-duration) var(--xuya-ease);
+}
+.ba-bar-fill.warn {
+    background: var(--xuya-danger);
+}
+
+/* 套餐制: 多窗口 */
+.plan-tiers {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+.plan-tier {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+.pt-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.pt-label {
+    font-size: 11px;
+    color: var(--xuya-text-secondary);
+    font-weight: 500;
+}
+.pt-pct {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--xuya-accent);
+    font-family: var(--xuya-font-mono);
+}
+.pt-pct.high {
+    color: var(--xuya-danger);
+}
+.pt-bar {
+    height: 4px;
+    background: var(--xuya-border);
+    border-radius: 2px;
+    overflow: hidden;
+}
+.pt-bar-fill {
+    height: 100%;
+    background: var(--xuya-accent);
+    border-radius: 2px;
+    transition: width var(--xuya-duration) var(--xuya-ease);
+}
+.pt-bar-fill.warn {
+    background: var(--xuya-danger);
+}
+.pt-reset {
+    font-size: 9.5px;
+    color: var(--xuya-text-tertiary);
+    margin-top: 1px;
+}
+
+/* 失效 / 错误 */
+.ba-invalid {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11.5px;
+    color: var(--xuya-danger);
+    font-weight: 500;
+}
+.ba-invalid-icon {
+    font-size: 13px;
+}
+.ba-error {
+    font-size: 11.5px;
+    color: var(--xuya-text-tertiary);
+    text-align: center;
+    padding: 4px 0;
 }
 
 .provider-card-actions {
