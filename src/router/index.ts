@@ -48,6 +48,11 @@ const router = createRouter({
       component: () => import('@/views/tools/QrCodeTool.vue'),
     },
     {
+      path: '/tools/qrdecode',
+      name: 'qrdecode',
+      component: () => import('@/views/tools/QrCodeDecoder.vue'),
+    },
+    {
       path: '/tools/lorem',
       name: 'lorem',
       component: () => import('@/views/tools/LoremGenerator.vue'),

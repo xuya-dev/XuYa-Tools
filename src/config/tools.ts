@@ -14,6 +14,7 @@ import {
   Palette,
   FileText,
   QrCode,
+  ScanQrCode,
   GitCompare,
   ScanText,
   ListTree,
@@ -128,6 +129,15 @@ export const tools: ToolMeta[] = [
     icon: QrCode,
     route: '/tools/qrcode',
     keywords: ['qrcode', 'qr', '二维码', '条码', 'barcode'],
+  },
+  {
+    id: 'qrdecode',
+    name: '二维码解码',
+    description: '上传二维码图片,自动识别并提取内容,支持拖拽粘贴。',
+    category: 'encoder',
+    icon: ScanQrCode,
+    route: '/tools/qrdecode',
+    keywords: ['qrcode', 'qr', 'decode', 'scan', '二维码', '解码', '识别', '扫码'],
   },
   {
     id: 'lorem',
