@@ -438,3 +438,36 @@ fn now_ms() -> i64 {
 fn _unused() {
     let _: Arc<()> = Arc::new(());
 }
+
+// ==================== 本机网卡枚举 ====================
+
+#[derive(Debug, Serialize)]
+pub struct NetworkInterface {
+    pub name: String,
+    pub ip: String,
+    pub netmask: String,
+    pub broadcast: Option<String>,
+    pub is_loopback: bool,
+}
+
+#[tauri::command]
+pub fn get_local_interfaces() -> Result<Vec<NetworkInterface>, String> {
+    let interfaces = if_addrs::get_if_addrs().map_err(|e| e.to_string())?;
+    let result = interfaces
+        .iter()
+        .filter_map(|iface| {
+            if let if_addrs::IfAddr::V4(ref v4) = iface.addr {
+                Some(NetworkInterface {
+                    name: iface.name.clone(),
+                    ip: v4.ip.to_string(),
+                    netmask: v4.netmask.to_string(),
+                    broadcast: v4.broadcast.map(|b| b.to_string()),
+                    is_loopback: iface.is_loopback(),
+                })
+            } else {
+                None
+            }
+        })
+        .collect();
+    Ok(result)
+}

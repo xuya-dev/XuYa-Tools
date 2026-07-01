@@ -1,6 +1,6 @@
 [package]
 name = "xuya-tools"
-version = "0.1.0"
+version = "1.0.0"
 description = "XuYa Tools - 程序员日常开发工具箱"
 authors = ["XuYa"]
 edition = "2021"
@@ -21,6 +21,7 @@ tauri = { version = "2", features = ["tray-icon", "image-png"] }
 tauri-plugin-opener = "2"
 tauri-plugin-single-instance = "2"
 tauri-plugin-autostart = "2"
+tauri-plugin-updater = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 
@@ -48,6 +49,9 @@ async-stream = "0.3"
 
 # 请求日志存储
 rusqlite = { version = "0.31", features = ["bundled"] }
+
+# 网络接口枚举
+if-addrs = "0.7"
 
 [profile.dev]
 incremental = true

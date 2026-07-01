@@ -1,5 +1,9 @@
 <template>
-  <ToolShell title="编码转换" :icon="Binary" description="Base64 / URL / HTML 实体 / Hex / Binary 双向转换。">
+  <ToolShell
+    title="编码转换"
+    :icon="Binary"
+    description="Base64 / URL / HTML 实体 / Hex / Binary / Unicode 双向实时转换。"
+  >
     <div class="mode-tabs">
       <button
         v-for="m in modes"
@@ -12,33 +16,49 @@
       </button>
     </div>
 
-    <div class="encode-grid">
-      <div class="encode-col">
+    <div class="enc-toolbar">
+      <div class="seg">
+        <button :class="{ active: !reversed }" @click="reversed = false">编码 ▸</button>
+        <button :class="{ active: reversed }" @click="reversed = true">◂ 解码</button>
+      </div>
+
+      <span class="sep"></span>
+
+      <span class="tb-stat">{{ directionLabel }} · {{ modeLabel }}</span>
+
+      <span style="flex: 1"></span>
+
+      <BaseButton variant="ghost" :disabled="!output" @click="doCopy">
+        <Copy :size="13" />
+        复制
+      </BaseButton>
+      <BaseButton variant="ghost" :disabled="!output" @click="swapToInput">→ 输入</BaseButton>
+      <BaseButton variant="ghost" @click="clearAll">清空</BaseButton>
+    </div>
+
+    <div class="enc-grid">
+      <div class="enc-col">
         <div class="col-head">
-          <span>原文 ({{ modeLabel }})</span>
-          <button class="mini-btn" @click="swapToInput">↑ 用结果填充</button>
+          <span>输入</span>
+          <span class="stat">{{ input.length }} 字符 · {{ inputBytes }} 字节</span>
         </div>
         <textarea
           v-model="input"
           class="editor"
-          :placeholder="`输入要${currentDirectionLabel}的文本`"
+          :placeholder="`输入要${directionLabel}的文本…`"
           spellcheck="false"
         ></textarea>
       </div>
 
-      <div class="encode-col">
+      <div class="enc-col">
         <div class="col-head">
           <span>结果</span>
-          <div class="col-actions">
-            <button class="mini-btn" :disabled="!output" @click="doCopy">
-              <Copy :size="12" /> 复制
-            </button>
-            <button class="mini-btn" @click="reverseDirection">
-              <ArrowLeftRight :size="12" /> {{ reversed ? '正向' : '反向' }}
-            </button>
-          </div>
+          <span class="stat" :class="{ err: !!errorMsg }">
+            {{ errorMsg ? '错误' : output ? `${output.length} 字符 · ${outputBytes} 字节` : '' }}
+          </span>
         </div>
-        <pre class="output" :class="{ err: !!errorMsg }"><code>{{ errorMsg || output || '—' }}</code></pre>
+        <pre v-if="errorMsg" class="output error-output"><code>{{ errorMsg }}</code></pre>
+        <pre v-else class="output"><code>{{ output || '—' }}</code></pre>
       </div>
     </div>
   </ToolShell>
@@ -46,18 +66,20 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
-import { Binary, Copy, ArrowLeftRight } from '@lucide/vue';
+import { Binary, Copy } from '@lucide/vue';
 import ToolShell from '@/components/layout/ToolShell.vue';
+import BaseButton from '@/components/ui/BaseButton.vue';
 import { copyToClipboard } from '@/composables/useClipboard';
 import { useToolState } from '@/composables/useToolState';
 
-type Mode = 'base64' | 'url' | 'html' | 'hex' | 'binary';
+type Mode = 'base64' | 'url' | 'html' | 'hex' | 'binary' | 'unicode';
 const modes: { id: Mode; label: string }[] = [
   { id: 'base64', label: 'Base64' },
   { id: 'url', label: 'URL' },
   { id: 'html', label: 'HTML 实体' },
   { id: 'hex', label: 'Hex' },
   { id: 'binary', label: 'Binary' },
+  { id: 'unicode', label: 'Unicode' },
 ];
 
 const mode = useToolState<Mode>('encoding', 'mode', 'base64');
@@ -67,9 +89,11 @@ const errorMsg = ref('');
 const reversed = useToolState('encoding', 'reversed', false);
 
 const modeLabel = computed(() => modes.find((m) => m.id === mode.value)?.label ?? '');
-const currentDirectionLabel = computed(() => (reversed.value ? '解码' : '编码'));
+const directionLabel = computed(() => (reversed.value ? '解码' : '编码'));
 
-// ===== UTF-8 安全的 Base64 =====
+const inputBytes = computed(() => new TextEncoder().encode(input.value).length);
+const outputBytes = computed(() => new TextEncoder().encode(output.value).length);
+
 function utf8ToBytes(str: string): Uint8Array {
   return new TextEncoder().encode(str);
 }
@@ -88,7 +112,52 @@ function base64ToBytes(b64: string): Uint8Array {
   return arr;
 }
 
-// ===== 各模式编/解码 =====
+function hexToBytes(hex: string): Uint8Array {
+  if (hex.length % 2 !== 0) throw new Error('Hex 长度必须为偶数');
+  const out = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < out.length; i++) out[i] = parseInt(hex.substr(i * 2, 2), 16);
+  return out;
+}
+function binaryToBytes(bin: string): Uint8Array {
+  if (bin.length % 8 !== 0) throw new Error('二进制长度必须为 8 的倍数');
+  const out = new Uint8Array(bin.length / 8);
+  for (let i = 0; i < out.length; i++) out[i] = parseInt(bin.substr(i * 8, 8), 2);
+  return out;
+}
+
+function encodeHtmlEntities(s: string): string {
+  const map: Record<string, string> = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  };
+  return s.replace(/[&<>"']/g, (c) => map[c] ?? c);
+}
+function decodeHtmlEntities(s: string): string {
+  const txt = document.createElement('textarea');
+  txt.innerHTML = s;
+  return txt.value;
+}
+
+function encodeUnicode(str: string): string {
+  return Array.from(str)
+    .map((char) => {
+      const code = char.codePointAt(0)!;
+      if (code < 128) return char;
+      if (code <= 0xffff) return '\\u' + code.toString(16).padStart(4, '0').toUpperCase();
+      return '\\u{' + code.toString(16).toUpperCase() + '}';
+    })
+    .join('');
+}
+function decodeUnicode(str: string): string {
+  return str.replace(/\\u\{([0-9a-fA-F]+)\}|\\u([0-9a-fA-F]{4})/g, (_, braced, hex) => {
+    const code = parseInt(braced || hex, 16);
+    return String.fromCodePoint(code);
+  });
+}
+
 function run() {
   errorMsg.value = '';
   output.value = '';
@@ -107,7 +176,7 @@ function run() {
       case 'html':
         output.value = reversed.value ? decodeHtmlEntities(text) : encodeHtmlEntities(text);
         break;
-      case 'hex': {
+      case 'hex':
         if (reversed.value) {
           const clean = text.replace(/0x/gi, '').replace(/\s+/g, '');
           output.value = bytesToUtf8(hexToBytes(clean));
@@ -117,8 +186,7 @@ function run() {
             .join(' ');
         }
         break;
-      }
-      case 'binary': {
+      case 'binary':
         if (reversed.value) {
           const clean = text.replace(/\s+/g, '');
           output.value = bytesToUtf8(binaryToBytes(clean));
@@ -128,37 +196,15 @@ function run() {
             .join(' ');
         }
         break;
-      }
+      case 'unicode':
+        output.value = reversed.value ? decodeUnicode(text) : encodeUnicode(text);
+        break;
     }
   } catch (e) {
-    errorMsg.value = `❌ ${e instanceof Error ? e.message : String(e)}`;
+    errorMsg.value = e instanceof Error ? e.message : String(e);
   }
 }
 
-function hexToBytes(hex: string): Uint8Array {
-  if (hex.length % 2 !== 0) throw new Error('Hex 长度必须为偶数');
-  const out = new Uint8Array(hex.length / 2);
-  for (let i = 0; i < out.length; i++) out[i] = parseInt(hex.substr(i * 2, 2), 16);
-  return out;
-}
-function binaryToBytes(bin: string): Uint8Array {
-  if (bin.length % 8 !== 0) throw new Error('二进制长度必须为 8 的倍数');
-  const out = new Uint8Array(bin.length / 8);
-  for (let i = 0; i < out.length; i++) out[i] = parseInt(bin.substr(i * 8, 8), 2);
-  return out;
-}
-
-function encodeHtmlEntities(s: string): string {
-  const map: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
-  return s.replace(/[&<>"']/g, (c) => map[c] ?? c);
-}
-function decodeHtmlEntities(s: string): string {
-  const txt = document.createElement('textarea');
-  txt.innerHTML = s;
-  return txt.value;
-}
-
-// ===== 操作 =====
 async function doCopy() {
   if (output.value) await copyToClipboard(output.value);
 }
@@ -168,8 +214,10 @@ function swapToInput() {
     output.value = '';
   }
 }
-function reverseDirection() {
-  reversed.value = !reversed.value;
+function clearAll() {
+  input.value = '';
+  output.value = '';
+  errorMsg.value = '';
 }
 
 watch([input, mode, reversed], run, { immediate: true });
@@ -178,19 +226,21 @@ watch([input, mode, reversed], run, { immediate: true });
 <style scoped>
 .mode-tabs {
   display: flex;
-  gap: 6px;
-  margin-bottom: 16px;
+  gap: 2px;
+  margin-bottom: 14px;
   border-bottom: 1px solid var(--xuya-border);
 }
 .mode-tab {
-  padding: 8px 14px;
+  padding: 8px 16px;
   font-size: 13px;
   color: var(--xuya-text-secondary);
   background: transparent;
   border: none;
   border-bottom: 2px solid transparent;
   margin-bottom: -1px;
-  transition: color 0var(--xuya-duration-fast), border-color 0var(--xuya-duration-fast);
+  transition:
+    color var(--xuya-duration-fast),
+    border-color var(--xuya-duration-fast);
 }
 .mode-tab:hover {
   color: var(--xuya-text);
@@ -201,14 +251,58 @@ watch([input, mode, reversed], run, { immediate: true });
   font-weight: 600;
 }
 
-.encode-grid {
+.enc-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.sep {
+  width: 1px;
+  height: 20px;
+  background: var(--xuya-border);
+  margin: 0 2px;
+}
+.seg {
+  display: inline-flex;
+  background: var(--xuya-input-bg);
+  border-radius: var(--xuya-radius-sm);
+  padding: 2px;
+  gap: 2px;
+}
+.seg button {
+  padding: 4px 14px;
+  font-size: 12px;
+  color: var(--xuya-text-secondary);
+  background: transparent;
+  border: none;
+  border-radius: var(--xuya-radius-sm);
+  transition: all var(--xuya-duration-fast) var(--xuya-ease);
+  white-space: nowrap;
+}
+.seg button:hover {
+  color: var(--xuya-text);
+}
+.seg button.active {
+  background: var(--xuya-bg-elevated);
+  color: var(--xuya-accent);
+  font-weight: 600;
+  box-shadow: var(--xuya-shadow-sm);
+}
+.tb-stat {
+  font-size: 11.5px;
+  color: var(--xuya-text-tertiary);
+}
+
+.enc-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 14px;
   flex: 1;
   min-height: 0;
 }
-.encode-col {
+.enc-col {
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -222,34 +316,19 @@ watch([input, mode, reversed], run, { immediate: true });
   font-weight: 600;
   color: var(--xuya-text-secondary);
 }
-.col-actions {
-  display: flex;
-  gap: 6px;
+.stat {
+  font-size: 10.5px;
+  font-weight: 400;
+  opacity: 0.75;
 }
-.mini-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px 8px;
-  font-size: 11px;
-  color: var(--xuya-text-secondary);
-  background: var(--xuya-input-bg);
-  border: 1px solid var(--xuya-border);
-  border-radius: var(--xuya-radius-sm);
-  transition: all 0var(--xuya-duration-fast);
-}
-.mini-btn:hover:not(:disabled) {
-  color: var(--xuya-text);
-  border-color: var(--xuya-accent);
-}
-.mini-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
+.stat.err {
+  color: var(--xuya-danger);
+  opacity: 1;
 }
 
 .editor {
   flex: 1;
-  min-height: 300px;
+  min-height: 280px;
   padding: 12px;
   border-radius: var(--xuya-radius);
   border: 1px solid var(--xuya-border);
@@ -257,20 +336,25 @@ watch([input, mode, reversed], run, { immediate: true });
   color: var(--xuya-text);
   font-family: var(--xuya-font-mono);
   font-size: 12.5px;
-  line-height: 1.6;
+  line-height: 1.65;
   resize: none;
-  transition: border-color 0var(--xuya-duration-fast), box-shadow 0var(--xuya-duration-fast);
+  tab-size: 2;
+  transition:
+    border-color var(--xuya-duration-fast),
+    box-shadow var(--xuya-duration-fast);
+}
+.editor::placeholder {
+  color: var(--xuya-text-tertiary);
 }
 .editor:focus {
   outline: none;
   border-color: var(--xuya-accent);
   box-shadow: 0 0 0 3px var(--xuya-accent-ring);
 }
-.editor::placeholder { color: var(--xuya-text-tertiary); }
 
 .output {
   flex: 1;
-  min-height: 300px;
+  min-height: 280px;
   margin: 0;
   padding: 12px;
   border-radius: var(--xuya-radius);
@@ -279,12 +363,15 @@ watch([input, mode, reversed], run, { immediate: true });
   overflow: auto;
   font-family: var(--xuya-font-mono);
   font-size: 12.5px;
-  line-height: 1.6;
+  line-height: 1.65;
   white-space: pre-wrap;
   word-break: break-all;
   color: var(--xuya-text);
 }
-.output.err code {
+.error-output {
+  border-color: var(--xuya-danger);
+}
+.error-output code {
   color: var(--xuya-danger);
 }
 </style>

@@ -30,6 +30,7 @@ use http_client::WsManager;
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_autostart::init(
             MacosLauncher::LaunchAgent,
             Some(vec!["--autostart"]),
@@ -76,6 +77,7 @@ pub fn run() {
             http_client::ws_connect,
             http_client::ws_send,
             http_client::ws_disconnect,
+            http_client::get_local_interfaces,
         ])
         .setup(|app| {
             // 注入 AppHandle 给代理服务, 用于 emit 告警事件

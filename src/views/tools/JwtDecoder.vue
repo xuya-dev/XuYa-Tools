@@ -1,77 +1,90 @@
 <template>
-  <ToolShell title="JWT 解析" :icon="KeyRound" description="解码 JWT 的 Header / Payload / Signature,查看算法与过期时间。">
+  <ToolShell
+    title="JWT 解析"
+    :icon="KeyRound"
+    description="解码 JWT 的 Header / Payload / Signature，查看算法、标准声明与过期状态。"
+  >
     <div class="jwt-input-wrap">
       <textarea
         v-model="token"
         class="jwt-input"
-        placeholder="粘贴 JWT (eyJhbGciOi... 开头)"
+        placeholder="粘贴 JWT (eyJhbGciOi… 开头)"
         spellcheck="false"
+        @paste="onPaste"
       ></textarea>
     </div>
 
-    <!-- 错误 -->
     <div v-if="errorMsg" class="jwt-error">
       <AlertCircle :size="16" />
       <span>{{ errorMsg }}</span>
     </div>
 
-    <!-- 解析结果 -->
     <template v-else-if="parsed">
-      <!-- 概览 -->
       <div class="jwt-overview">
-        <div class="overview-item">
-          <span class="label">算法</span>
-          <span class="value">{{ parsed.header.alg || '—' }}</span>
+        <div class="overview-row">
+          <div class="overview-item">
+            <span class="ov-label">算法</span>
+            <span class="ov-value mono">{{ parsed.header.alg || '—' }}</span>
+          </div>
+          <div class="overview-item">
+            <span class="ov-label">类型</span>
+            <span class="ov-value">{{ parsed.header.typ || '—' }}</span>
+          </div>
+          <div class="overview-item">
+            <span class="ov-label">状态</span>
+            <span class="ov-value">
+              <span class="status-badge" :class="tokenStatus">{{ statusLabel }}</span>
+            </span>
+          </div>
+          <div v-if="expRemaining" class="overview-item">
+            <span class="ov-label">剩余有效期</span>
+            <span class="ov-value" :class="{ expired: isExpired }">{{ expRemaining }}</span>
+          </div>
         </div>
-        <div class="overview-item">
-          <span class="label">类型</span>
-          <span class="value">{{ parsed.header.typ || '—' }}</span>
-        </div>
-        <div v-if="issuedAt" class="overview-item">
-          <span class="label">签发于</span>
-          <span class="value">{{ issuedAt }}</span>
-        </div>
-        <div v-if="expiresAt" class="overview-item">
-          <span class="label">过期时间</span>
-          <span class="value" :class="{ expired: isExpired, valid: !isExpired }">
-            {{ expiresAt }}
-            <small v-if="isExpired">(已过期)</small>
-            <small v-else>(有效)</small>
-          </span>
+
+        <div v-if="standardClaims.length" class="claims-row">
+          <div v-for="c in standardClaims" :key="c.key" class="claim-item" :title="c.desc">
+            <span class="claim-key mono">{{ c.key }}</span>
+            <span class="claim-value">{{ c.display }}</span>
+            <button class="copy-mini" @click="copyText(String(c.raw))">
+              <Copy :size="11" />
+            </button>
+          </div>
         </div>
       </div>
 
-      <!-- 三段着色展示 -->
       <div class="jwt-segments">
-        <span class="seg seg-0">{{ parsed.parts[0] }}</span>
+        <span class="seg seg-0" :title="'Header (Base64URL)'">{{ parsed.parts[0] }}</span>
         <span class="seg-dot">.</span>
-        <span class="seg seg-1">{{ parsed.parts[1] }}</span>
+        <span class="seg seg-1" :title="'Payload (Base64URL)'">{{ parsed.parts[1] }}</span>
         <span class="seg-dot">.</span>
-        <span class="seg seg-2">{{ parsed.parts[2] }}</span>
+        <span class="seg seg-2" :title="'Signature'">{{ parsed.parts[2] }}</span>
       </div>
 
-      <!-- Header / Payload -->
       <div class="parts-grid">
         <div class="part">
           <div class="part-head">
             <span class="dot seg-0-bg"></span>
             Header
-            <button class="mini-btn" @click="copy(parsed.headerRaw)"><Copy :size="12" /></button>
+            <button class="mini-btn" @click="copyText(parsed.headerRaw)">
+              <Copy :size="12" />
+            </button>
           </div>
-          <pre class="part-code"><code>{{ parsed.headerRaw }}</code></pre>
+          <CodeView :model-value="parsed.headerRaw" language="json" placeholder="—" />
         </div>
         <div class="part">
           <div class="part-head">
             <span class="dot seg-1-bg"></span>
             Payload
-            <button class="mini-btn" @click="copy(parsed.payloadRaw)"><Copy :size="12" /></button>
+            <button class="mini-btn" @click="copyText(parsed.payloadRaw)">
+              <Copy :size="12" />
+            </button>
           </div>
-          <pre class="part-code"><code>{{ parsed.payloadRaw }}</code></pre>
+          <CodeView :model-value="parsed.payloadRaw" language="json" placeholder="—" />
         </div>
       </div>
     </template>
 
-    <!-- 占位 -->
     <div v-else class="jwt-placeholder">
       <KeyRound :size="40" />
       <p>粘贴 JWT 后自动解码</p>
@@ -80,12 +93,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { computed } from 'vue';
 import { KeyRound, Copy, AlertCircle } from '@lucide/vue';
 import ToolShell from '@/components/layout/ToolShell.vue';
+import CodeView from '@/components/ui/CodeView.vue';
 import { copyToClipboard } from '@/composables/useClipboard';
+import { useToolState } from '@/composables/useToolState';
 
-const token = ref('');
+const token = useToolState('jwt', 'token', '');
 
 interface Parsed {
   parts: string[];
@@ -97,12 +112,22 @@ interface Parsed {
 
 type ParseResult = { ok: true; data: Parsed } | { ok: false; error: string } | null;
 
+const CLAIM_META: Record<string, { label: string; desc: string }> = {
+  iss: { label: '签发者', desc: 'Issuer — 签发 JWT 的主体' },
+  sub: { label: '主题', desc: 'Subject — JWT 所面向的用户' },
+  aud: { label: '受众', desc: 'Audience — JWT 的接收方' },
+  exp: { label: '过期时间', desc: 'Expiration Time' },
+  nbf: { label: '生效时间', desc: 'Not Before — 在此之前不可用' },
+  iat: { label: '签发时间', desc: 'Issued At' },
+  jti: { label: '唯一 ID', desc: 'JWT ID' },
+};
+
 const parsedResult = computed<ParseResult>(() => {
   const t = token.value.trim();
   if (!t) return null;
   const parts = t.split('.');
   if (parts.length !== 3) {
-    return { ok: false, error: 'JWT 格式错误:应由 3 段 (header.payload.signature) 用点号分隔。' };
+    return { ok: false, error: 'JWT 格式错误：应由 3 段 (header.payload.signature) 用点号分隔。' };
   }
   try {
     const header = JSON.parse(b64urlDecode(parts[0] ?? ''));
@@ -118,7 +143,7 @@ const parsedResult = computed<ParseResult>(() => {
       },
     };
   } catch (e) {
-    return { ok: false, error: `解码失败:${e instanceof Error ? e.message : String(e)}` };
+    return { ok: false, error: `解码失败：${e instanceof Error ? e.message : String(e)}` };
   }
 });
 
@@ -130,16 +155,74 @@ const parsed = computed<Parsed | null>(() =>
   parsedResult.value && parsedResult.value.ok ? parsedResult.value.data : null,
 );
 
-const issuedAt = computed(() => fmtClaim(parsed.value?.payload.iat));
-const expiresAt = computed(() => fmtClaim(parsed.value?.payload.exp));
-const isExpired = computed(() => {
-  const exp = parsed.value?.payload.exp;
-  if (typeof exp !== 'number') return false;
-  return exp * 1000 < Date.now();
+const tokenStatus = computed<'valid' | 'expired' | 'not-yet' | 'unknown'>(() => {
+  if (!parsed.value) return 'unknown';
+  const now = Math.floor(Date.now() / 1000);
+  const exp = parsed.value.payload.exp;
+  const nbf = parsed.value.payload.nbf;
+  if (typeof exp === 'number' && now > exp) return 'expired';
+  if (typeof nbf === 'number' && now < nbf) return 'not-yet';
+  return 'valid';
+});
+
+const statusLabel = computed(() => {
+  return { valid: '有效', expired: '已过期', 'not-yet': '尚未生效', unknown: '—' }[
+    tokenStatus.value
+  ];
+});
+
+const isExpired = computed(() => tokenStatus.value === 'expired');
+
+const expRemaining = computed(() => {
+  if (!parsed.value) return '';
+  const exp = parsed.value.payload.exp;
+  if (typeof exp !== 'number') return '';
+  return timeRemaining(exp);
+});
+
+function timeRemaining(exp: number): string {
+  const diff = exp * 1000 - Date.now();
+  const abs = Math.abs(diff);
+  const days = Math.floor(abs / 86400000);
+  const hours = Math.floor((abs % 86400000) / 3600000);
+  const mins = Math.floor((abs % 3600000) / 60000);
+  const parts: string[] = [];
+  if (days > 0) parts.push(`${days} 天`);
+  if (hours > 0) parts.push(`${hours} 小时`);
+  if (days === 0 && hours === 0 && mins > 0) parts.push(`${mins} 分钟`);
+  if (!parts.length) return diff < 0 ? '刚刚过期' : '不足 1 分钟';
+  return diff < 0 ? `已过期 ${parts.join(' ')}` : `剩余 ${parts.join(' ')}`;
+}
+
+interface ClaimDisplay {
+  key: string;
+  raw: unknown;
+  display: string;
+  desc: string;
+}
+
+const standardClaims = computed<ClaimDisplay[]>(() => {
+  if (!parsed.value) return [];
+  const payload = parsed.value.payload;
+  const result: ClaimDisplay[] = [];
+  for (const [key, meta] of Object.entries(CLAIM_META)) {
+    if (key in payload) {
+      const val = payload[key];
+      let display: string;
+      if (key === 'exp' || key === 'iat' || key === 'nbf') {
+        display = typeof val === 'number' ? fmtTime(val) : String(val);
+      } else if (key === 'aud' && Array.isArray(val)) {
+        display = val.join(', ');
+      } else {
+        display = String(val);
+      }
+      result.push({ key, raw: val, display, desc: meta.desc });
+    }
+  }
+  return result;
 });
 
 function b64urlDecode(s: string): string {
-  // base64url → base64,补齐 padding
   let b64 = s.replace(/-/g, '+').replace(/_/g, '/');
   while (b64.length % 4) b64 += '=';
   const bin = atob(b64);
@@ -148,14 +231,21 @@ function b64urlDecode(s: string): string {
   return new TextDecoder().decode(bytes);
 }
 
-function fmtClaim(v: unknown): string | null {
-  if (typeof v !== 'number') return null;
-  const d = new Date(v * 1000);
-  return d.toLocaleString('zh-CN', { hour12: false });
+function fmtTime(ts: number): string {
+  return new Date(ts * 1000).toLocaleString('zh-CN', { hour12: false });
 }
 
-async function copy(text: string | undefined) {
-  if (text) await copyToClipboard(text, '已复制');
+function onPaste(e: ClipboardEvent) {
+  const text = e.clipboardData?.getData('text') ?? '';
+  if (text.trim()) {
+    setTimeout(() => {
+      token.value = token.value.trim();
+    }, 0);
+  }
+}
+
+async function copyText(text: string) {
+  await copyToClipboard(text, '已复制');
 }
 </script>
 
@@ -166,6 +256,7 @@ async function copy(text: string | undefined) {
 .jwt-input {
   width: 100%;
   min-height: 70px;
+  max-height: 140px;
   padding: 12px;
   border-radius: var(--xuya-radius);
   border: 1px solid var(--xuya-border);
@@ -176,7 +267,9 @@ async function copy(text: string | undefined) {
   line-height: 1.5;
   resize: vertical;
   word-break: break-all;
-  transition: border-color 0var(--xuya-duration-fast), box-shadow 0var(--xuya-duration-fast);
+  transition:
+    border-color var(--xuya-duration-fast),
+    box-shadow var(--xuya-duration-fast);
 }
 .jwt-input:focus {
   outline: none;
@@ -197,51 +290,120 @@ async function copy(text: string | undefined) {
 }
 
 .jwt-overview {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px 28px;
-  padding: 16px 20px;
-  margin-bottom: 16px;
+  padding: 14px 18px;
+  margin-bottom: 14px;
   background: var(--xuya-card-bg);
   border: 1px solid var(--xuya-border);
   border-radius: var(--xuya-radius);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.overview-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 28px;
 }
 .overview-item {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
 }
-.overview-item .label {
-  font-size: 11px;
+.ov-label {
+  font-size: 10.5px;
   color: var(--xuya-text-tertiary);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.4px;
+  font-weight: 600;
 }
-.overview-item .value {
+.ov-value {
   font-size: 13px;
   font-weight: 600;
   color: var(--xuya-text);
 }
-.overview-item .value.expired {
+.ov-value.mono {
+  font-family: var(--xuya-font-mono);
+}
+.ov-value.expired {
   color: var(--xuya-danger);
 }
-.overview-item .value.valid {
+
+.status-badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.status-badge.valid {
+  background: var(--xuya-success-soft);
   color: var(--xuya-success);
 }
-.overview-item .value small {
-  font-weight: 400;
-  opacity: 0.8;
+.status-badge.expired {
+  background: var(--xuya-danger-soft);
+  color: var(--xuya-danger);
+}
+.status-badge.not-yet {
+  background: var(--xuya-warn-soft);
+  color: var(--xuya-warn);
+}
+
+.claims-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.claim-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px 4px 10px;
+  background: var(--xuya-input-bg);
+  border: 1px solid var(--xuya-border-light);
+  border-radius: var(--xuya-radius-sm);
+}
+.claim-key {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--xuya-accent);
+}
+.claim-value {
+  font-size: 11.5px;
+  color: var(--xuya-text);
+  word-break: break-all;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.copy-mini {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  color: var(--xuya-text-tertiary);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition: color var(--xuya-duration-fast);
+}
+.copy-mini:hover {
+  color: var(--xuya-accent);
 }
 
 .jwt-segments {
-  padding: 12px;
-  margin-bottom: 16px;
+  padding: 10px 12px;
+  margin-bottom: 14px;
   background: var(--xuya-input-bg);
+  border: 1px solid var(--xuya-border);
   border-radius: var(--xuya-radius);
   font-family: var(--xuya-font-mono);
-  font-size: 11.5px;
+  font-size: 11px;
   word-break: break-all;
   line-height: 1.8;
+  overflow: auto;
 }
 .seg {
   padding: 2px 4px;
@@ -273,6 +435,7 @@ async function copy(text: string | undefined) {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  min-height: 0;
 }
 .part-head {
   display: flex;
@@ -302,24 +465,12 @@ async function copy(text: string | undefined) {
   background: var(--xuya-input-bg);
   border: 1px solid var(--xuya-border);
   border-radius: var(--xuya-radius-sm);
-  transition: all 0var(--xuya-duration-fast);
+  cursor: pointer;
+  transition: all var(--xuya-duration-fast);
 }
 .mini-btn:hover {
-  color: var(--xuya-text);
+  color: var(--xuya-accent);
   border-color: var(--xuya-accent);
-}
-.part-code {
-  margin: 0;
-  padding: 12px;
-  background: var(--xuya-input-bg);
-  border: 1px solid var(--xuya-border);
-  border-radius: var(--xuya-radius);
-  font-family: var(--xuya-font-mono);
-  font-size: 12.5px;
-  line-height: 1.6;
-  overflow: auto;
-  max-height: 280px;
-  color: var(--xuya-text);
 }
 
 .jwt-placeholder {

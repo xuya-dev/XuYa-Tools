@@ -1,21 +1,27 @@
 <template>
-  <ToolShell title="二维码解码" :icon="ScanQrCode" description="上传二维码图片,自动识别并提取内容,支持拖拽粘贴。">
+  <ToolShell
+    title="二维码解码"
+    :icon="ScanLine"
+    description="上传 / 拖拽 / 粘贴二维码图片，自动识别并提取内容，智能解析 WiFi、名片、链接。"
+  >
     <div class="decode-grid">
-      <!-- 上传区 -->
       <div class="upload-col">
+        <div class="col-head">
+          <span>图片</span>
+          <span v-if="previewUrl" class="stat">{{ imgInfo }}</span>
+        </div>
         <div
-            class="drop-zone"
-            :class="{ dragging, 'has-image': !!previewUrl }"
-            @dragover.prevent="dragging = true"
-            @dragleave.prevent="dragging = false"
-            @drop.prevent="onDrop"
-            @click="triggerFileInput"
-            @paste="onPaste"
+          class="drop-zone"
+          :class="{ dragging, 'has-image': !!previewUrl }"
+          @dragover.prevent="dragging = true"
+          @dragleave.prevent="dragging = false"
+          @drop.prevent="onDrop"
+          @click="triggerFileInput"
         >
-          <input ref="fileInputRef" type="file" accept="image/*" class="hidden-input" @change="onFileSelect" />
+          <input ref="fileInputRef" type="file" accept="image/*" hidden @change="onFileSelect" />
           <template v-if="previewUrl">
             <img :src="previewUrl" class="preview-img" alt="二维码预览" />
-            <button class="clear-btn" @click.stop="clearAll">
+            <button class="clear-btn" title="移除图片" @click.stop="clearAll">
               <X :size="14" />
             </button>
           </template>
@@ -27,65 +33,139 @@
         </div>
       </div>
 
-      <!-- 结果区 -->
       <div class="result-col">
         <div class="col-head">
           <span>解码结果</span>
-          <BaseButton v-if="result" variant="ghost" @click="copyResult">
-            <Copy :size="13" /> 复制
-          </BaseButton>
-        </div>
-
-        <div v-if="decoding" class="result-status">
-          <Loader2 :size="20" class="spin" /> 解码中…
-        </div>
-
-        <div v-else-if="error" class="result-status error">
-          <AlertCircle :size="20" />
-          <span>{{ error }}</span>
-        </div>
-
-        <div v-else-if="result" class="result-content">
-          <div class="result-type">
+          <div v-if="result" class="head-actions">
             <span class="type-badge" :class="resultType">{{ resultTypeLabel }}</span>
-          </div>
-          <pre class="result-text" :class="{ link: isLink }" @click="isLink ? openLink() : undefined">{{ result }}</pre>
-          <div v-if="isLink" class="result-actions">
-            <BaseButton variant="ghost" @click="openLink">
-              <ExternalLink :size="13" /> 打开链接
+            <BaseButton variant="ghost" @click="copyResult">
+              <Copy :size="13" />
+              复制
             </BaseButton>
           </div>
         </div>
 
-        <div v-else class="result-placeholder">
-          <ScanQrCode :size="40" />
+        <div v-if="decoding" class="result-box loading">
+          <Loader2 :size="20" class="spin" />
+          解码中…
+        </div>
+
+        <div v-else-if="error" class="result-box error">
+          <AlertCircle :size="20" />
+          <span>{{ error }}</span>
+        </div>
+
+        <div v-else-if="result" class="result-box">
+          <!-- WiFi 结构化展示 -->
+          <template v-if="wifiData">
+            <div class="parsed-section">
+              <div class="parsed-row">
+                <span class="parsed-label">网络名称</span>
+                <span class="parsed-value mono">{{ wifiData.ssid || '—' }}</span>
+                <button
+                  v-if="wifiData.ssid"
+                  class="copy-mini"
+                  @click="copyText(wifiData.ssid, 'SSID')"
+                >
+                  <Copy :size="11" />
+                </button>
+              </div>
+              <div class="parsed-row">
+                <span class="parsed-label">密码</span>
+                <span class="parsed-value mono">{{ wifiData.password || '(无密码)' }}</span>
+                <button
+                  v-if="wifiData.password"
+                  class="copy-mini"
+                  @click="copyText(wifiData.password, '密码')"
+                >
+                  <Copy :size="11" />
+                </button>
+              </div>
+              <div class="parsed-row">
+                <span class="parsed-label">加密方式</span>
+                <span class="parsed-value">{{ wifiData.encryption }}</span>
+              </div>
+            </div>
+          </template>
+
+          <!-- vCard 结构化展示 -->
+          <template v-else-if="vcardData">
+            <div class="parsed-section">
+              <div v-if="vcardData.name" class="parsed-row">
+                <span class="parsed-label">姓名</span>
+                <span class="parsed-value">{{ vcardData.name }}</span>
+              </div>
+              <div v-if="vcardData.phone" class="parsed-row">
+                <span class="parsed-label">电话</span>
+                <span class="parsed-value mono">{{ vcardData.phone }}</span>
+                <button class="copy-mini" @click="copyText(vcardData.phone, '电话')">
+                  <Copy :size="11" />
+                </button>
+              </div>
+              <div v-if="vcardData.email" class="parsed-row">
+                <span class="parsed-label">邮箱</span>
+                <span class="parsed-value mono">{{ vcardData.email }}</span>
+                <button class="copy-mini" @click="copyText(vcardData.email, '邮箱')">
+                  <Copy :size="11" />
+                </button>
+              </div>
+              <div v-if="vcardData.org" class="parsed-row">
+                <span class="parsed-label">组织</span>
+                <span class="parsed-value">{{ vcardData.org }}</span>
+              </div>
+            </div>
+          </template>
+
+          <!-- 原始文本 -->
+          <div class="raw-section">
+            <span class="raw-label">原始内容</span>
+            <pre
+              class="result-text"
+              :class="{ link: isLink }"
+              @click="isLink ? openLink() : undefined"
+              >{{ result }}</pre>
+          </div>
+
+          <!-- 操作按钮 -->
+          <div v-if="isLink" class="result-actions">
+            <BaseButton variant="ghost" @click="openLink">
+              <ExternalLink :size="13" />
+              打开链接
+            </BaseButton>
+          </div>
+        </div>
+
+        <div v-else class="result-box placeholder">
+          <ScanLine :size="40" />
           <p>上传二维码图片后自动解码</p>
         </div>
       </div>
     </div>
 
-    <!-- 历史记录 -->
     <div v-if="history.length" class="history-section">
-      <div class="section-label">解码历史</div>
+      <div class="section-label">
+        <span>解码历史</span>
+        <button class="clear-history" @click="history = []">清空</button>
+      </div>
       <div class="history-list">
-        <button v-for="(h, i) in history" :key="i" class="history-item" @click="historyClick(h)">
-          <span class="hist-type" :class="h.type">{{ h.typeLabel }}</span>
+        <button v-for="(h, i) in history" :key="i" class="history-item" @click="restoreResult(h)">
+          <span class="hist-badge" :class="h.type">{{ h.typeLabel }}</span>
           <span class="hist-text">{{ h.text }}</span>
           <span class="hist-time">{{ h.time }}</span>
         </button>
       </div>
-      <button class="clear-history" @click="history = []">清空历史</button>
     </div>
   </ToolShell>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue';
-import { ScanQrCode, Upload, X, Copy, AlertCircle, Loader2, ExternalLink } from '@lucide/vue';
+import { ScanLine, Upload, X, Copy, AlertCircle, Loader2, ExternalLink } from '@lucide/vue';
 import ToolShell from '@/components/layout/ToolShell.vue';
 import BaseButton from '@/components/ui/BaseButton.vue';
 import { useToast } from '@/composables/useToast';
 import { copyToClipboard } from '@/composables/useClipboard';
+import { useToolState } from '@/composables/useToolState';
 import jsQR from 'jsqr';
 
 const toast = useToast();
@@ -97,15 +177,17 @@ const result = ref('');
 const error = ref('');
 const decoding = ref(false);
 const dragging = ref(false);
+const imgInfo = ref('');
 
 interface HistoryItem {
   text: string;
+  fullText: string;
   type: string;
   typeLabel: string;
   time: string;
 }
 
-const history = ref<HistoryItem[]>([]);
+const history = useToolState<HistoryItem[]>('qrdecode', 'history', []);
 
 const resultType = computed(() => {
   if (!result.value) return 'text';
@@ -114,22 +196,62 @@ const resultType = computed(() => {
   if (/^tel:/i.test(result.value)) return 'phone';
   if (/^WIFI:/i.test(result.value)) return 'wifi';
   if (/^BEGIN:VCARD/i.test(result.value)) return 'vcard';
+  if (/^sms:/i.test(result.value)) return 'sms';
   return 'text';
 });
 
 const resultTypeLabel = computed(() => {
   const map: Record<string, string> = {
-    url: '🔗 链接',
-    email: '📧 邮箱',
-    phone: '📞 电话',
-    wifi: '📶 WiFi',
-    vcard: '👤 名片',
-    text: '📝 文本',
+    url: '链接',
+    email: '邮箱',
+    phone: '电话',
+    wifi: 'WiFi',
+    vcard: '名片',
+    sms: '短信',
+    text: '文本',
   };
-  return map[resultType.value] ?? '📝 文本';
+  return map[resultType.value] ?? '文本';
 });
 
 const isLink = computed(() => resultType.value === 'url');
+
+interface WifiInfo {
+  ssid: string;
+  password: string;
+  encryption: string;
+  hidden: boolean;
+}
+const wifiData = computed<WifiInfo | null>(() => {
+  if (resultType.value !== 'wifi') return null;
+  const m = result.value.match(/WIFI:(?:T:([^;]*);)?S:([^;]*);(?:P:([^;]*);)?(?:H:([^;]*);)?;?/i);
+  if (!m) return null;
+  return {
+    encryption: (m[1] || 'nopass').toUpperCase(),
+    ssid: m[2] || '',
+    password: m[3] || '',
+    hidden: (m[4] || '').toLowerCase() === 'true',
+  };
+});
+
+interface VcardInfo {
+  name: string;
+  phone: string;
+  email: string;
+  org: string;
+}
+const vcardData = computed<VcardInfo | null>(() => {
+  if (resultType.value !== 'vcard') return null;
+  const get = (key: string) => {
+    const m = result.value.match(new RegExp(`${key}[^:]*:(.+)`, 'i'));
+    return m?.[1]?.trim() || '';
+  };
+  return {
+    name: get('FN'),
+    phone: get('TEL'),
+    email: get('EMAIL'),
+    org: get('ORG'),
+  };
+});
 
 function triggerFileInput() {
   if (!previewUrl.value) fileInputRef.value?.click();
@@ -146,10 +268,9 @@ function onDrop(e: DragEvent) {
   if (file) loadImage(file);
 }
 
-function onPaste(e: ClipboardEvent) {
-  const items = e.clipboardData?.items;
-  if (!items) return;
-  for (const item of items) {
+function globalPaste(e: ClipboardEvent) {
+  if (!e.clipboardData?.items) return;
+  for (const item of e.clipboardData.items) {
     if (item.type.startsWith('image/')) {
       const file = item.getAsFile();
       if (file) {
@@ -169,6 +290,7 @@ function loadImage(file: File) {
 
   clearAll();
   previewUrl.value = URL.createObjectURL(file);
+  imgInfo.value = `${(file.size / 1024).toFixed(1)} KB`;
 
   const img = new Image();
   img.onload = () => {
@@ -179,7 +301,6 @@ function loadImage(file: File) {
       return;
     }
 
-    // 限制最大尺寸提升性能
     const maxSize = 1500;
     let { width, height } = img;
     if (width > maxSize || height > maxSize) {
@@ -192,6 +313,7 @@ function loadImage(file: File) {
     canvas.height = height;
     ctx.drawImage(img, 0, 0, width, height);
     imageData.value = ctx.getImageData(0, 0, width, height);
+    imgInfo.value = `${width}×${height} · ${(file.size / 1024).toFixed(1)} KB`;
     decode();
   };
   img.onerror = () => {
@@ -206,7 +328,6 @@ function decode() {
   error.value = '';
   result.value = '';
 
-  // 异步解码避免 UI 卡顿
   setTimeout(() => {
     try {
       const code = jsQR(imageData.value!.data, imageData.value!.width, imageData.value!.height, {
@@ -218,7 +339,7 @@ function decode() {
         addToHistory(code.data);
         toast.success('解码成功');
       } else {
-        error.value = '未在图片中找到二维码,请确保图片清晰且包含完整二维码';
+        error.value = '未在图片中找到二维码，请确保图片清晰且包含完整二维码';
       }
     } catch (e) {
       error.value = '解码失败: ' + (e instanceof Error ? e.message : String(e));
@@ -231,37 +352,49 @@ function decode() {
 function addToHistory(text: string) {
   const type = resultType.value;
   const typeLabels: Record<string, string> = {
-    url: '链接', email: '邮箱', phone: '电话', wifi: 'WiFi', vcard: '名片', text: '文本',
+    url: '链接',
+    email: '邮箱',
+    phone: '电话',
+    wifi: 'WiFi',
+    vcard: '名片',
+    sms: '短信',
+    text: '文本',
   };
   const now = new Date();
   const time = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
 
-  history.value.unshift({
-    text: text.length > 80 ? text.slice(0, 80) + '…' : text,
-    type,
-    typeLabel: typeLabels[type] ?? '文本',
-    time,
-  });
-
-  if (history.value.length > 20) history.value.pop();
+  history.value = [
+    {
+      text: text.length > 60 ? text.slice(0, 60) + '…' : text,
+      fullText: text,
+      type,
+      typeLabel: typeLabels[type] ?? '文本',
+      time,
+    },
+    ...history.value.filter((h) => h.fullText !== text),
+  ].slice(0, 20);
 }
 
-function historyClick(h: HistoryItem) {
-  result.value = h.text.endsWith('…') ? h.text : h.text;
+function restoreResult(h: HistoryItem) {
+  result.value = h.fullText;
+  error.value = '';
 }
 
 async function copyResult() {
   if (result.value) await copyToClipboard(result.value, '已复制解码结果');
 }
 
+async function copyText(text: string, label: string) {
+  await copyToClipboard(text, `已复制${label}`);
+}
+
 async function openLink() {
-  if (isLink.value) {
-    try {
-      const opener = await import('@tauri-apps/plugin-opener');
-      await opener.openUrl(result.value);
-    } catch {
-      window.open(result.value, '_blank');
-    }
+  if (!isLink.value) return;
+  try {
+    const opener = await import('@tauri-apps/plugin-opener');
+    await opener.openUrl(result.value);
+  } catch {
+    window.open(result.value, '_blank');
   }
 }
 
@@ -271,28 +404,11 @@ function clearAll() {
   imageData.value = null;
   result.value = '';
   error.value = '';
+  imgInfo.value = '';
   if (fileInputRef.value) fileInputRef.value.value = '';
 }
 
-// 全局粘贴监听
-function globalPaste(e: ClipboardEvent) {
-  if (!e.clipboardData?.items) return;
-  for (const item of e.clipboardData.items) {
-    if (item.type.startsWith('image/')) {
-      const file = item.getAsFile();
-      if (file) {
-        loadImage(file);
-        e.preventDefault();
-        break;
-      }
-    }
-  }
-}
-
-onMounted(() => {
-  window.addEventListener('paste', globalPaste);
-});
-
+onMounted(() => window.addEventListener('paste', globalPaste));
 onUnmounted(() => {
   window.removeEventListener('paste', globalPaste);
   if (previewUrl.value) URL.revokeObjectURL(previewUrl.value);
@@ -315,7 +431,26 @@ onUnmounted(() => {
   min-height: 0;
 }
 
-/* 上传区 */
+.col-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--xuya-text-secondary);
+}
+.head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.stat {
+  font-size: 10.5px;
+  font-weight: 400;
+  opacity: 0.75;
+  font-family: var(--xuya-font-mono);
+}
+
 .drop-zone {
   flex: 1;
   min-height: 280px;
@@ -349,9 +484,6 @@ onUnmounted(() => {
 .drop-zone.has-image:hover {
   background: var(--xuya-input-bg);
 }
-.hidden-input {
-  display: none;
-}
 .preview-img {
   max-width: 100%;
   max-height: 100%;
@@ -381,81 +513,154 @@ onUnmounted(() => {
   justify-content: center;
   border-radius: var(--xuya-radius-sm);
   background: var(--xuya-overlay);
-  color: var(--xuya-on-accent);
+  color: #fff;
   border: none;
   cursor: pointer;
-  transition: background var(--xuya-duration-fast) var(--xuya-ease);
+  transition: background var(--xuya-duration-fast);
 }
 .clear-btn:hover {
   background: var(--xuya-danger);
 }
 
-/* 结果区 */
-.col-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 12px;
+.type-badge {
+  font-size: 10.5px;
   font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 99px;
+  background: var(--xuya-accent-soft);
+  color: var(--xuya-accent);
+}
+.type-badge.url {
+  background: var(--xuya-info-soft);
+  color: var(--xuya-info);
+}
+.type-badge.email {
+  background: var(--xuya-success-soft);
+  color: var(--xuya-success);
+}
+.type-badge.phone {
+  background: var(--xuya-warn-soft);
+  color: var(--xuya-warn);
+}
+.type-badge.wifi {
+  background: var(--xuya-purple-soft);
+  color: var(--xuya-purple);
+}
+.type-badge.vcard {
+  background: var(--xuya-success-soft);
+  color: var(--xuya-success);
+}
+.type-badge.sms {
+  background: var(--xuya-info-soft);
+  color: var(--xuya-info);
+}
+.type-badge.text {
+  background: var(--xuya-bg-subtle);
   color: var(--xuya-text-secondary);
 }
-.result-status {
+
+.result-box {
   flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  font-size: 13px;
-  color: var(--xuya-text-tertiary);
-  border: 1px solid var(--xuya-border);
-  border-radius: var(--xuya-radius);
-  background: var(--xuya-input-bg);
-}
-.result-status.error {
-  color: var(--xuya-danger);
-  flex-direction: column;
-  gap: 10px;
-  padding: 24px;
-  text-align: center;
-}
-.result-content {
-  flex: 1;
+  min-height: 280px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   border: 1px solid var(--xuya-border);
   border-radius: var(--xuya-radius);
   background: var(--xuya-input-bg);
   padding: 14px;
   overflow: auto;
 }
-.result-type {
-  display: flex;
-  gap: 6px;
+.result-box.loading,
+.result-box.error {
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--xuya-text-tertiary);
 }
-.type-badge {
-  font-size: 11px;
-  font-weight: 600;
-  padding: 3px 10px;
-  border-radius: var(--xuya-radius-sm);
-  background: var(--xuya-accent-soft);
-  color: var(--xuya-accent);
+.result-box.error {
+  color: var(--xuya-danger);
 }
-.type-badge.url { background: var(--xuya-accent-soft); color: var(--xuya-accent); }
-.type-badge.email { background: var(--xuya-success-soft); color: var(--xuya-success); }
-.type-badge.phone { background: var(--xuya-warn-soft); color: var(--xuya-warn); }
-.type-badge.wifi { background: var(--xuya-accent-soft); color: var(--xuya-accent); }
-.type-badge.vcard { background: var(--xuya-success-soft); color: var(--xuya-success); }
-.type-badge.text { background: var(--xuya-border); color: var(--xuya-text-secondary); }
+.result-box.placeholder {
+  align-items: center;
+  justify-content: center;
+  color: var(--xuya-text-tertiary);
+}
+.result-box.placeholder p {
+  font-size: 13px;
+}
 
-.result-text {
-  margin: 0;
+.parsed-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   padding: 12px;
   background: var(--xuya-bg-subtle);
   border: 1px solid var(--xuya-border-light);
   border-radius: var(--xuya-radius-sm);
-  font-family: var(--xuya-font-mono);
+}
+.parsed-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.parsed-label {
+  width: 64px;
+  font-size: 11.5px;
+  color: var(--xuya-text-tertiary);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.parsed-value {
+  flex: 1;
   font-size: 13px;
+  color: var(--xuya-text);
+  word-break: break-all;
+}
+.parsed-value.mono {
+  font-family: var(--xuya-font-mono);
+}
+.copy-mini {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  color: var(--xuya-text-tertiary);
+  border: 1px solid var(--xuya-border);
+  background: var(--xuya-bg-elevated);
+  cursor: pointer;
+  transition: all var(--xuya-duration-fast);
+  flex-shrink: 0;
+}
+.copy-mini:hover {
+  color: var(--xuya-accent);
+  border-color: var(--xuya-accent);
+}
+
+.raw-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.raw-label {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--xuya-text-tertiary);
+  font-weight: 600;
+}
+.result-text {
+  margin: 0;
+  padding: 10px 12px;
+  background: var(--xuya-bg-subtle);
+  border: 1px solid var(--xuya-border-light);
+  border-radius: var(--xuya-radius-sm);
+  font-family: var(--xuya-font-mono);
+  font-size: 12.5px;
   line-height: 1.6;
   color: var(--xuya-text);
   white-space: pre-wrap;
@@ -468,37 +673,37 @@ onUnmounted(() => {
   text-decoration-style: dashed;
   text-underline-offset: 3px;
 }
+
 .result-actions {
   display: flex;
   gap: 8px;
 }
-.result-placeholder {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  color: var(--xuya-text-tertiary);
-  border: 1px solid var(--xuya-border);
-  border-radius: var(--xuya-radius);
-  background: var(--xuya-input-bg);
-}
-.result-placeholder p {
-  font-size: 13px;
-}
 
-/* 历史 */
 .history-section {
   margin-top: 16px;
 }
 .section-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.6px;
+  letter-spacing: 0.5px;
   color: var(--xuya-text-tertiary);
   margin-bottom: 8px;
+}
+.clear-history {
+  font-size: 10px;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--xuya-text-tertiary);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+.clear-history:hover {
+  color: var(--xuya-danger);
 }
 .history-list {
   display: flex;
@@ -516,15 +721,16 @@ onUnmounted(() => {
   border-radius: var(--xuya-radius-sm);
   background: var(--xuya-input-bg);
   border: 1px solid var(--xuya-border-light);
-  transition: all var(--xuya-duration-fast) var(--xuya-ease);
+  transition: all var(--xuya-duration-fast);
   text-align: left;
   width: 100%;
   cursor: pointer;
 }
 .history-item:hover {
-  background: var(--xuya-border-light);
+  background: var(--xuya-accent-soft);
+  border-color: var(--xuya-accent);
 }
-.hist-type {
+.hist-badge {
   font-size: 10px;
   font-weight: 600;
   padding: 2px 7px;
@@ -533,12 +739,30 @@ onUnmounted(() => {
   color: var(--xuya-accent);
   flex-shrink: 0;
 }
-.hist-type.url { background: var(--xuya-accent-soft); color: var(--xuya-accent); }
-.hist-type.email { background: var(--xuya-success-soft); color: var(--xuya-success); }
-.hist-type.phone { background: var(--xuya-warn-soft); color: var(--xuya-warn); }
-.hist-type.wifi { background: var(--xuya-accent-soft); color: var(--xuya-accent); }
-.hist-type.vcard { background: var(--xuya-success-soft); color: var(--xuya-success); }
-.hist-type.text { background: var(--xuya-border); color: var(--xuya-text-secondary); }
+.hist-badge.url {
+  background: var(--xuya-info-soft);
+  color: var(--xuya-info);
+}
+.hist-badge.email {
+  background: var(--xuya-success-soft);
+  color: var(--xuya-success);
+}
+.hist-badge.phone {
+  background: var(--xuya-warn-soft);
+  color: var(--xuya-warn);
+}
+.hist-badge.wifi {
+  background: var(--xuya-purple-soft);
+  color: var(--xuya-purple);
+}
+.hist-badge.vcard {
+  background: var(--xuya-success-soft);
+  color: var(--xuya-success);
+}
+.hist-badge.text {
+  background: var(--xuya-bg-subtle);
+  color: var(--xuya-text-secondary);
+}
 .hist-text {
   flex: 1;
   min-width: 0;
@@ -552,18 +776,6 @@ onUnmounted(() => {
   font-size: 11px;
   color: var(--xuya-text-tertiary);
   flex-shrink: 0;
-}
-.clear-history {
-  margin-top: 6px;
-  font-size: 11px;
-  color: var(--xuya-text-tertiary);
-  background: none;
-  border: none;
-  cursor: pointer;
-  transition: color var(--xuya-duration-fast) var(--xuya-ease);
-}
-.clear-history:hover {
-  color: var(--xuya-danger);
 }
 
 .spin {
