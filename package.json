@@ -18,7 +18,8 @@
     "format": "prettier --write \"src/**/*.{ts,vue,css,html,json}\" \"*.{ts,js,json,md}\"",
     "format:check": "prettier --check \"src/**/*.{ts,vue,css,html,json}\" \"*.{ts,js,json,md}\"",
     "fmt:rust": "cargo fmt --manifest-path src-tauri/Cargo.toml",
-    "clippy": "cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings"
+    "clippy": "cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings",
+    "version": "node scripts/bump-version.cjs"
   },
   "dependencies": {
     "@lobehub/icons-static-svg": "^1.91.0",

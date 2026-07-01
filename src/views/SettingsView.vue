@@ -271,7 +271,7 @@ function exportData() {
     }
   }
   data['__exportTime'] = new Date().toISOString();
-  data['__version'] = '0.1.0';
+  data['__version'] = '1.0.0';
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
