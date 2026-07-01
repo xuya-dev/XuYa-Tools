@@ -7,27 +7,40 @@ on:
   workflow_dispatch:
 
 jobs:
-  publish:
+  create-release:
     permissions:
       contents: write
-    runs-on: ${{ matrix.settings.os }}
+    runs-on: ubuntu-latest
+    outputs:
+      release_upload_url: ${{ steps.create_release.outputs.upload_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: 'XuYa Tools ${{ github.ref_name }}'
+          draft: true
+          generate_release_notes: true
+
+  build:
+    needs: create-release
+    permissions:
+      contents: write
     strategy:
       fail-fast: false
       matrix:
-        settings:
-          - os: ubuntu-22.04
-            target: x86_64-unknown-linux-gnu
-            label: linux-amd64
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
-            label: windows-amd64
-          - os: macos-latest
+        include:
+          - platform: macos-latest
             target: aarch64-apple-darwin
-            label: macos-arm64
-          - os: macos-latest
+          - platform: macos-latest
             target: x86_64-apple-darwin
-            label: macos-intel
-
+          - platform: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+          - platform: windows-latest
+            target: x86_64-pc-windows-msvc
+    runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
 
@@ -39,7 +52,7 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.settings.target }}
+          targets: ${{ matrix.target }}
 
       - name: Rust cache
         uses: swatinem/rust-cache@v2
@@ -47,22 +60,20 @@ jobs:
           workspaces: './src-tauri -> target'
 
       - name: Install Linux dependencies
-        if: matrix.settings.os == 'ubuntu-22.04'
+        if: matrix.platform == 'ubuntu-22.04'
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libssl-dev libgtk-3-dev
 
-      - name: Install npm dependencies
+      - name: Install frontend dependencies
         run: npm install
 
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: ${{ github.ref_name }}
           releaseName: 'XuYa Tools ${{ github.ref_name }}'
           releaseDraft: true
           prerelease: false
-          updaterJsonPreferNsis: true
+          args: --target ${{ matrix.target }}
