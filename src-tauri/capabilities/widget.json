@@ -1,29 +1,25 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
-  "identifier": "default",
-  "description": "XuYa Tools 默认权限",
-  "windows": ["main", "widget"],
+  "identifier": "widget",
+  "description": "桌面悬浮小组件窗口权限",
+  "windows": ["widget"],
   "permissions": [
     "core:path:default",
     "core:event:default",
     "core:app:default",
-    "core:webview:default",
-    "core:webview:allow-create-webview-window",
     "core:window:default",
     "core:window:allow-start-dragging",
     "core:window:allow-minimize",
-    "core:window:allow-maximize",
-    "core:window:allow-unmaximize",
-    "core:window:allow-toggle-maximize",
-    "core:window:allow-is-maximized",
+    "core:window:allow-close",
     "core:window:allow-show",
     "core:window:allow-hide",
-    "core:window:allow-close",
     "core:window:allow-set-focus",
     "core:window:allow-set-always-on-top",
     "core:window:allow-set-position",
+    "core:window:allow-set-size",
+    "core:window:allow-is-visible",
+    "core:window:allow-center",
     "core:menu:default",
-    "opener:default",
-    "autostart:default"
+    "opener:default"
   ]
 }

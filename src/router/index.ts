@@ -100,6 +100,7 @@ const router = createRouter({
       name: 'ipcalc',
       component: () => import('@/views/tools/IpCalculator.vue'),
     },
+    { path: '/widget', name: 'widget', component: () => import('@/views/WidgetView.vue') },
     { path: '/settings', name: 'settings', component: () => import('@/views/SettingsView.vue') },
     { path: '/tools/cli', name: 'cli', component: () => import('@/views/tools/CliManager.vue') },
     {
