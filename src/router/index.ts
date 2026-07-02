@@ -46,6 +46,11 @@ const router = createRouter({
       name: 'imgtool',
       component: () => import('@/views/tools/ImageTool.vue'),
     },
+    {
+      path: '/tools/datagen',
+      name: 'datagen',
+      component: () => import('@/views/tools/DataGenerator.vue'),
+    },
     { path: '/tools/color', name: 'color', component: () => import('@/views/tools/ColorTool.vue') },
     {
       path: '/tools/qrcode',
@@ -100,7 +105,6 @@ const router = createRouter({
       name: 'ipcalc',
       component: () => import('@/views/tools/IpCalculator.vue'),
     },
-    { path: '/widget', name: 'widget', component: () => import('@/views/WidgetView.vue') },
     { path: '/settings', name: 'settings', component: () => import('@/views/SettingsView.vue') },
     { path: '/tools/cli', name: 'cli', component: () => import('@/views/tools/CliManager.vue') },
     {

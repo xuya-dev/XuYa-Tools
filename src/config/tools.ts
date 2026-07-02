@@ -28,6 +28,7 @@ import {
   Hash,
   Image,
   Type,
+  Users,
 } from '@lucide/vue';
 
 export type ToolCategory =
@@ -158,6 +159,27 @@ export const tools: ToolMeta[] = [
     keywords: ['image', 'compress', 'resize', 'convert', 'webp', 'base64', '图片', '压缩', '缩放'],
   },
   {
+    id: 'datagen',
+    name: '测试数据',
+    description: '生成身份证、手机号、姓名等测试数据，带校验位与身份证正反面。',
+    category: 'encoder',
+    icon: Users,
+    route: '/tools/datagen',
+    keywords: [
+      'idcard',
+      'phone',
+      'name',
+      'mock',
+      'test',
+      'data',
+      '身份证',
+      '手机号',
+      '测试',
+      '数据',
+      '生成',
+    ],
+  },
+  {
     id: 'color',
     name: '颜色工具',
     description: 'HEX / RGB / HSL 互转、色板生成、WCAG 对比度检测。',
@@ -229,7 +251,23 @@ export const tools: ToolMeta[] = [
     category: 'text',
     icon: Type,
     route: '/tools/textproc',
-    keywords: ['text', 'case', 'upper', 'lower', 'camel', 'snake', 'kebab', 'sort', 'dedup', 'extract', '文本', '大小写', '排序', '去重', '统计'],
+    keywords: [
+      'text',
+      'case',
+      'upper',
+      'lower',
+      'camel',
+      'snake',
+      'kebab',
+      'sort',
+      'dedup',
+      'extract',
+      '文本',
+      '大小写',
+      '排序',
+      '去重',
+      '统计',
+    ],
   },
   // ---- 日期时间 ----
   {

@@ -2,13 +2,11 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "XuYa Tools 默认权限",
-  "windows": ["main", "widget"],
+  "windows": ["main"],
   "permissions": [
     "core:path:default",
     "core:event:default",
     "core:app:default",
-    "core:webview:default",
-    "core:webview:allow-create-webview-window",
     "core:window:default",
     "core:window:allow-start-dragging",
     "core:window:allow-minimize",
@@ -20,8 +18,6 @@
     "core:window:allow-hide",
     "core:window:allow-close",
     "core:window:allow-set-focus",
-    "core:window:allow-set-always-on-top",
-    "core:window:allow-set-position",
     "core:menu:default",
     "opener:default",
     "autostart:default"

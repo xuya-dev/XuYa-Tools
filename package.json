@@ -31,6 +31,7 @@
     "@types/js-yaml": "^4.0.9",
     "crypto-js": "^4.2.0",
     "highlight.js": "^11.11.1",
+    "html-to-image": "^1.11.13",
     "js-md5": "^0.8.3",
     "js-yaml": "^5.2.0",
     "marked": "^18.0.5",

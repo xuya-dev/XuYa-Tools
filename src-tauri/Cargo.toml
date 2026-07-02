@@ -17,7 +17,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = ["macos-private-api", "tray-icon", "image-png"] }
+tauri = { version = "2", features = ["tray-icon", "image-png"] }
 tauri-plugin-opener = "2"
 tauri-plugin-single-instance = "2"
 tauri-plugin-autostart = "2"
@@ -51,9 +51,6 @@ rusqlite = { version = "0.31", features = ["bundled"] }
 
 # 网络接口枚举
 if-addrs = "0.7"
-
-# 系统监控 (悬浮窗)
-sysinfo = "0.32"
 
 [profile.dev]
 incremental = true

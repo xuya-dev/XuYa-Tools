@@ -22,7 +22,6 @@ use proxy::ProxyService;
 
 mod db;
 mod usage;
-mod sys_monitor;
 
 mod http_client;
 use http_client::WsManager;
@@ -49,8 +48,6 @@ pub fn run() {
         .manage(ProxyService::new(cli_data_dir()))
         // WebSocket 连接管理器
         .manage(WsManager::new())
-        // 系统监控状态
-        .manage(sys_monitor::SysState::new())
         .invoke_handler(tauri::generate_handler![
             // ---- CLI 配置 ----
             get_cli_status,
@@ -80,8 +77,6 @@ pub fn run() {
             http_client::ws_send,
             http_client::ws_disconnect,
             http_client::get_local_interfaces,
-            // ---- 系统监控 ----
-            sys_monitor::get_system_stats,
         ])
         .setup(|app| {
             // 注入 AppHandle 给代理服务, 用于 emit 告警事件

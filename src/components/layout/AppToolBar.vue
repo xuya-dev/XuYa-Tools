@@ -17,9 +17,6 @@
     </span>
 
     <div class="tb-controls" @mousedown.stop>
-      <button class="tb-btn theme-btn" title="桌面悬浮窗" @click="onToggleWidget">
-        <LayoutPanelLeft :size="15" />
-      </button>
       <button class="tb-btn theme-btn" title="布局与主题" @click="emitSwitcher">
         <SlidersHorizontal :size="15" />
       </button>
@@ -78,20 +75,14 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useRoute } from 'vue-router';
-import { Sun, Moon, Monitor, SlidersHorizontal, ChevronDown, LayoutPanelLeft } from '@lucide/vue';
+import { Sun, Moon, Monitor, SlidersHorizontal, ChevronDown } from '@lucide/vue';
 import { tools, CATEGORY_LABELS, CATEGORY_COLORS } from '@/config/tools';
 import { useWindow } from '@/composables/useWindow';
 import { useTheme } from '@/composables/useTheme';
-import { useWidget } from '@/composables/useWidget';
 
 const route = useRoute();
 const { isMaximized, minimize, toggleMaximize, close, startDrag } = useWindow();
 const { mode, cycleMode } = useTheme();
-const { toggleWidget } = useWidget();
-
-function onToggleWidget() {
-  toggleWidget();
-}
 
 const categoryName = computed(() => {
   const cat = tools.find((t) => route.path === t.route)?.category;
