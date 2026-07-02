@@ -178,7 +178,7 @@
         <img class="about-logo" src="/Logo.png" alt="" aria-hidden="true" />
         <div class="about-info">
           <div class="about-name">XuYa Tools</div>
-          <div class="about-version">v1.0.0 · 程序员日常开发工具箱</div>
+          <div class="about-version">v1.0.1 · 程序员日常开发工具箱</div>
           <div class="about-tech">Vite 8 · Vue 3 · Tauri 2 · {{ toolCount }} 个工具</div>
         </div>
       </div>

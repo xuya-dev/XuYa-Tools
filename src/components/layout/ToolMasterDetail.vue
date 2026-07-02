@@ -11,7 +11,7 @@
           <img class="md-brand-logo" src="/Logo.png" alt="" />
           <div class="md-brand-text">
             <span class="md-brand-name">XuYa Tools</span>
-            <small class="md-brand-sub">开发工具箱 · v1.0.0</small>
+            <small class="md-brand-sub">开发工具箱 · v1.0.1</small>
           </div>
         </div>
 
@@ -287,7 +287,7 @@
           <img class="md-brand-logo" src="/Logo.png" alt="" />
           <div class="md-brand-text">
             <span class="md-brand-name">XuYa Tools</span>
-            <small class="md-brand-sub">开发工具箱 · v1.0.0</small>
+            <small class="md-brand-sub">开发工具箱 · v1.0.1</small>
           </div>
         </div>
         <div class="md-master-head">
