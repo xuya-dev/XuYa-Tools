@@ -382,6 +382,6 @@ mod tests {
     fn test_toml_quote_escapes() {
         assert_eq!(toml_quote("hello"), "\"hello\"");
         assert_eq!(toml_quote("say \"hi\""), "\"say \\\"hi\\\"\"");
-        assert_eq!(toml_quote(r"C:\path"), "\"C:\\path\"");
+        assert_eq!(toml_quote(r"C:\path"), "\"C:\\\\path\"");
     }
 }

@@ -62,14 +62,14 @@ mod tests {
     #[test]
     fn test_in_memory_db_schema_migration() {
         let db = Database::in_memory().expect("打开内存数据库失败");
-        // schema_version 表应存在且版本=1
+        // schema_version 表应存在且版本=2
         let conn = db.conn.lock().unwrap();
         let version: u32 = conn
             .query_row("SELECT MAX(version) FROM schema_version", [], |row| {
                 row.get(0)
             })
             .unwrap();
-        assert_eq!(version, 1, "schema 版本应为 1");
+        assert_eq!(version, 2, "schema 版本应为 2");
         // proxy_request_logs 表应存在
         let count: i64 = conn
             .query_row("SELECT COUNT(*) FROM proxy_request_logs", [], |row| {
