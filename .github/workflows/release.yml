@@ -22,7 +22,24 @@ jobs:
           tag_name: ${{ github.ref_name }}
           name: 'XuYa Tools ${{ github.ref_name }}'
           draft: true
-          generate_release_notes: true
+          body: |
+            ## v1.0.3 更新内容
+
+            本次新增 7 个开发常用工具,工具总数达到 34 个。
+
+            ### ✨ 新增工具
+
+            - **CSV 表格** — CSV 可视化预览,支持排序 / 筛选,一键转 JSON / Markdown / TSV / SQL,兼容 RFC 4180。
+            - **JSON 转类型** — 粘贴 JSON 一键生成 Go / Rust / TypeScript / Java / Python 类型定义,递归推断嵌套结构。
+            - **JSON 对比** — 按字段路径结构化对比两个 JSON,识别新增 / 删除 / 修改,支持忽略数组顺序。
+            - **代码格式化** — 美化 / 压缩 XML、HTML、CSS、JavaScript 代码,纯前端实现。
+            - **敏感脱敏** — 一键打码文本中的手机号 / 身份证 / 邮箱 / 银行卡 / IP,支持自定义正则规则。
+            - **时间偏移** — 计算「N 天后是几号」「两日期相差多久」,支持工作日计算。
+            - **端口检测** — 检测主机端口连通性,支持端口段批量扫描,显示握手耗时。
+
+            ### 🔧 说明
+            - 工具箱至此功能基本完整,后续重心转向体验打磨与稳定性。
+            - 已装旧版本的用户,启动应用后会自动收到更新提示。
 
   build:
     needs: create-release
