@@ -35,7 +35,6 @@
       <div class="col">
         <div class="col-head">
           <span>原始代码</span>
-          <button class="mini-btn" @click="loadSample">示例</button>
         </div>
         <textarea
           v-model="input"
@@ -423,16 +422,6 @@ function minifyJs(src: string): string {
     .replace(/\s*([{}();,=+\-*/<>!&|?:])\s*/g, '$1')
     .replace(/\n/g, '')
     .trim();
-}
-
-function loadSample() {
-  const samples: Record<Lang, string> = {
-    xml: '<root><user id="1"><name>张三</name><age>18</age></user><user id="2"><name>李四</name></user></root>',
-    html: '<!DOCTYPE html><html><head><title>Test</title></head><body><h1>Hello</h1><p>World</p></body></html>',
-    css: 'body{margin:0;padding:0;font-family:sans-serif}.btn{color:#fff;background:#007bff;padding:8px 16px;border:none;border-radius:4px;cursor:pointer}',
-    js: 'function add(a,b){return a+b}const result=add(1,2);if(result>0){console.log("positive:"+result)}else{console.log("zero")}',
-  };
-  input.value = samples[lang.value];
 }
 
 async function doCopy() {

@@ -35,7 +35,6 @@
         <div class="col-head">
           <span>CSV 输入</span>
           <div class="col-actions">
-            <button class="mini-btn" @click="loadSample">示例</button>
             <button class="mini-btn" @click="loadFile">导入文件</button>
             <input
               ref="fileInput"
@@ -49,7 +48,7 @@
         <textarea
           v-model="input"
           class="editor"
-          placeholder="粘贴 CSV,如:&#10;name,age,city&#10;张三,18,北京&#10;李四,25,上海"
+          placeholder="粘贴 CSV 文本"
           spellcheck="false"
         ></textarea>
       </div>
@@ -322,15 +321,6 @@ const exportText = computed(() => {
 });
 
 // ===== 操作 =====
-function loadSample() {
-  input.value = `name,age,city,join_date
-张三,28,北京,2023-01-15
-李四,35,上海,2022-11-08
-王五,22,广州,2024-03-20
-赵六,30,北京,2023-07-01
-孙七,28,深圳,2024-01-10`;
-}
-
 function loadFile() {
   fileInput.value?.click();
 }

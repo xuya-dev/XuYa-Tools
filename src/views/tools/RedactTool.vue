@@ -19,7 +19,6 @@
         <div class="col-head">
           <span>原始文本</span>
           <div class="col-actions">
-            <button class="mini-btn" @click="loadSample">示例</button>
             <button class="mini-btn" @click="clearAll">清空</button>
           </div>
         </div>
@@ -158,12 +157,6 @@ function run() {
 
   output.value = result;
   redactCount.value = count;
-}
-
-function loadSample() {
-  input.value = `客户张三,手机 13912345678,身份证 110101199003071234。
-联系邮箱:zhangsan@example.com,工资卡 6225880212345678。
-服务器内网 192.168.1.100,公网 8.8.8.8。`;
 }
 
 function clearAll() {

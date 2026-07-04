@@ -28,12 +28,11 @@
       <div class="col">
         <div class="col-head">
           <span>JSON 输入</span>
-          <button class="mini-btn" @click="sampleJson">示例</button>
         </div>
         <textarea
           v-model="input"
           class="editor"
-          placeholder='粘贴 JSON,如:&#10;{&#10;  "name": "张三",&#10;  "age": 18,&#10;  "tags": ["a", "b"]&#10;}'
+          placeholder="粘贴 JSON"
           spellcheck="false"
         ></textarea>
       </div>
@@ -421,22 +420,6 @@ function run() {
   } catch (e) {
     errorMsg.value = `❌ 生成失败:${e instanceof Error ? e.message : String(e)}`;
   }
-}
-
-function sampleJson() {
-  input.value = JSON.stringify(
-    {
-      id: 123,
-      name: '张三',
-      active: true,
-      score: 95.5,
-      tags: ['a', 'b'],
-      address: { city: '北京', zip: '100000' },
-      friends: [{ id: 2, name: '李四' }],
-    },
-    null,
-    2,
-  );
 }
 
 async function doCopy() {
