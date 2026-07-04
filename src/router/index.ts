@@ -37,11 +37,6 @@ const router = createRouter({
       component: () => import('@/views/tools/CodeBeautify.vue'),
     },
     {
-      path: '/tools/jsondiff',
-      name: 'jsondiff',
-      component: () => import('@/views/tools/JsonDiff.vue'),
-    },
-    {
       path: '/tools/csvtool',
       name: 'csvtool',
       component: () => import('@/views/tools/CsvTool.vue'),

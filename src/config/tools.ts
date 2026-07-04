@@ -157,15 +157,6 @@ export const tools: ToolMeta[] = [
     keywords: ['xml', 'html', 'css', 'js', 'beautify', 'minify', '格式化', '美化', '压缩'],
   },
   {
-    id: 'jsondiff',
-    name: 'JSON 对比',
-    description: '按字段路径结构化对比两个 JSON,识别新增 / 删除 / 修改。',
-    category: 'converter',
-    icon: GitCompare,
-    route: '/tools/jsondiff',
-    keywords: ['json', 'diff', 'compare', '对比', '差异', '结构化'],
-  },
-  {
     id: 'csvtool',
     name: 'CSV 表格',
     description: 'CSV 可视化预览,支持排序 / 筛选,一键转 JSON / Markdown / TSV / SQL。',
