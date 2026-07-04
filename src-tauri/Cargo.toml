@@ -1,6 +1,6 @@
 [package]
 name = "xuya-tools"
-version = "1.0.1"
+version = "1.0.2"
 description = "XuYa Tools - 程序员日常开发工具箱"
 authors = ["XuYa"]
 edition = "2021"
