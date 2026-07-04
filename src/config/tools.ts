@@ -29,6 +29,11 @@ import {
   Image,
   Type,
   Users,
+  CalendarClock,
+  EyeOff,
+  Code2,
+  PlugZap,
+  Table,
 } from '@lucide/vue';
 
 export type ToolCategory =
@@ -120,6 +125,54 @@ export const tools: ToolMeta[] = [
     icon: Database,
     route: '/tools/sql',
     keywords: ['sql', 'format', 'beautify', 'mysql', 'postgres', '格式化', '美化', '查询'],
+  },
+  {
+    id: 'jsontocode',
+    name: 'JSON 转类型',
+    description: '粘贴 JSON,一键生成 Go / Rust / TypeScript / Java / Python 类型定义。',
+    category: 'converter',
+    icon: Braces,
+    route: '/tools/jsontocode',
+    keywords: [
+      'json',
+      'go',
+      'rust',
+      'typescript',
+      'java',
+      'python',
+      'struct',
+      'class',
+      '类型',
+      '生成',
+      '代码生成',
+    ],
+  },
+  {
+    id: 'codebeautify',
+    name: '代码格式化',
+    description: '美化 / 压缩 XML、HTML、CSS、JavaScript 代码,纯前端实现。',
+    category: 'converter',
+    icon: Code2,
+    route: '/tools/codebeautify',
+    keywords: ['xml', 'html', 'css', 'js', 'beautify', 'minify', '格式化', '美化', '压缩'],
+  },
+  {
+    id: 'jsondiff',
+    name: 'JSON 对比',
+    description: '按字段路径结构化对比两个 JSON,识别新增 / 删除 / 修改。',
+    category: 'converter',
+    icon: GitCompare,
+    route: '/tools/jsondiff',
+    keywords: ['json', 'diff', 'compare', '对比', '差异', '结构化'],
+  },
+  {
+    id: 'csvtool',
+    name: 'CSV 表格',
+    description: 'CSV 可视化预览,支持排序 / 筛选,一键转 JSON / Markdown / TSV / SQL。',
+    category: 'converter',
+    icon: Table,
+    route: '/tools/csvtool',
+    keywords: ['csv', 'table', 'excel', 'json', 'markdown', 'tsv', 'sql', '表格', '筛选', '排序'],
   },
   // ---- 编码生成 ----
   {
@@ -269,6 +322,29 @@ export const tools: ToolMeta[] = [
       '统计',
     ],
   },
+  {
+    id: 'redact',
+    name: '敏感脱敏',
+    description: '一键打码文本中的手机号、身份证、邮箱、银行卡、IP,支持自定义规则。',
+    category: 'text',
+    icon: EyeOff,
+    route: '/tools/redact',
+    keywords: [
+      'redact',
+      'mask',
+      'phone',
+      'idcard',
+      'email',
+      'bank',
+      'ip',
+      '脱敏',
+      '打码',
+      '隐私',
+      '敏感信息',
+      '手机号',
+      '身份证',
+    ],
+  },
   // ---- 日期时间 ----
   {
     id: 'timestamp',
@@ -287,6 +363,15 @@ export const tools: ToolMeta[] = [
     icon: ListTree,
     route: '/tools/cron',
     keywords: ['cron', 'crontab', 'schedule', '定时', '计划任务', '表达式'],
+  },
+  {
+    id: 'datemath',
+    name: '时间偏移',
+    description: '计算「N 天后是几号」「两日期相差多久」,支持工作日计算。',
+    category: 'datetime',
+    icon: CalendarClock,
+    route: '/tools/datemath',
+    keywords: ['date', 'add', 'sub', 'diff', 'workday', '日期', '偏移', '相差', '工作日', '加减'],
   },
   // ---- 网络参考 ----
   {
@@ -324,6 +409,15 @@ export const tools: ToolMeta[] = [
     icon: Network,
     route: '/tools/ipcalc',
     keywords: ['ip', 'subnet', 'cidr', 'mask', '网络', '子网', '掩码', 'ipv4'],
+  },
+  {
+    id: 'portcheck',
+    name: '端口检测',
+    description: '检测主机端口是否开放,支持端口段批量扫描,显示连通状态与握手耗时。',
+    category: 'network',
+    icon: PlugZap,
+    route: '/tools/portcheck',
+    keywords: ['port', 'tcp', 'scan', 'connect', '端口', '连通性', '扫描', '开放', 'telnet'],
   },
   // ---- 开发配置 ----
   {

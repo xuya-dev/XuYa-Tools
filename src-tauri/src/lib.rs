@@ -24,6 +24,7 @@ mod db;
 mod usage;
 
 mod http_client;
+mod port_check;
 use http_client::WsManager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -80,6 +81,8 @@ pub fn run() {
             http_client::ws_send,
             http_client::ws_disconnect,
             http_client::get_local_interfaces,
+            // ---- 端口连通性检测 ----
+            port_check::port_check,
         ])
         .setup(|app| {
             // 注入 AppHandle 给代理服务, 用于 emit 告警事件

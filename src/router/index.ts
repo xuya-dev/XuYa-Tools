@@ -27,6 +27,26 @@ const router = createRouter({
     },
     { path: '/tools/sql', name: 'sql', component: () => import('@/views/tools/SqlFormatter.vue') },
     {
+      path: '/tools/jsontocode',
+      name: 'jsontocode',
+      component: () => import('@/views/tools/JsonToCode.vue'),
+    },
+    {
+      path: '/tools/codebeautify',
+      name: 'codebeautify',
+      component: () => import('@/views/tools/CodeBeautify.vue'),
+    },
+    {
+      path: '/tools/jsondiff',
+      name: 'jsondiff',
+      component: () => import('@/views/tools/JsonDiff.vue'),
+    },
+    {
+      path: '/tools/csvtool',
+      name: 'csvtool',
+      component: () => import('@/views/tools/CsvTool.vue'),
+    },
+    {
       path: '/tools/urlparser',
       name: 'urlparser',
       component: () => import('@/views/tools/UrlParser.vue'),
@@ -84,11 +104,21 @@ const router = createRouter({
       component: () => import('@/views/tools/TextProcessor.vue'),
     },
     {
+      path: '/tools/redact',
+      name: 'redact',
+      component: () => import('@/views/tools/RedactTool.vue'),
+    },
+    {
       path: '/tools/timestamp',
       name: 'timestamp',
       component: () => import('@/views/tools/TimestampTool.vue'),
     },
     { path: '/tools/cron', name: 'cron', component: () => import('@/views/tools/CronParser.vue') },
+    {
+      path: '/tools/datemath',
+      name: 'datemath',
+      component: () => import('@/views/tools/DateMath.vue'),
+    },
     { path: '/tools/http', name: 'http', component: () => import('@/views/tools/HttpTool.vue') },
     {
       path: '/tools/websocket',
@@ -104,6 +134,11 @@ const router = createRouter({
       path: '/tools/ipcalc',
       name: 'ipcalc',
       component: () => import('@/views/tools/IpCalculator.vue'),
+    },
+    {
+      path: '/tools/portcheck',
+      name: 'portcheck',
+      component: () => import('@/views/tools/PortCheck.vue'),
     },
     { path: '/settings', name: 'settings', component: () => import('@/views/SettingsView.vue') },
     { path: '/tools/cli', name: 'cli', component: () => import('@/views/tools/CliManager.vue') },
