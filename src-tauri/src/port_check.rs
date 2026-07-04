@@ -68,9 +68,7 @@ fn parse_ports(spec: &str) -> Result<Vec<u16>, String> {
                 out.push(p);
             }
         } else {
-            let p: u16 = part
-                .parse()
-                .map_err(|_| format!("非法端口: {part}"))?;
+            let p: u16 = part.parse().map_err(|_| format!("非法端口: {part}"))?;
             out.push(p);
         }
         if out.len() > MAX_PORTS {
@@ -90,8 +88,16 @@ async fn probe(host: &str, port: u16, timeout_ms: u64) -> (bool, u64, Option<Str
     let connect = tokio::net::TcpStream::connect(&addr);
     match tokio::time::timeout(Duration::from_millis(timeout_ms), connect).await {
         Ok(Ok(_stream)) => (true, start.elapsed().as_millis() as u64, None),
-        Ok(Err(e)) => (false, start.elapsed().as_millis() as u64, Some(e.to_string())),
-        Err(_) => (false, timeout_ms, Some(format!("连接超时 ({timeout_ms}ms)"))),
+        Ok(Err(e)) => (
+            false,
+            start.elapsed().as_millis() as u64,
+            Some(e.to_string()),
+        ),
+        Err(_) => (
+            false,
+            timeout_ms,
+            Some(format!("连接超时 ({timeout_ms}ms)")),
+        ),
     }
 }
 
