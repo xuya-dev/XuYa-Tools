@@ -42,6 +42,9 @@ pub fn run() {
                 let _ = window.set_focus();
             }
         }))
+        // 应用更新 (前端 @tauri-apps/plugin-updater 调用,process 提供重启能力)
+        .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         // CLI 配置切换服务
         .manage(CliConfigService::new(cli_data_dir()))
         // 本地代理服务 (内部持有统计数据库,与 CLI 服务解耦)

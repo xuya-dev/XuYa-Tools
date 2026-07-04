@@ -178,8 +178,47 @@
         <img class="about-logo" src="/Logo.png" alt="" aria-hidden="true" />
         <div class="about-info">
           <div class="about-name">XuYa Tools</div>
-          <div class="about-version">v1.0.1 · 程序员日常开发工具箱</div>
+          <div class="about-version">
+            {{ appVersion ? `v${appVersion}` : 'v?' }} · 程序员日常开发工具箱
+          </div>
           <div class="about-tech">Vite 8 · Vue 3 · Tauri 2 · {{ toolCount }} 个工具</div>
+          <!-- 检查更新 -->
+          <div class="update-row">
+            <BaseButton
+              variant="ghost"
+              :disabled="checking || downloading || installing"
+              @click="onCheckUpdate"
+            >
+              <RefreshCw :size="14" :class="{ spinning: checking }" />
+              {{ checking ? '检查中…' : '检查更新' }}
+            </BaseButton>
+            <!-- 发现新版本 -->
+            <template v-if="updateInfo">
+              <div class="update-found">
+                <span class="update-version">发现新版本 v{{ updateInfo.version }}</span>
+                <BaseButton
+                  variant="primary"
+                  :disabled="downloading || installing"
+                  @click="onDownloadInstall"
+                >
+                  <Download :size="14" />
+                  {{ downloading ? `下载中 ${progress}%` : installing ? '安装中…' : '立即更新' }}
+                </BaseButton>
+                <button class="update-dismiss" title="忽略" @click="dismissUpdate">×</button>
+              </div>
+              <pre v-if="updateInfo.body && !downloading" class="update-notes">{{
+                updateInfo.body
+              }}</pre>
+              <div v-if="downloading" class="update-progress">
+                <div class="update-progress-bar" :style="{ width: progress + '%' }"></div>
+              </div>
+            </template>
+            <!-- 已是最新(手动检查后) -->
+            <span v-else-if="upToDate" class="update-uptodate">
+              <CircleCheck :size="14" />
+              已是最新版本
+            </span>
+          </div>
         </div>
       </div>
     </div>
@@ -197,11 +236,14 @@ import {
   Download,
   Upload,
   SlidersHorizontal,
+  RefreshCw,
+  CircleCheck,
 } from '@lucide/vue';
 import ToolShell from '@/components/layout/ToolShell.vue';
 import BaseButton from '@/components/ui/BaseButton.vue';
 import { useTheme } from '@/composables/useTheme';
 import { useToast } from '@/composables/useToast';
+import { useUpdater } from '@/composables/useUpdater';
 import { clearAllToolState } from '@/composables/useToolState';
 import { useFavorites } from '@/composables/useFavorites';
 import { useLayout, type LayoutMode } from '@/composables/useLayout';
@@ -218,6 +260,32 @@ const toolCount = tools.length;
 
 const autostartEnabled = ref(false);
 const dataDir = ref('');
+
+// 更新相关
+const {
+  checking,
+  updateInfo,
+  downloading,
+  progress,
+  installing,
+  checkForUpdate,
+  downloadAndInstall,
+  dismissUpdate,
+  fetchAppVersion,
+} = useUpdater();
+const appVersion = ref('');
+const upToDate = ref(false);
+
+async function onCheckUpdate() {
+  upToDate.value = false;
+  await checkForUpdate(false);
+  // 检查完若无 updateInfo,标记为最新(仅手动检查时显示)
+  if (!updateInfo.value && !checking.value) upToDate.value = true;
+}
+
+async function onDownloadInstall() {
+  await downloadAndInstall();
+}
 
 async function toggleAutostart() {
   try {
@@ -271,7 +339,7 @@ function exportData() {
     }
   }
   data['__exportTime'] = new Date().toISOString();
-  data['__version'] = '1.0.0';
+  data['__version'] = appVersion.value || 'unknown';
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -323,6 +391,8 @@ onMounted(async () => {
   } catch {
     /* 非 Tauri 环境 */
   }
+  // 拉取应用版本号(读 tauri.conf.json 的 version)
+  appVersion.value = await fetchAppVersion();
 });
 </script>
 
@@ -536,5 +606,86 @@ kbd {
   color: var(--xuya-text-tertiary);
   margin-top: 6px;
   font-family: var(--xuya-font-mono);
+}
+
+/* 检查更新 */
+.update-row {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.update-found {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.update-version {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--xuya-accent);
+}
+.update-dismiss {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--xuya-radius-sm);
+  border: 1px solid var(--xuya-border);
+  background: var(--xuya-input-bg);
+  color: var(--xuya-text-tertiary);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  transition: all var(--xuya-duration-fast);
+}
+.update-dismiss:hover {
+  color: var(--xuya-danger);
+  border-color: var(--xuya-danger);
+}
+.update-notes {
+  width: 100%;
+  margin: 0;
+  padding: 10px;
+  max-height: 160px;
+  overflow: auto;
+  font-family: var(--xuya-font-mono);
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--xuya-text-secondary);
+  background: var(--xuya-input-bg);
+  border: 1px solid var(--xuya-border);
+  border-radius: var(--xuya-radius-sm);
+}
+.update-progress {
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--xuya-input-bg);
+  overflow: hidden;
+}
+.update-progress-bar {
+  height: 100%;
+  background: var(--xuya-accent);
+  transition: width 0.2s var(--xuya-ease);
+}
+.update-uptodate {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--xuya-success);
+}
+.spinning {
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>

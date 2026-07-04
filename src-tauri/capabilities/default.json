@@ -20,6 +20,8 @@
     "core:window:allow-set-focus",
     "core:menu:default",
     "opener:default",
-    "autostart:default"
+    "autostart:default",
+    "updater:default",
+    "process:default"
   ]
 }

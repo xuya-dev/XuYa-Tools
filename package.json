@@ -27,6 +27,8 @@
     "@tauri-apps/api": "^2.11.1",
     "@tauri-apps/plugin-autostart": "^2.5.1",
     "@tauri-apps/plugin-opener": "^2.5.4",
+    "@tauri-apps/plugin-process": "^2.3.1",
+    "@tauri-apps/plugin-updater": "^2.10.1",
     "@types/crypto-js": "^4.2.2",
     "@types/js-yaml": "^4.0.9",
     "crypto-js": "^4.2.0",
