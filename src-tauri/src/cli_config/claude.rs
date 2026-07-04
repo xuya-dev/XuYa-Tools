@@ -368,7 +368,7 @@ mod tests {
             icon_color: String::new(),
             codex_auth_json: String::new(),
             codex_config_toml: String::new(),
-            updated_at: 0,
+            ..Default::default()
         };
         set_env(&mut env, &provider);
         // sonnet 带 1M 后缀
@@ -444,7 +444,7 @@ mod tests {
             icon_color: String::new(),
             codex_auth_json: String::new(),
             codex_config_toml: String::new(),
-            updated_at: 0,
+            ..Default::default()
         };
         set_env(&mut env, &provider);
         assert!(env.get("ANTHROPIC_DEFAULT_SONNET_MODEL").is_none());

@@ -48,7 +48,7 @@ export function useTheme() {
       isDark.value = resolveDark(m);
       applyToDom(isDark.value);
     },
-    { immediate: true }
+    { immediate: true },
   );
 
   // 系统变化时,若当前为 system 则同步

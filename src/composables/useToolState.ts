@@ -42,7 +42,7 @@ export function useToolState<T>(toolId: string, key: string, defaultValue: T): R
         /* 存储满或隐私模式,静默忽略 */
       }
     },
-    { deep: true }
+    { deep: true },
   );
 
   cache.set(storageKey, state as Ref<unknown>);

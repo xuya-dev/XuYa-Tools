@@ -86,7 +86,8 @@ button {
 body,
 .theme-transition,
 .theme-transition * {
-  transition: background-color var(--xuya-duration) var(--xuya-ease),
+  transition:
+    background-color var(--xuya-duration) var(--xuya-ease),
     border-color var(--xuya-duration) var(--xuya-ease),
     color var(--xuya-duration) var(--xuya-ease);
 }
@@ -95,7 +96,8 @@ body,
 /* 路由切换淡入 */
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity var(--xuya-duration) var(--xuya-ease-out),
+  transition:
+    opacity var(--xuya-duration) var(--xuya-ease-out),
     transform var(--xuya-duration) var(--xuya-ease-out);
 }
 .fade-enter-from {

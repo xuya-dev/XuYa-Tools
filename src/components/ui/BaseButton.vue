@@ -17,7 +17,7 @@ withDefaults(
     disabled?: boolean;
     block?: boolean;
   }>(),
-  { variant: 'secondary', type: 'button', disabled: false, block: false }
+  { variant: 'secondary', type: 'button', disabled: false, block: false },
 );
 </script>
 
@@ -34,7 +34,8 @@ withDefaults(
   border: 1px solid var(--xuya-border);
   background: var(--xuya-input-bg);
   color: var(--xuya-text);
-  transition: background var(--xuya-duration-fast) var(--xuya-ease),
+  transition:
+    background var(--xuya-duration-fast) var(--xuya-ease),
     border-color var(--xuya-duration-fast) var(--xuya-ease),
     transform var(--xuya-duration-fast) var(--xuya-ease),
     box-shadow var(--xuya-duration-fast) var(--xuya-ease),
@@ -61,11 +62,15 @@ withDefaults(
   background: var(--xuya-accent-gradient);
   color: var(--xuya-on-accent);
   border: none;
-  box-shadow: 0 2px 8px var(--xuya-accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  box-shadow:
+    0 2px 8px var(--xuya-accent-glow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
 .variant-primary:hover:not(:disabled) {
   background: var(--xuya-accent-gradient-hover);
-  box-shadow: 0 4px 14px var(--xuya-accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  box-shadow:
+    0 4px 14px var(--xuya-accent-glow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
   transform: translateY(-1px);
 }
 .variant-primary:active:not(:disabled) {

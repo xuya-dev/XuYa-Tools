@@ -70,8 +70,22 @@ import c from 'highlight.js/lib/languages/c';
 import cpp from 'highlight.js/lib/languages/cpp';
 
 const HL_LANGS: Record<string, unknown> = {
-  javascript, typescript, python, bash, xml, css, json, sql, yaml, markdown, shell,
-  go, rust, java, c, cpp,
+  javascript,
+  typescript,
+  python,
+  bash,
+  xml,
+  css,
+  json,
+  sql,
+  yaml,
+  markdown,
+  shell,
+  go,
+  rust,
+  java,
+  c,
+  cpp,
 };
 for (const [name, lang] of Object.entries(HL_LANGS)) hljs.registerLanguage(name, lang as never);
 hljs.registerAliases(['js', 'jsx'], { languageName: 'javascript' });

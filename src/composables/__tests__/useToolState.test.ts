@@ -1,11 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { nextTick } from 'vue';
-import {
-  useToolState,
-  clearToolState,
-  clearAllToolState,
-  getToolStateAll,
-} from '../useToolState';
+import { useToolState, clearToolState, clearAllToolState, getToolStateAll } from '../useToolState';
 
 describe('useToolState', () => {
   beforeEach(() => {

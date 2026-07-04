@@ -143,7 +143,17 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { Image as ImageIcon, X, Download, Copy, RefreshCw, RotateCcw, RotateCw, FlipHorizontal, FlipVertical } from '@lucide/vue';
+import {
+  Image as ImageIcon,
+  X,
+  Download,
+  Copy,
+  RefreshCw,
+  RotateCcw,
+  RotateCw,
+  FlipHorizontal,
+  FlipVertical,
+} from '@lucide/vue';
 import ToolShell from '@/components/layout/ToolShell.vue';
 import BaseButton from '@/components/ui/BaseButton.vue';
 import { useToast } from '@/composables/useToast';

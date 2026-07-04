@@ -16,7 +16,7 @@ withDefaults(
     placeholder?: string;
     type?: 'text' | 'number' | 'password';
   }>(),
-  { modelValue: '', placeholder: '', type: 'text' }
+  { modelValue: '', placeholder: '', type: 'text' },
 );
 
 const emit = defineEmits<{ (e: 'update:modelValue', v: string): void }>();
@@ -35,7 +35,8 @@ function onInput(e: Event) {
   border: 1px solid var(--xuya-border);
   background: var(--xuya-input-bg);
   color: var(--xuya-text);
-  transition: border-color var(--xuya-duration-fast) var(--xuya-ease),
+  transition:
+    border-color var(--xuya-duration-fast) var(--xuya-ease),
     box-shadow var(--xuya-duration-fast) var(--xuya-ease),
     background var(--xuya-duration-fast) var(--xuya-ease);
 }

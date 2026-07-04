@@ -28,7 +28,7 @@ watch(
       /* ignore */
     }
   },
-  { deep: true }
+  { deep: true },
 );
 
 export function useFavorites() {

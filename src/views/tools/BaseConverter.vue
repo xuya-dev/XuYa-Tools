@@ -42,13 +42,7 @@
         </div>
         <div class="bit-input-group">
           <label class="bit-label">位移 N</label>
-          <input
-            v-model.number="shiftN"
-            type="number"
-            min="0"
-            class="bit-input"
-            placeholder="0"
-          />
+          <input v-model.number="shiftN" type="number" min="0" class="bit-input" placeholder="0" />
         </div>
       </div>
       <div class="bit-btns">

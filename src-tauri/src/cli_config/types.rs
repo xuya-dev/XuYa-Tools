@@ -31,10 +31,11 @@ impl AppType {
 }
 
 /// provider 适用范围
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum ProviderScope {
     /// 仅 Claude Code
+    #[default]
     Claude,
     /// 仅 Codex
     Codex,
@@ -116,7 +117,7 @@ impl ApiFormat {
 }
 
 /// provider 配置 (应用内 SSOT)
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct CliProvider {
     /// 唯一 ID
     pub id: String,

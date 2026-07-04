@@ -326,7 +326,7 @@ mod tests {
             icon_color: String::new(),
             codex_auth_json: String::new(),
             codex_config_toml: String::new(),
-            updated_at: 0,
+            ..Default::default()
         }
     }
 

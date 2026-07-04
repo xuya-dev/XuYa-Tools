@@ -24,7 +24,8 @@
             :title="f.desc"
             @click="toggleFlag(f.ch)"
           >
-            <span class="flag-ch">{{ f.ch }}</span>{{ f.short }}
+            <span class="flag-ch">{{ f.ch }}</span>
+            {{ f.short }}
           </button>
         </div>
       </div>

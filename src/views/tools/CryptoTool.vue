@@ -72,13 +72,48 @@
       <div class="key-row">
         <div class="key-field">
           <label class="ctrl-label">
-            密钥 (Hex)
-            <button class="gen-btn" @click="symKey = genHex(symKeyBytes)">随机</button>
+            <span>密钥</span>
+            <span class="key-meta">
+              <span
+                class="fmt-toggle"
+                :class="{ active: symKeyFormat === 'text' }"
+                role="button"
+                tabindex="0"
+                :title="
+                  symKeyFormat === 'hex'
+                    ? '当前:Hex 字符串(每 2 hex = 1 字节)'
+                    : '当前:UTF-8 文本(原始字节,MySQL 语义,右侧补 0)'
+                "
+                @click="symKeyFormat = symKeyFormat === 'hex' ? 'text' : 'hex'"
+                @keydown.enter="symKeyFormat = symKeyFormat === 'hex' ? 'text' : 'hex'"
+                @keydown.space.prevent="symKeyFormat = symKeyFormat === 'hex' ? 'text' : 'hex'"
+              >
+                {{ symKeyFormat === 'hex' ? 'Hex' : '文本' }}
+              </span>
+              <button
+                v-if="symKeyFormat === 'hex'"
+                class="gen-btn"
+                @click="symKey = genHex(symKeyBytes)"
+              >
+                随机
+              </button>
+              <span
+                v-else
+                class="text-keysize"
+                :title="'按字节长度自动判定:≤16→AES-128,17~24→192,25~32→256'"
+              >
+                {{ textKeySizeHint }}
+              </span>
+            </span>
           </label>
           <input
             v-model="symKey"
             class="mono-input"
-            :placeholder="`${symKeyBytes} 字节 = ${symKeyBytes * 2} hex`"
+            :placeholder="
+              symKeyFormat === 'hex'
+                ? `${symKeyBytes} 字节 = ${symKeyBytes * 2} hex`
+                : '文本密钥(MySQL 兼容,取 UTF-8 原始字节)'
+            "
             spellcheck="false"
           />
         </div>
@@ -394,6 +429,8 @@ watch(hashInput, computeHash);
 const symAlgo = useToolState<'aes' | 'sm4'>('crypto', 'symAlgo', 'aes');
 const symMode = useToolState<'ecb' | 'cbc' | 'gcm'>('crypto', 'symMode', 'cbc');
 const symDirection = useToolState<'encrypt' | 'decrypt'>('crypto', 'symDir', 'encrypt');
+/** 密钥格式:hex = 按 hex 解析(严格 16/24/32 字节);text = 按 UTF-8 文本字节(MySQL 语义,右侧补 0)。 */
+const symKeyFormat = useToolState<'hex' | 'text'>('crypto', 'symKeyFormat', 'hex');
 const symKey = ref('');
 const symIv = ref('');
 const symInput = ref('');
@@ -419,6 +456,15 @@ const symModes = computed(() => {
 });
 const symKeyBytes = computed(() => (symAlgo.value === 'aes' ? 16 : 16));
 
+/** 文本密钥模式下,根据当前密钥的字节长度提示 MySQL 自动判定的 AES key size。 */
+const textKeySizeHint = computed(() => {
+  const len = symKey.value.trim() ? new TextEncoder().encode(symKey.value.trim()).length : 0;
+  if (len === 0) return 'AES-?';
+  if (len <= 16) return `AES-128 (${len}B)`;
+  if (len <= 24) return `AES-192 (${len}B)`;
+  return `AES-256 (${len}B)`;
+});
+
 watch(symAlgo, () => {
   const modes = symModes.value;
   if (!modes.find((m) => m.id === symMode.value)) symMode.value = modes[0]!.id;
@@ -439,7 +485,7 @@ async function runSym() {
 }
 
 function runAesEcb(): string {
-  const key = CryptoJS.enc.Hex.parse(symKey.value.trim());
+  const key = parseSymKey();
   if (symDirection.value === 'encrypt') {
     const enc = CryptoJS.AES.encrypt(symInput.value, key, {
       mode: CryptoJS.mode.ECB,
@@ -454,7 +500,46 @@ function runAesEcb(): string {
     mode: CryptoJS.mode.ECB,
     padding: CryptoJS.pad.Pkcs7,
   });
-  return dec.toString(CryptoJS.enc.Utf8);
+  return safeUtf8(dec);
+}
+
+/**
+ * 解析对称密钥。
+ * - hex:严格按 hex 解析(必须 16/24/32 字节)。
+ * - text:取 UTF-8 原始字节(MySQL AES_ENCRYPT 语义),右侧补 \0 到 16/24/32,
+ *   字节长度决定 key size(≤16→128,17~24→192,25~32→256)。
+ *   这样可直接解 MySQL 库中 HEX(AES_ENCRYPT(...)) 的密文。
+ */
+function parseSymKey(): CryptoJS.lib.WordArray {
+  const raw = symKey.value.trim();
+  if (!raw) throw new Error('请输入密钥');
+  if (symKeyFormat.value === 'hex') {
+    return CryptoJS.enc.Hex.parse(raw.replace(/\s/g, ''));
+  }
+  const bytes = new TextEncoder().encode(raw);
+  const size = bytes.length <= 16 ? 16 : bytes.length <= 24 ? 24 : 32;
+  if (bytes.length > size) throw new Error(`密钥过长(${bytes.length} 字节),文本模式最长 32 字节`);
+  const padded = new Uint8Array(size);
+  padded.set(bytes);
+  return bytesToWordArray(padded);
+}
+
+function bytesToWordArray(bytes: Uint8Array): CryptoJS.lib.WordArray {
+  const hex = Array.from(bytes)
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+  return CryptoJS.enc.Hex.parse(hex);
+}
+
+/** 安全转 UTF-8:解密失败(密钥/模式不对)时 dec 往往含非法字节,直接 toString(Utf8) 会抛错吞掉结果。 */
+function safeUtf8(dec: CryptoJS.lib.WordArray): string {
+  const { words, sigBytes } = dec;
+  const bytes = new Uint8Array(sigBytes);
+  for (let i = 0; i < sigBytes; i++) {
+    const word = words[i >>> 2] ?? 0;
+    bytes[i] = (word >>> (24 - (i % 4) * 8)) & 0xff;
+  }
+  return new TextDecoder('utf-8', { fatal: false }).decode(bytes);
 }
 
 async function runAes(): Promise<string> {
@@ -822,6 +907,38 @@ function runSm2() {
 }
 .gen-btn:hover {
   text-decoration: underline;
+}
+.key-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.fmt-toggle {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: var(--xuya-radius-sm);
+  color: var(--xuya-text-secondary);
+  background: var(--xuya-input-bg);
+  border: 1px solid var(--xuya-border);
+  cursor: pointer;
+  user-select: none;
+  transition: all var(--xuya-duration-fast);
+}
+.fmt-toggle:hover {
+  color: var(--xuya-text);
+  border-color: var(--xuya-accent);
+}
+.fmt-toggle.active {
+  color: var(--xuya-accent);
+  background: var(--xuya-accent-soft);
+  border-color: var(--xuya-accent);
+}
+.text-keysize {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--xuya-accent);
+  opacity: 0.85;
 }
 
 .io-row {

@@ -1352,11 +1352,11 @@ mod tests {
         };
         if content.is_empty() && finish.is_some() {
             format!(
-                "{{\"id\":\"chatcmpl-1\",\"model\":\"gpt-4o\",\"choices\":[{{\"index\":0,\"delta\":{{}},\"{fr}\":null}}]}}"
+                "{{\"id\":\"chatcmpl-1\",\"model\":\"gpt-4o\",\"choices\":[{{\"index\":0,\"delta\":{{}},{fr}}}]}}"
             )
         } else {
             format!(
-                "{{\"id\":\"chatcmpl-1\",\"model\":\"gpt-4o\",\"choices\":[{{\"index\":0,\"delta\":{{\"content\":\"{content}\"}},{fr}}]}}"
+                "{{\"id\":\"chatcmpl-1\",\"model\":\"gpt-4o\",\"choices\":[{{\"index\":0,\"delta\":{{\"content\":\"{content}\"}},{fr}}}]}}"
             )
         }
     }

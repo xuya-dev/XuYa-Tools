@@ -25,18 +25,8 @@
 
     <!-- 查找替换面板 -->
     <div v-if="mode === 'find_replace'" class="extra-panel">
-      <input
-        v-model="findText"
-        class="extra-input"
-        placeholder="查找内容…"
-        spellcheck="false"
-      />
-      <input
-        v-model="replaceText"
-        class="extra-input"
-        placeholder="替换为…"
-        spellcheck="false"
-      />
+      <input v-model="findText" class="extra-input" placeholder="查找内容…" spellcheck="false" />
+      <input v-model="replaceText" class="extra-input" placeholder="替换为…" spellcheck="false" />
       <label class="toggle-label">
         <input v-model="useRegex" type="checkbox" class="toggle-check" />
         正则
@@ -374,11 +364,9 @@ function process() {
   }
 }
 
-watch(
-  [input, mode, findText, replaceText, useRegex, filterPattern, filterMode],
-  process,
-  { immediate: true },
-);
+watch([input, mode, findText, replaceText, useRegex, filterPattern, filterMode], process, {
+  immediate: true,
+});
 
 const charCount = computed(() => input.value.length);
 const charCountNoSpace = computed(() => input.value.replace(/\s/g, '').length);

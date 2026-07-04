@@ -1007,7 +1007,15 @@ const claudeModels = computed(() => {
         model: p.model,
       };
     }
-    return { model_sonnet: '', sonnet_name: '', model_opus: '', opus_name: '', model_haiku: '', haiku_name: '', model: '' };
+    return {
+      model_sonnet: '',
+      sonnet_name: '',
+      model_opus: '',
+      opus_name: '',
+      model_haiku: '',
+      haiku_name: '',
+      model: '',
+    };
   }
   const pid = status.value?.claude.matched_provider_id;
   const p = providers.value.find((item) => item.id === pid);

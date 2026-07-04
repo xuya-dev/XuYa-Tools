@@ -23,7 +23,10 @@ async function getWindow(): Promise<TauriWindow | null> {
   try {
     // 动态导入,避免非 Tauri 环境下报错
     const mod = await import('@tauri-apps/api/window');
-    win = (mod.getCurrentWindow?.() ?? (mod as unknown as { getCurrentWindow: () => TauriWindow }).getCurrentWindow()) as TauriWindow;
+    win = (mod.getCurrentWindow?.() ??
+      (
+        mod as unknown as { getCurrentWindow: () => TauriWindow }
+      ).getCurrentWindow()) as TauriWindow;
   } catch {
     win = null;
   }

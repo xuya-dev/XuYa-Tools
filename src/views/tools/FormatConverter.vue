@@ -26,11 +26,7 @@
         <Copy :size="13" />
         复制结果
       </BaseButton>
-      <BaseButton
-        v-if="toFormat === 'json'"
-        variant="ghost"
-        @click="jsonPretty = !jsonPretty"
-      >
+      <BaseButton v-if="toFormat === 'json'" variant="ghost" @click="jsonPretty = !jsonPretty">
         {{ jsonPretty ? '压缩 JSON' : '美化 JSON' }}
       </BaseButton>
       <BaseButton variant="ghost" @click="input = ''">清空</BaseButton>

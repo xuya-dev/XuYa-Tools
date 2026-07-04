@@ -17,7 +17,7 @@
       </BaseButton>
     </div>
 
-      <div v-if="parseError" class="error-box">{{ parseError }}</div>
+    <div v-if="parseError" class="error-box">{{ parseError }}</div>
 
     <template v-if="parsed && !parseError">
       <!-- URL 组成部分 -->

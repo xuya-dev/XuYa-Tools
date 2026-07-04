@@ -3,7 +3,10 @@ import { useToast } from './useToast';
 /**
  * 复制文本到剪贴板,并给出统一的 Toast 反馈。
  */
-export async function copyToClipboard(text: string, successMsg = '已复制到剪贴板'): Promise<boolean> {
+export async function copyToClipboard(
+  text: string,
+  successMsg = '已复制到剪贴板',
+): Promise<boolean> {
   const toast = useToast();
   try {
     await navigator.clipboard.writeText(text);
