@@ -11,7 +11,7 @@
           <img class="md-brand-logo" src="/Logo.png" alt="" />
           <div class="md-brand-text">
             <span class="md-brand-name">XuYa Tools</span>
-            <small class="md-brand-sub">开发工具箱 · v1.0.3</small>
+            <small class="md-brand-sub">开发工具箱 · v1.0.4</small>
           </div>
         </div>
 
@@ -287,7 +287,7 @@
           <img class="md-brand-logo" src="/Logo.png" alt="" />
           <div class="md-brand-text">
             <span class="md-brand-name">XuYa Tools</span>
-            <small class="md-brand-sub">开发工具箱 · v1.0.3</small>
+            <small class="md-brand-sub">开发工具箱 · v1.0.4</small>
           </div>
         </div>
         <div class="md-master-head">
@@ -391,6 +391,7 @@ import {
   Type,
   Globe,
   Terminal,
+  Sparkles,
 } from '@lucide/vue';
 import {
   tools,
@@ -425,6 +426,7 @@ const categoryIcons: Record<ToolCategory, typeof ArrowLeftRight> = {
   text: Type,
   network: Globe,
   devops: Terminal,
+  ai: Sparkles,
 };
 
 const keyword = ref('');
@@ -543,6 +545,7 @@ const allCategories = computed(() => {
     'text',
     'network',
     'devops',
+    'ai',
   ];
   return order.filter((c) => groupedTools.value[c]?.length);
 });
@@ -1204,5 +1207,12 @@ const dualTools = computed(() => {
 
 .dual-sidebar .md-master-foot {
   flex-shrink: 0;
+}
+
+.md-item:hover :deep(.brand-icon),
+.md-item.active :deep(.brand-icon),
+.grid-tile:hover :deep(.brand-icon),
+.grid-tile.active :deep(.brand-icon) {
+  color: inherit !important;
 }
 </style>

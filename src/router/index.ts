@@ -142,6 +142,11 @@ const router = createRouter({
       name: 'proxy',
       component: () => import('@/views/tools/ProxyDashboard.vue'),
     },
+    {
+      path: '/tools/ai/:id',
+      name: 'ai-chat',
+      component: () => import('@/views/tools/AiChatView.vue'),
+    },
   ],
 });
 

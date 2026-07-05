@@ -20,6 +20,13 @@
     "core:window:allow-set-focus",
     "core:menu:default",
     "opener:default",
+    "core:webview:allow-create-webview",
+    "core:webview:allow-set-webview-position",
+    "core:webview:allow-set-webview-size",
+    "core:webview:allow-set-webview-auto-resize",
+    "core:webview:allow-webview-close",
+    "core:webview:allow-create-webview-window",
+    "core:window:allow-create",
     "autostart:default",
     "updater:default",
     "process:default"

@@ -61,9 +61,16 @@ export const BRAND_COLORS: Record<string, string> = {
   glm: '#3859ff',
   bailian: '#7b3df5',
   volcano: '#ff5c00',
+  doubao: '#ff5c00',
   minimax: '#ff3d00',
   stepfun: '#0066ff',
   longcat: '#ffc300',
+  gemini: '#4285f4',
+  grok: '#000000',
+  xai: '#000000',
+  yuanbao: '#0052d9',
+  alibaba: '#ff6a00',
+  zai: '#000000',
   custom: '#6b7280',
 };
 
@@ -101,6 +108,12 @@ import doubaoIconRaw from '@lobehub/icons-static-svg/icons/doubao.svg?raw';
 import minimaxIconRaw from '@lobehub/icons-static-svg/icons/minimax.svg?raw';
 import stepfunIconRaw from '@lobehub/icons-static-svg/icons/stepfun.svg?raw';
 import longcatIconRaw from '@lobehub/icons-static-svg/icons/longcat.svg?raw';
+import geminiIconRaw from '@lobehub/icons-static-svg/icons/gemini.svg?raw';
+import grokIconRaw from '@lobehub/icons-static-svg/icons/grok.svg?raw';
+import xaiIconRaw from '@lobehub/icons-static-svg/icons/xai.svg?raw';
+import yuanbaoIconRaw from '@lobehub/icons-static-svg/icons/yuanbao.svg?raw';
+import alibabaIconRaw from '@lobehub/icons-static-svg/icons/alibaba.svg?raw';
+import zaiIconRaw from '@lobehub/icons-static-svg/icons/zai.svg?raw';
 
 /** 项目内 icon slug -> 本地 SVG 标记 */
 const LOBE_ICONS_RAW: Record<string, string> = {
@@ -116,6 +129,12 @@ const LOBE_ICONS_RAW: Record<string, string> = {
   minimax: minimaxIconRaw,
   stepfun: stepfunIconRaw,
   longcat: longcatIconRaw,
+  gemini: geminiIconRaw,
+  grok: grokIconRaw,
+  xai: xaiIconRaw,
+  yuanbao: yuanbaoIconRaw,
+  alibaba: alibabaIconRaw,
+  zai: zaiIconRaw,
 };
 
 /**

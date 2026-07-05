@@ -35,9 +35,10 @@ import {
   PlugZap,
   Table,
 } from '@lucide/vue';
+import { createBrandIcon } from './aiIcons';
 
 export type ToolCategory =
-  'converter' | 'encoder' | 'crypto' | 'datetime' | 'devops' | 'text' | 'network';
+  'converter' | 'encoder' | 'crypto' | 'datetime' | 'devops' | 'text' | 'network' | 'ai';
 
 export interface ToolMeta {
   id: string;
@@ -46,6 +47,8 @@ export interface ToolMeta {
   category: ToolCategory;
   icon: Component;
   route: string;
+  brandIcon?: string;
+  url?: string;
   /** 搜索关键词 (含中英文别名) */
   keywords: string[];
 }
@@ -58,6 +61,7 @@ export const CATEGORY_LABELS: Record<ToolCategory, string> = {
   devops: '开发配置',
   text: '文本处理',
   network: '网络参考',
+  ai: '在线对话',
 };
 
 export const CATEGORY_COLORS: Record<ToolCategory, string> = {
@@ -68,6 +72,7 @@ export const CATEGORY_COLORS: Record<ToolCategory, string> = {
   devops: '#c4b5fd',
   text: '#a78bfa',
   network: '#34d399',
+  ai: '#f472b6',
 };
 
 export const tools: ToolMeta[] = [
@@ -441,5 +446,116 @@ export const tools: ToolMeta[] = [
       'token',
       '费用',
     ],
+  },
+  // ---- 人工智能 ----
+  {
+    id: 'ai_chatgpt',
+    name: 'ChatGPT',
+    description: '打开 ChatGPT 网页对话。',
+    category: 'ai',
+    icon: createBrandIcon('openai'),
+    brandIcon: 'openai',
+    route: '/tools/ai/chatgpt',
+    url: 'https://chat.openai.com',
+    keywords: ['chatgpt', 'openai', 'gpt'],
+  },
+  {
+    id: 'ai_claude',
+    name: 'Claude',
+    description: '打开 Claude 网页对话。',
+    category: 'ai',
+    icon: createBrandIcon('claude'),
+    brandIcon: 'claude',
+    route: '/tools/ai/claude',
+    url: 'https://claude.ai',
+    keywords: ['claude', 'anthropic'],
+  },
+  {
+    id: 'ai_gemini',
+    name: 'Gemini',
+    description: '打开 Gemini 网页对话。',
+    category: 'ai',
+    icon: createBrandIcon('gemini'),
+    brandIcon: 'gemini',
+    route: '/tools/ai/gemini',
+    url: 'https://gemini.google.com',
+    keywords: ['gemini', 'google', 'bard'],
+  },
+  {
+    id: 'ai_grok',
+    name: 'Grok',
+    description: '打开 Grok 网页对话。',
+    category: 'ai',
+    icon: createBrandIcon('grok'),
+    brandIcon: 'grok',
+    route: '/tools/ai/grok',
+    url: 'https://grok.x.ai',
+    keywords: ['grok', 'xai', 'x.ai'],
+  },
+  {
+    id: 'ai_doubao',
+    name: '豆包',
+    description: '打开豆包网页对话。',
+    category: 'ai',
+    icon: createBrandIcon('doubao'),
+    brandIcon: 'doubao',
+    route: '/tools/ai/doubao',
+    url: 'https://www.doubao.com/chat',
+    keywords: ['doubao', '字节跳动', '豆包'],
+  },
+  {
+    id: 'ai_deepseek',
+    name: 'DeepSeek',
+    description: '打开 DeepSeek 网页对话。',
+    category: 'ai',
+    icon: createBrandIcon('deepseek'),
+    brandIcon: 'deepseek',
+    route: '/tools/ai/deepseek',
+    url: 'https://chat.deepseek.com',
+    keywords: ['deepseek', '深度求索'],
+  },
+  {
+    id: 'ai_kimi',
+    name: 'Kimi',
+    description: '打开 Kimi 网页对话。',
+    category: 'ai',
+    icon: createBrandIcon('kimi'),
+    brandIcon: 'kimi',
+    route: '/tools/ai/kimi',
+    url: 'https://kimi.moonshot.cn',
+    keywords: ['kimi', 'moonshot', '月之暗面'],
+  },
+  {
+    id: 'ai_yuanbao',
+    name: '元宝',
+    description: '打开腾讯元宝网页对话。',
+    category: 'ai',
+    icon: createBrandIcon('yuanbao'),
+    brandIcon: 'yuanbao',
+    route: '/tools/ai/yuanbao',
+    url: 'https://yuanbao.tencent.com/chat',
+    keywords: ['yuanbao', 'tencent', '腾讯元宝', '元宝'],
+  },
+  {
+    id: 'ai_qianwen',
+    name: '千问',
+    description: '打开通义千问网页对话。',
+    category: 'ai',
+    icon: createBrandIcon('alibaba'),
+    brandIcon: 'alibaba',
+    route: '/tools/ai/qianwen',
+    url: 'https://tongyi.aliyun.com/qianwen',
+    keywords: ['qianwen', 'tongyi', '通义千问', '千问'],
+  },
+  {
+    id: 'ai_zai',
+    name: 'Z.AI',
+    description: '打开 Z.AI 网页对话。',
+    category: 'ai',
+    icon: createBrandIcon('zai'),
+    brandIcon: 'zai',
+    route: '/tools/ai/zai',
+    url: 'https://z.ai',
+    keywords: ['zai', 'z.ai', '智谱'],
   },
 ];
